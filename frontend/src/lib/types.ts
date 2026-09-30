@@ -245,3 +245,19 @@ export interface IntelReport {
 }
 export interface MemoryMetric { name: string; first: { value: string; at: string }; last: { value: string; at: string }; changed: boolean; points: number }
 export interface IntelData { report: Report<IntelReport> | null; competitors: Competitor[]; signals: Signal[]; market: Signal[]; memory: Record<string, MemoryMetric[]> }
+
+export interface FounderBrief { status: string; opportunity: string; risk: string; recommendation: string; confidence: number }
+export interface RecommendedAction { title: string; description: string; priority: 'High' | 'Medium' | 'Low'; source: string }
+export type ReadinessKey = 'validation' | 'research' | 'competitors' | 'boardroom' | 'prototype' | 'experiments'
+export interface ReadinessDetail { progress: number; status: 'complete' | 'in_progress' | 'not_started'; current: string; missing: string[]; tab: string }
+export type LaunchReadiness = Record<ReadinessKey, number> & { overallReadinessScore: number; details: Record<ReadinessKey, ReadinessDetail> }
+export interface VentureCommand {
+  brief: FounderBrief
+  actions: RecommendedAction[]
+  readiness: LaunchReadiness
+  source: 'ai' | 'rules'
+  generatedAt: string | null
+  stale: boolean
+  generating: boolean
+  error: string | null
+}

@@ -108,7 +108,8 @@ r.post('/ventures/:id/validate', async (req, res) => {
 
 r.get('/research', async (req, res) => {
   const match = { user_id: req.user.id, ...(req.query.kind && { kind: String(req.query.kind) }), ...(req.query.venture_id && { venture_id: String(req.query.venture_id) }) }
-  res.json(await db.list('research_reports', match, { limit: 300 }))
+  // Internal reports (competitive intelligence, founder brief) have their own views; they aren't Research library items.
+  res.json((await db.list('research_reports', match, { limit: 300 })).filter((x) => match.kind || !['intel', 'brief'].includes(x.kind)))
 })
 r.get('/research/:id', async (req, res) => res.json(await own('research_reports', req.params.id, req.user)))
 r.delete('/research/:id', async (req, res) => {

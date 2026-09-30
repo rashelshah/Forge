@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { AppWindow, Brain, Check, FlaskConical, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
+import { AppWindow, Brain, FlaskConical, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { DECISION_COPY, LiveBoardroom } from '@/components/boardroom'
 import { DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
+import { CommandCenter } from '@/components/overview'
 import { PrototypeStudio } from '@/components/prototype'
 import { MvpView, OpportunityCard, ValidationView } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
@@ -13,7 +14,7 @@ import { Input, Select, Textarea } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
 import { useAction, useVenture } from '@/lib/queries'
-import type { BoardSession, Chunk, Experiment, Memory, MvpPlan, PrototypeContent, Report, Stage, Validation, Venture } from '@/lib/types'
+import type { BoardSession, Chunk, Memory, MvpPlan, PrototypeContent, Report, Stage, Validation, Venture } from '@/lib/types'
 import { ago, cn, date, titleCase } from '@/lib/utils'
 import { CompetitorsPanel } from './Competitors'
 import { ExperimentList } from './Experiments'
@@ -36,21 +37,10 @@ function Generating({ label }: { label: string }) {
 
 // ---------------------------------------------------------------- overview
 
-function Overview({ v, validation, validate, steps }: { v: Venture; validation?: Report<Validation>; validate: ReturnType<typeof useValidate>; steps: { label: string; done: boolean; tab: string }[] }) {
-  const [, setParams] = useSearchParams()
+function Overview({ v, validation, validate }: { v: Venture; validation?: Report<Validation>; validate: ReturnType<typeof useValidate> }) {
   return (
-    <div className="space-y-6">
-      <Card className="p-5">
-        <p className="mb-4 text-sm font-medium">Pipeline</p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {steps.map((s, i) => (
-            <button key={s.label} onClick={() => setParams({ tab: s.tab })} className={cn('flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm transition cursor-pointer', s.done ? 'border-[#d8e9c2] bg-[#f5faef]' : 'border-line hover:bg-canvas')}>
-              <span className={cn('grid size-5 shrink-0 place-items-center rounded-full text-[10px]', s.done ? 'bg-leaf text-white' : 'bg-soft text-muted')}>{s.done ? <Check className="size-3" /> : i + 1}</span>
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </Card>
+    <div className="space-y-8">
+      <CommandCenter ventureId={v.id} stage={v.stage} />
 
       {v.opportunity && (
         <div>
@@ -167,8 +157,6 @@ export default function VentureDetail() {
   const { data: v, isLoading, error } = useVenture(id)
   const reports = useReports(id)
   const { data: sessions = [] } = useQuery({ queryKey: ['boardroom', { venture_id: id }], queryFn: () => api<BoardSession[]>(`/boardroom?venture_id=${id}`) })
-  const { data: experiments = [] } = useQuery({ queryKey: ['experiments', { venture_id: id }], queryFn: () => api<Experiment[]>(`/experiments?venture_id=${id}`) })
-  const { data: competitors = [] } = useQuery({ queryKey: ['competitors', { venture_id: id }], queryFn: () => api<{ id: string }[]>(`/competitors?venture_id=${id}`) })
   const validate = useValidate(id)
   const update = useAction((patch: Partial<Venture>) => api(`/ventures/${id}`, patch, 'PATCH'), [['ventures'], ['dashboard']])
   const remove = useAction(() => api(`/ventures/${id}`, undefined, 'DELETE'), [['ventures'], ['dashboard'], ['me']], 'Venture deleted')
@@ -189,14 +177,6 @@ export default function VentureDetail() {
   const validation = reports.latest<Validation>('validation')
   const mvp = reports.latest<MvpPlan>('mvp')
   const prototype = reports.latest<PrototypeContent>('prototype')
-  const steps = [
-    { label: 'Validate', done: !!validation, tab: 'overview' },
-    { label: 'Boardroom', done: sessions.some((s) => s.status === 'completed'), tab: 'boardroom' },
-    { label: 'MVP plan', done: !!mvp, tab: 'mvp' },
-    { label: 'Prototype', done: !!prototype, tab: 'prototype' },
-    { label: 'Experiment', done: experiments.length > 0, tab: 'experiments' },
-    { label: 'Monitor', done: competitors.length > 0, tab: 'competitors' },
-  ]
 
   return (
     <>
@@ -231,7 +211,7 @@ export default function VentureDetail() {
           <TabsTrigger value="memory"><Brain />Memory</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview"><Overview v={v} validation={validation} validate={validate} steps={steps} /></TabsContent>
+        <TabsContent value="overview"><Overview v={v} validation={validation} validate={validate} /></TabsContent>
 
         <TabsContent value="boardroom" className="space-y-8">
           <LiveBoardroom venture={v} />

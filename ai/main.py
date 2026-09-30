@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 
 import agents
 import boardroom
+import chief
 import core
 import design_intel
 import intel
@@ -230,3 +231,8 @@ def studio_edit(html: str = Body(...), instruction: str = Body(...), name: str =
         return studio.edit_html(html, instruction, name)
     except (studio.StudioError, design_intel.DesignError) as e:
         raise HTTPException(422, str(e))
+
+
+@app.post("/chief/brief")
+def chief_brief(context: dict = Body(..., embed=True)):
+    return chief.run(context)
