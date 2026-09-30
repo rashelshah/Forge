@@ -103,3 +103,5 @@
 
 .prose-foundry p { @apply text-ink-2 leading-relaxed; }
 .scrollbar-none { scrollbar-width: none; }
+
+@keyframes fill { from { width: 0 } to { width: 100% } }
