@@ -221,7 +221,7 @@ def board_verdict(venture: dict, votes: dict):
 
 # ---------------------------------------------------------------- MVP architect
 
-def mvp(venture: dict):
+def mvp(venture: dict, context: dict | None = None):
     product, audience = split(venture["idea"])
     market = _is_marketplace(venture["idea"])
     entity, entities = ("listing", "listings") if market else ("project", "projects")
@@ -250,14 +250,22 @@ def mvp(venture: dict):
         "summary": f"A 6-week MVP of {_an(product)} for {audience} focused on one core loop: "
                    f"{'list, discover, transact' if market else 'onboard, create, get value'} — instrumented for activation and retention.",
         "features": [
-            {"name": "Onboarding & auth", "description": f"Sign up in under a minute with profile tailored to {audience}", "priority": "must"},
-            {"name": f"Create {entities}" , "description": f"Core creation flow for {entities}", "priority": "must"},
-            {"name": "Search & discovery" if market else "Smart workspace", "description": "Find the right match fast" if market else "Organise and act on work in one place", "priority": "must"},
-            {"name": "Payments & payouts" if market else "AI assistant", "description": "Escrowed checkout with fees" if market else "Automate the most repetitive step", "priority": "must"},
-            {"name": "Reviews & trust" if market else "Collaboration", "description": "Ratings and verification" if market else "Invite teammates and share", "priority": "should"},
-            {"name": "Notifications", "description": "Email and in-app nudges for key events", "priority": "should"},
-            {"name": "Analytics dashboard", "description": "Usage insights for power users", "priority": "could"},
-            {"name": "Mobile app", "description": "Native app after web retention is proven", "priority": "could"},
+            {"name": "Onboarding & auth", "description": f"Sign up in under a minute with profile tailored to {audience}", "priority": "must",
+             "reason": "Nothing else works without accounts", "user_impact": "high", "effort": "low"},
+            {"name": f"Create {entities}", "description": f"Core creation flow for {entities}", "priority": "must",
+             "reason": "This is the product's core loop", "user_impact": "high", "effort": "medium"},
+            {"name": "Search & discovery" if market else "Smart workspace", "description": "Find the right match fast" if market else "Organise and act on work in one place", "priority": "must",
+             "reason": "Users must reach value in the first session", "user_impact": "high", "effort": "medium"},
+            {"name": "Payments & payouts" if market else "AI assistant", "description": "Escrowed checkout with fees" if market else "Automate the most repetitive step", "priority": "must",
+             "reason": "Proves people will pay" if market else "The differentiator users will notice", "user_impact": "high", "effort": "high"},
+            {"name": "Reviews & trust" if market else "Collaboration", "description": "Ratings and verification" if market else "Invite teammates and share", "priority": "should",
+             "reason": "Raises repeat use, but launch works without it", "user_impact": "medium", "effort": "medium"},
+            {"name": "Notifications", "description": "Email and in-app nudges for key events", "priority": "should",
+             "reason": "Brings users back, not needed to test demand", "user_impact": "medium", "effort": "low"},
+            {"name": "Analytics dashboard", "description": "Usage insights for power users", "priority": "could",
+             "reason": "No meaningful data exists yet", "user_impact": "low", "effort": "medium"},
+            {"name": "Mobile app", "description": "Native app after web retention is proven", "priority": "could",
+             "reason": "Web is enough to test demand", "user_impact": "low", "effort": "high"},
         ],
         "user_stories": [
             {"as_a": audience.rstrip("s") if audience.endswith("s") else audience, "i_want": f"to get started with {product} in minutes",
@@ -314,6 +322,77 @@ def mvp(venture: dict):
         ],
         "stack": ["React", "Node.js", "PostgreSQL", "Stripe" if market else "OpenAI", "Vercel", "PostHog"],
         "monthly_cost_estimate": "$150–$400 at MVP scale",
+        "strategy": _strategy(market, entity, entities, audience, context or {}),
+    }
+
+
+def _strategy(market: bool, entity: str, entities: str, audience: str, context: dict) -> dict:
+    """Offline strategy template; weakest validation dimension steers the headline."""
+    val = context.get("validation") or {}
+    scores = {k: val[k]["score"] for k in ("demand", "competition", "defensibility", "revenue_potential", "founder_fit") if isinstance(val.get(k), dict)}
+    weak = min(scores, key=scores.get) if scores else None
+    challenge = {
+        "demand": "Proving people actively want this before you build more.",
+        "competition": "Standing out against incumbents that already serve this need.",
+        "defensibility": "Building something competitors cannot copy in a weekend.",
+        "revenue_potential": "Showing users will pay enough to sustain the business.",
+        "founder_fit": "Shipping fast with the skills on the founding team.",
+    }.get(weak, "Transaction trust: buyers and sellers must believe the other side is real." if market else "Getting users to their first win in one session.")
+    core_f = "Listings & Search" if market else "Core workflow"
+    trust = "Verification & Escrow" if market else "AI assistant"
+    comps = [
+        ("auth", "Authentication", "Sign-up, login, sessions", "low", 2, [], "Onboarding & auth"),
+        ("data", "Data model", "Schema, migrations, seed data", "low", 2, ["auth"], ""),
+        ("core", core_f, f"Create, browse and manage {entities}", "medium", 6, ["data"], f"Create {entities}"),
+        ("search", "Search & discovery" if market else "Workspace views", "Find and filter quickly", "medium", 4, ["core"], "Search & discovery" if market else "Smart workspace"),
+        ("pay" if market else "ai", "Payments & payouts" if market else "AI assistant", "Checkout with fees and payouts" if market else "Automate the most repetitive step", "high", 8, ["core"], "Payments & payouts" if market else "AI assistant"),
+        ("trust", "Reviews & trust" if market else "Collaboration", "Ratings, verification" if market else "Invites and sharing", "medium", 5, ["pay" if market else "ai"], "Reviews & trust" if market else "Collaboration"),
+        ("notify", "Notifications", "Email and in-app nudges", "low", 3, ["trust"], "Notifications"),
+        ("events", "Analytics events", "Track the activation funnel", "low", 2, ["auth"], ""),
+        ("beta", "Private beta", "30 users, fix the top issues", "medium", 5, ["search", "notify"], ""),
+    ]
+    return {
+        "recommendation": {
+            "headline": f"Launch as a focused {'trust-first marketplace' if market else 'single-workflow product'} for {audience}.",
+            "biggest_challenge": challenge,
+            "prioritize": ["Onboarding & auth", f"Create {entities}", "Payments & payouts" if market else "AI assistant"],
+            "delay": ["Analytics dashboard", "Mobile app", "Notifications"],
+            "reason": "Only ship what proves the core loop works. Everything else waits for real usage data.",
+        },
+        "build_vs_buy": [
+            {"component": "Authentication", "decision": "buy", "provider": "Supabase Auth", "reason": "Auth gives no competitive edge.", "time_saved": "1-2 weeks"},
+            {"component": "Database", "decision": "buy", "provider": "Supabase Postgres", "reason": "Managed Postgres is solved infrastructure.", "time_saved": "1 week"},
+            {"component": "Payments", "decision": "buy", "provider": "Stripe Connect" if market else "Stripe Billing", "reason": "Compliance and payouts are hard to get right.", "time_saved": "3-4 weeks"},
+            {"component": "Email", "decision": "buy", "provider": "Resend", "reason": "Deliverability is a commodity.", "time_saved": "1 week"},
+            {"component": "Analytics", "decision": "buy", "provider": "PostHog", "reason": "Funnels out of the box.", "time_saved": "1-2 weeks"},
+            {"component": core_f, "decision": "build", "provider": "React + Node", "reason": "This is the product itself.", "time_saved": "Core differentiator"},
+            {"component": "Trust system" if market else "Workflow logic", "decision": "build", "provider": "Your own rules on top of bought services", "reason": "Your edge lives here.", "time_saved": "Core differentiator"},
+        ],
+        "components": [{"id": i, "name": n, "description": dsc, "complexity": c, "effort_days": e, "depends_on": dep, "feature": f} for i, n, dsc, c, e, dep, f in comps],
+        "complexity": {"frontend": "medium", "backend": "medium", "infrastructure": "low", "overall": "medium",
+                       "bootstrap_cost": "$0-$500", "agency_cost": "$10k-$20k", "team_cost": "Internal resources"},
+        "risks": [
+            {"title": "Payment integration" if market else "AI quality", "severity": "high",
+             "explanation": "Compliance and edge cases slow the launch." if market else "Inconsistent output erodes trust fast.",
+             "mitigation": "Use Stripe Connect with hosted onboarding; test mode first." if market else "Constrain the task, add human review, log failures."},
+            {"title": "Cold start", "severity": "medium", "explanation": "Users will not arrive on their own.", "mitigation": "Seed the first 30 users by hand in one community."},
+            {"title": "Scope creep", "severity": "medium", "explanation": "Nice-to-haves quietly double the timeline.", "mitigation": "Freeze the Must Build list for the first release."},
+            {"title": f"{entities.capitalize()} and search", "severity": "low", "explanation": "Well-understood CRUD patterns.", "mitigation": "Use Postgres full-text search."},
+        ],
+        "metrics": [
+            {"feature": f"Create {entities}", "metric": f"100 active {entities}"},
+            {"feature": "Onboarding & auth", "metric": "60% of sign-ups finish onboarding"},
+            {"feature": "Payments & payouts" if market else "AI assistant", "metric": "90% transaction completion" if market else "40% of users use it weekly"},
+            {"feature": "Search & discovery" if market else "Smart workspace", "metric": "50% of sessions reach a result"},
+        ],
+        "avoid": [
+            {"name": "AI matching / recommendations", "reason": "Needs data scale you do not have yet."},
+            {"name": "Advanced analytics", "reason": "No meaningful data yet; PostHog covers the basics."},
+            {"name": "Social feed", "reason": "Not core to the main loop."},
+            {"name": "Native mobile app", "reason": "Prove retention on web first."},
+        ],
+        "investor": {"technical_complexity": "medium", "scalability": "high", "defensibility": "medium", "monetization": "high", "execution_risk": "medium",
+                     "note": "A focused scope with bought infrastructure reads as capital-efficient; defensibility depends on data gathered post-launch."},
     }
 
 

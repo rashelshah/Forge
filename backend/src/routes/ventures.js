@@ -196,8 +196,14 @@ r.post('/ventures/:id/boardroom', async (req, res) => {
 
 r.post('/ventures/:id/mvp', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
-  const out = await runAgent(req.user, v.id, 'MVP Architect', '/mvp', { venture: ventureCtx(v), founder: req.user.founder_profile },
-    (o) => `${o.features.length} features · ${o.apis.length} endpoints · ${o.sprint_plan.length} sprints`)
+  // The strategy sections are grounded in what the founder already learned: validation, competitors and the board's verdict.
+  const [validation, competitors, sessions] = await Promise.all([
+    latestReport(v.id, 'validation'), db.list('competitors', { venture_id: v.id }), db.list('boardroom_sessions', { venture_id: v.id }, { limit: 20 }),
+  ])
+  const board = sessions.find((s) => s.status === 'completed' && s.verdict)?.verdict ?? null
+  const out = await runAgent(req.user, v.id, 'MVP Architect', '/mvp',
+    { venture: ventureCtx(v), founder: req.user.founder_profile, context: { validation: validation?.content ?? null, competitors, board } },
+    (o) => `${o.features.length} features · ${o.apis.length} endpoints · ${o.strategy?.components.length ?? 0} build steps`)
   const report = await saveReport(req.user, v.id, 'mvp', `MVP blueprint · ${v.name}`, out, out.summary)
   await remember(req.user, v.id, 'roadmap', 'MVP blueprint', `${out.summary}\nMust-haves: ${out.features.filter((f) => f.priority === 'must').map((f) => f.name).join(', ')}\n` +
     `Sprints: ${out.sprint_plan.map((s) => `S${s.sprint} ${s.goal}`).join('; ')}`)

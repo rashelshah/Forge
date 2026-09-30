@@ -166,6 +166,10 @@ async function synthesize(user, v, rep, d, rd, sig) {
     const actions = out.actions.filter((a) => a.title && !seen.has(a.title.toLowerCase()) && seen.add(a.title.toLowerCase())).slice(0, 6)
     let highs = 0
     for (const a of actions) if (a.priority === 'High' && ++highs > 2) a.priority = 'Medium'
+    // The model may not paint a positive picture against negative evidence.
+    const negative = d.board?.decision === 'KILL' || (d.v.overall_score ?? 100) < 40
+    if (!d.val) out.brief.status = 'Not validated yet'
+    else if (negative) out.brief.status = 'At risk'
     await db.update('research_reports', rep.id, {
       title: `Founder brief · ${v.name}`, summary: out.brief.recommendation.slice(0, 280), created_at: now(),
       content: { brief: { ...out.brief, confidence: Math.min(out.brief.confidence, cap) }, actions, signature: sig, generated_at: now(), build: null },

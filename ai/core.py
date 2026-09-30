@@ -32,12 +32,14 @@ HEAVY = [os.getenv("LLM_MODEL") or ("openai/gpt-oss-120b" if GROQ else "gpt-4o-m
 FAST = [m.strip() for m in (os.getenv("LLM_FAST_MODELS") or ("openai/gpt-oss-20b,qwen/qwen3.8-27b" if GROQ else "gpt-4o-mini")).split(",") if m.strip()]
 MODEL = HEAVY[0]
 # Prototype code generation uses Groq first (due to Gemini free tier rate limits), then Gemini.
-CODE = HEAVY + FAST + ([m.strip() for m in (os.getenv("CODE_MODELS") or "gemini-flash-latest,gemini-3.5-flash").split(",")] if GEMINI else [])
+CODE = HEAVY + FAST + ([m.strip() for m in (os.getenv("CODE_MODELS") or "gemini-flash-lite-latest,gemini-3.5-flash").split(",")] if GEMINI else [])
+# Groq's per-minute budget is easily exhausted by multi-call agents, so the default chains end on Gemini when a key exists.
+GEMINI_FALLBACK = [m.strip() for m in (os.getenv("GEMINI_MODELS") or "gemini-flash-lite-latest,gemini-3.5-flash").split(",")] if GEMINI else []
 MODE = "live" if OPENAI else "demo"
 # Vision-capable models for screenshot analysis (Design Intelligence). Groq has no vision models, so Gemini (each model
 # has its own free quota) leads, then OpenAI if that's the only key.
 VISION = [m.strip() for m in (os.getenv("VISION_MODELS") or ",".join(
-    ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.1-flash-lite"] if GEMINI else ["gpt-4o-mini"] if not GROQ and os.getenv("OPENAI_API_KEY") else [])).split(",") if m.strip()]
+    ["gemini-flash-lite-latest", "gemini-3.1-flash-lite"] if GEMINI else ["gpt-4o-mini"] if not GROQ and os.getenv("OPENAI_API_KEY") else [])).split(",") if m.strip()]
 
 
 # ---------------------------------------------------------------- LLM
@@ -78,9 +80,9 @@ def structured(schema, system: str, user, temperature: float = 0.4, tier: str = 
         with _rr_lock:
             _rr["i"] += 1
             start = _rr["i"] % len(FAST)
-        models = FAST[start:] + FAST[:start] + HEAVY
+        models = FAST[start:] + FAST[:start] + HEAVY + GEMINI_FALLBACK
     else:
-        models = HEAVY + FAST
+        models = HEAVY + FAST + GEMINI_FALLBACK
     errors = []
     for model in dict.fromkeys(models):
         method = "json_schema" if ("gpt-oss" in model or model.startswith("gemini") or not GROQ) else "function_calling"

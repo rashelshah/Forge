@@ -104,8 +104,8 @@ def board(venture: dict = Body(...), question: str = Body(...), rounds: int = Bo
 
 
 @app.post("/mvp")
-def mvp(venture: dict = Body(...), founder: dict = Body({})):
-    return agents.mvp(venture, founder)
+def mvp(venture: dict = Body(...), founder: dict = Body({}), context: dict = Body({})):
+    return agents.mvp(venture, founder, context)
 
 
 @app.post("/prototype")

@@ -6,7 +6,8 @@ import { DECISION_COPY, LiveBoardroom } from '@/components/boardroom'
 import { DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
 import { CommandCenter } from '@/components/overview'
 import { PrototypeStudio } from '@/components/prototype'
-import { MvpView, OpportunityCard, ValidationView } from '@/components/research'
+import { MvpView } from '@/components/mvp'
+import { OpportunityCard, ValidationView } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -235,8 +236,8 @@ export default function VentureDetail() {
         </TabsContent>
 
         <TabsContent value="mvp">
-          <Generator v={v} kind="mvp" report={mvp} label="MVP blueprint" running="MVP Architect is drafting features, stories, schema, APIs, architecture and sprints…"
-            empty="Features, user stories, database schema, APIs, an architecture diagram, a sprint plan and team requirements — informed by boardroom decisions in memory.">
+          <Generator v={v} kind="mvp" report={mvp} label="MVP blueprint" running="MVP Architect is weighing scope, build vs buy, risks and launch order against your validation, competitors and boardroom findings…"
+            empty="An AI CTO's plan: what to build first and delay, build vs buy, launch roadmap, costs, risks and success metrics, plus the features, stories, schema and APIs behind it.">
             {(m) => <MvpView m={m} />}
           </Generator>
         </TabsContent>

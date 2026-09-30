@@ -41,9 +41,23 @@ export type Validation = Record<ScoreKey, ScoreDetail> & {
   mode: Mode
 }
 
+export type Level = 'low' | 'medium' | 'high'
+export interface MvpComponent { id: string; name: string; description: string; complexity: Level; effort_days: number; depends_on: string[]; feature: string }
+export interface MvpStrategy {
+  recommendation: { headline: string; biggest_challenge: string; prioritize: string[]; delay: string[]; reason: string }
+  build_vs_buy: { component: string; decision: 'build' | 'buy'; provider: string; reason: string; time_saved: string }[]
+  components: MvpComponent[]
+  complexity: { frontend: Level; backend: Level; infrastructure: Level; overall: Level; bootstrap_cost: string; agency_cost: string; team_cost: string }
+  risks: { title: string; severity: Level; explanation: string; mitigation: string }[]
+  metrics: { feature: string; metric: string }[]
+  avoid: { name: string; reason: string }[]
+  investor: { technical_complexity: Level; scalability: Level; defensibility: Level; monetization: Level; execution_risk: Level; note: string }
+}
+
 export interface MvpPlan {
   summary: string
-  features: { name: string; description: string; priority: 'must' | 'should' | 'could' }[]
+  strategy?: MvpStrategy
+  features: { name: string; description: string; priority: 'must' | 'should' | 'could'; reason?: string; user_impact?: Level; effort?: Level }[]
   user_stories: { as_a: string; i_want: string; so_that: string; acceptance: string[] }[]
   database_schema: { table: string; columns: { name: string; type: string; note?: string }[] }[]
   apis: { method: string; path: string; description: string }[]

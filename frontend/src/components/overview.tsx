@@ -170,7 +170,7 @@ function Readiness({ c }: { c: VentureCommand }) {
 export function CommandCenter({ ventureId, stage }: { ventureId: string; stage: string }) {
   const q = useQuery({
     queryKey: ['command', ventureId], queryFn: () => api<VentureCommand>(`/ventures/${ventureId}/command`),
-    refetchInterval: (query) => (query.state.data?.generating ? 3000 : false),
+    refetchInterval: (query) => (query.state.data?.generating ? 3000 : false), refetchIntervalInBackground: true,
   })
   const qc = useQueryClient()
   const refresh = useAction(() => api(`/ventures/${ventureId}/command/refresh`, {}), [['command', ventureId]])

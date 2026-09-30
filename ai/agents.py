@@ -1,6 +1,7 @@
 """Single-shot agents: discovery, validation, MVP architect, prototype builder, competitor intel, experiments, monitoring."""
 import hashlib
 import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -217,6 +218,9 @@ class Feature(BaseModel):
     name: str
     description: str
     priority: Literal["must", "should", "could"]
+    reason: str = Field(description="Why it has this priority, one sentence")
+    user_impact: Literal["high", "medium", "low"]
+    effort: Literal["low", "medium", "high"]
 
 
 class Story(BaseModel):
@@ -282,36 +286,139 @@ class MvpProduct(BaseModel):
     monthly_cost_estimate: str
 
 
+Level = Literal["low", "medium", "high"]
+
+
+class Recommendation(BaseModel):
+    headline: str = Field(description="One sentence: what this startup should launch as (max 20 words)")
+    biggest_challenge: str = Field(description="The single hardest thing to get right, one sentence")
+    prioritize: list[str] = Field(description="2-4 feature names to build first, taken from the features list")
+    delay: list[str] = Field(description="2-4 feature names to postpone, taken from the features list")
+    reason: str = Field(description="Why, 1-2 sentences")
+
+
+class BuildBuy(BaseModel):
+    component: str
+    decision: Literal["build", "buy"]
+    provider: str = Field(description="Suggested provider for 'buy'; for 'build' the stack piece it is built on")
+    reason: str
+    time_saved: str = Field(description="e.g. '2-3 weeks'; for build, what it costs instead")
+
+
+class Component(BaseModel):
+    id: str = Field(description="short snake_case id")
+    name: str
+    description: str
+    complexity: Level
+    effort_days: int = Field(ge=1, le=40, description="Focused developer days for ONE developer")
+    depends_on: list[str] = Field(description="ids of other components that must exist first; no cycles")
+    feature: str = Field(description="Name of the feature this delivers, or '' for foundations")
+
+
+class Complexity(BaseModel):
+    frontend: Level
+    backend: Level
+    infrastructure: Level
+    overall: Level
+    bootstrap_cost: str = Field(description="Tools + infra for a solo founder, e.g. '$0-$500'")
+    agency_cost: str = Field(description="Hiring an agency, e.g. '$10k-$20k'")
+    team_cost: str = Field(description="Startup team cost note, e.g. 'Internal resources'")
+
+
+class Risk(BaseModel):
+    title: str
+    severity: Level
+    explanation: str
+    mitigation: str
+
+
+class Metric(BaseModel):
+    feature: str
+    metric: str = Field(description="Measurable success criterion with a number, e.g. '80% verified users'")
+
+
+class Avoid(BaseModel):
+    name: str
+    reason: str
+
+
+class Investor(BaseModel):
+    technical_complexity: Level
+    scalability: Level
+    defensibility: Level
+    monetization: Level
+    execution_risk: Level
+    note: str = Field(description="One sentence on how an investor would view this")
+
+
+class MvpStrategy(BaseModel):
+    recommendation: Recommendation
+    build_vs_buy: list[BuildBuy] = Field(description="5-8 components")
+    components: list[Component] = Field(description="8-12 build components forming a dependency DAG")
+    complexity: Complexity
+    risks: list[Risk] = Field(description="4-6 risks, technical and business")
+    metrics: list[Metric] = Field(description="One per must/should feature")
+    avoid: list[Avoid] = Field(description="3-5 things NOT to build in the MVP")
+    investor: Investor
+
+
 class MvpEngineering(BaseModel):
     database_schema: list[Table] = Field(description="4-8 snake_case tables with key columns")
     apis: list[Api] = Field(description="8-14 REST endpoints that operate on those tables")
     architecture: Architecture = Field(description="7-12 nodes across client/api/service/data/external; edges only between existing node ids")
 
 
-def mvp(venture: dict, founder: dict):
+def _strategy_context(context: dict) -> str:
+    """Flatten the founder's validation, competitor and boardroom work into a prompt block."""
+    val, comps, board = context.get("validation") or {}, context.get("competitors") or [], context.get("board") or {}
+    parts = []
+    if val:
+        parts.append(f"Validation: overall {val.get('overall')}/100, {val.get('verdict')}. " + ", ".join(
+            f"{k} {val[k]['score']}" for k in WEIGHTS if isinstance(val.get(k), dict)) + f". Risks: {'; '.join(val.get('key_risks') or [])}")
+    if comps:
+        parts.append("Competitors: " + "; ".join(f"{c['name']} ({c.get('threat_level', 'medium')} threat): {(c.get('description') or '')[:100]}" for c in comps[:6]))
+    if board:
+        parts.append(f"Boardroom verdict: {board.get('decision')} - {board.get('headline')}. Assumptions: "
+                     + "; ".join(a.get("assumption", "") for a in board.get("critical_assumptions", [])))
+    return "\n".join(parts) or "No validation, competitor or boardroom work yet."
+
+
+def mvp(venture: dict, founder: dict, context: dict | None = None):
+    context = context or {}
     mem = core.recall(venture["id"], "boardroom decision assumptions features scope roadmap risks", k=6)
     if not core.OPENAI:
-        return {**demo.mvp(venture), "mode": "demo"}
-    ctx = f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}"
+        return {**demo.mvp(venture, context), "mode": "demo"}
+    ctx = f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\n{_strategy_context(context)}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}"
     product = core.structured(
         MvpProduct,
         "You are Foundry's MVP Architect. Design the smallest product that tests the riskiest assumption, scoped for a "
         "6-8 week build by a lean team. Respect boardroom decisions, key risks and experiment results in memory; prefer a "
-        "stack that matches the founder's skills. Keep descriptions short.",
+        "stack that matches the founder's skills. Keep descriptions short. Give every feature a one-sentence reason for its "
+        "priority, a user_impact and an effort. Only a few features may be 'must'; be ruthless.",
         ctx, max_tokens=5000,
     )
-    eng = core.structured(
-        MvpEngineering,
+    scope = f"\n\nMVP scope:\n{product.summary}\nFeatures: " + "; ".join(f"{f.name} ({f.priority})" for f in product.features)
+    eng_prompt = (
         "You are Foundry's MVP Architect designing the engineering blueprint for this MVP. Table and column names are "
-        "snake_case; API paths must operate on those tables; architecture edges reference existing node ids only.",
-        f"{ctx}\n\nMVP scope:\n{product.summary}\nFeatures: " + "; ".join(f"{f.name} ({f.priority})" for f in product.features)
-        + f"\nStack: {', '.join(product.stack)}",
-        tier="fast", max_tokens=5000,
-    )
+        "snake_case; API paths must operate on those tables; architecture edges reference existing node ids only.")
+    strat_prompt = (
+        "You are a senior product architect, startup CTO and product manager advising a founder on how to execute this MVP. "
+        "Be opinionated and specific to THIS venture, grounded in the validation, competitor and boardroom findings. "
+        "Buy commodity infrastructure (auth, payments, email, hosting); build only what differentiates. "
+        "Components form a dependency DAG (foundations first, each depends_on only existing ids). effort_days is for one "
+        "developer. Avoid list protects the founder from overbuilding: name real tempting features and why they are premature.")
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        eng_f = ex.submit(core.structured, MvpEngineering, eng_prompt, ctx + scope + f"\nStack: {', '.join(product.stack)}", tier="fast", max_tokens=5000)
+        strat_f = ex.submit(core.structured, MvpStrategy, strat_prompt, ctx + scope, max_tokens=6000)
+        eng, strat = eng_f.result(), strat_f.result()
     arch = eng.architecture.model_dump()
     ids = {n["id"] for n in arch["nodes"]}
     arch["edges"] = [e for e in arch["edges"] if e["source"] in ids and e["target"] in ids]
-    return {**product.model_dump(), **eng.model_dump(), "architecture": arch, "mode": "live"}
+    strategy = strat.model_dump()
+    cids = {c["id"] for c in strategy["components"]}
+    for c in strategy["components"]:  # drop dangling/self edges so the graph always renders
+        c["depends_on"] = [d for d in c["depends_on"] if d in cids and d != c["id"]]
+    return {**product.model_dump(), **eng.model_dump(), "architecture": arch, "strategy": strategy, "mode": "live"}
 
 
 # ---------------------------------------------------------------- Prototype builder (Lovable-style)

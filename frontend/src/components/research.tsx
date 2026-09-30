@@ -1,8 +1,9 @@
-import { ArrowUpRight, BookOpen, CheckCircle2, ChevronDown, Globe, Quote, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, BookOpen, ChevronDown, Globe, Quote, TriangleAlert } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { SCORE_KEYS, SCORE_LABELS, ScoreRing, scoreColor } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { MvpView } from '@/components/mvp'
 import { PrototypePreview } from '@/components/prototype'
 import type { ExperimentAnalysis, MvpPlan, Opportunity, PrototypeContent, Report, Source, Validation } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -115,150 +116,6 @@ export function ValidationView({ v }: { v: Validation }) {
           <ul className="space-y-1.5 text-sm text-ink-2">{v.key_risks.map((r) => <li key={r} className="flex gap-2"><span className="text-faint">—</span>{r}</li>)}</ul>
         </Card>
       )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------- MVP architect
-
-const LAYERS = [
-  ['client', 'Client'], ['api', 'API'], ['service', 'Services'], ['data', 'Data'], ['external', 'External'],
-] as const
-const LAYER_STYLE: Record<string, string> = {
-  client: 'bg-[#fdf1e8] border-[#f7d9c1]', api: 'bg-dark text-white border-dark', service: 'bg-[#f0f3ff] border-[#d5defb]',
-  data: 'bg-[#f1f7e9] border-[#d8e9c2]', external: 'bg-soft border-line-2',
-}
-
-export function ArchitectureDiagram({ arch }: { arch: MvpPlan['architecture'] }) {
-  const cols = LAYERS.filter(([l]) => arch.nodes.some((n) => n.layer === l))
-  return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-canvas p-4">
-      <div className="dot-grid rounded-lg p-4" style={{ minWidth: cols.length * 150 }}>
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${cols.length}, minmax(130px, 1fr))` }}>
-          {cols.map(([layer, label], ci) => (
-            <div key={layer} className="relative flex flex-col items-stretch gap-3">
-              <p className="text-center font-mono text-[10px] tracking-[0.14em] text-muted uppercase">{label}</p>
-              <div className="flex flex-1 flex-col justify-center gap-3">
-                {arch.nodes.filter((n) => n.layer === layer).map((n) => {
-                  const out = arch.edges.filter((e) => e.source === n.id).map((e) => arch.nodes.find((x) => x.id === e.target)?.label).filter(Boolean)
-                  return (
-                    <div key={n.id} className={cn('rounded-xl border px-3 py-2.5 text-center text-[13px] font-medium shadow-press-light', LAYER_STYLE[layer])}>
-                      {n.label}
-                      {out.length > 0 && <p className="mt-1 text-[10px] font-normal opacity-60">→ {out.join(', ')}</p>}
-                    </div>
-                  )
-                })}
-              </div>
-              {ci < cols.length - 1 && <span className="absolute top-1/2 -right-3 text-faint">›</span>}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="text-xl">{title}</h3>
-        {aside}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-const PRIORITY_TONE = { must: 'dark', should: 'indigo', could: 'neutral' } as const
-const METHOD_TONE: Record<string, string> = { GET: 'text-[#3f6b17]', POST: 'text-azure', PUT: 'text-amber', PATCH: 'text-amber', DELETE: 'text-rose' }
-
-export function MvpView({ m }: { m: MvpPlan }) {
-  return (
-    <div className="space-y-10">
-      <Card className="p-6">
-        <p className="text-[15px] text-ink-2">{m.summary}</p>
-        <div className="mt-4 flex flex-wrap gap-1.5">{m.stack.map((s) => <Badge key={s} tone="outline">{s}</Badge>)}</div>
-        <p className="mt-3 text-xs text-muted">Estimated infrastructure: {m.monthly_cost_estimate}</p>
-      </Card>
-
-      <Section title="Features">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {m.features.map((f) => (
-            <Card key={f.name} className="p-4">
-              <div className="flex items-center justify-between gap-2"><p className="font-medium">{f.name}</p><Badge tone={PRIORITY_TONE[f.priority]} className="capitalize">{f.priority}</Badge></div>
-              <p className="mt-1 text-sm text-muted">{f.description}</p>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="User stories">
-        <div className="grid gap-3 md:grid-cols-2">
-          {m.user_stories.map((s, i) => (
-            <Card key={i} className="p-4 text-sm">
-              <p><span className="text-muted">As a</span> {s.as_a}, <span className="text-muted">I want</span> {s.i_want}, <span className="text-muted">so that</span> {s.so_that}.</p>
-              <ul className="mt-3 space-y-1">{s.acceptance.map((a) => <li key={a} className="flex gap-2 text-xs text-ink-2"><CheckCircle2 className="size-3.5 shrink-0 text-leaf" />{a}</li>)}</ul>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Architecture"><ArchitectureDiagram arch={m.architecture} /></Section>
-
-      <Section title="Database schema">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {m.database_schema.map((t) => (
-            <Card key={t.table} className="overflow-hidden">
-              <p className="border-b border-line bg-canvas px-4 py-2 font-mono text-[13px] font-medium">{t.table}</p>
-              <ul className="divide-y divide-line">
-                {t.columns.map((c) => (
-                  <li key={c.name} className="flex items-center justify-between gap-2 px-4 py-1.5 font-mono text-xs">
-                    <span>{c.name}</span>
-                    <span className="text-muted">{c.type}{c.note ? ` · ${c.note}` : ''}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="APIs">
-        <Card className="divide-y divide-line">
-          {m.apis.map((a) => (
-            <div key={a.method + a.path} className="flex flex-col gap-1 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-4">
-              <span className={cn('w-16 font-mono text-xs font-medium', METHOD_TONE[a.method])}>{a.method}</span>
-              <span className="font-mono text-[13px] sm:w-64">{a.path}</span>
-              <span className="text-sm text-muted">{a.description}</span>
-            </div>
-          ))}
-        </Card>
-      </Section>
-
-      <Section title="Sprint plan">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {m.sprint_plan.map((s) => (
-            <Card key={s.sprint} className="p-4">
-              <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Sprint {s.sprint}</p>
-              <p className="mt-1 font-medium">{s.goal}</p>
-              <ul className="mt-3 space-y-1.5 text-sm text-ink-2">{s.tasks.map((t) => <li key={t} className="flex gap-2"><span className="mt-2 size-1 shrink-0 rounded-full bg-faint" />{t}</li>)}</ul>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Team requirements">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {m.team.map((t) => (
-            <Card key={t.role} className="p-4">
-              <p className="font-display text-3xl">{t.count}×</p>
-              <p className="mt-1 font-medium">{t.role}</p>
-              <p className="mt-1 text-sm text-muted">{t.why}</p>
-            </Card>
-          ))}
-        </div>
-      </Section>
     </div>
   )
 }
