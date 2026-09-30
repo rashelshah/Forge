@@ -1,0 +1,139 @@
+"""Foundry AI — agent service (FastAPI). Internal: only the Node API should call it."""
+import json
+import os
+
+from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
+
+import agents
+import boardroom
+import core
+
+app = FastAPI(title="Foundry AI agents")
+VECTOR_ERROR = None
+try:
+    core.seed_library()
+except Exception as e:  # e.g. supabase/migrations/002_pgvector.sql not applied yet
+    VECTOR_ERROR = str(e)[:300]
+    print("vector store unavailable:", VECTOR_ERROR)
+KEY = os.getenv("AI_INTERNAL_KEY")
+
+
+@app.middleware("http")
+async def internal_only(request: Request, call_next):
+    if KEY and request.url.path != "/health" and request.headers.get("x-internal-key") != KEY:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "forbidden"}, status_code=403)
+    return await call_next(request)
+
+
+@app.exception_handler(core.LLMError)
+async def llm_error(request: Request, exc: core.LLMError):
+    from fastapi.responses import JSONResponse
+    print("LLM failure:", exc)
+    busy = "429" in str(exc) or "rate" in str(exc).lower()
+    return JSONResponse(status_code=503, content={"detail": (
+        "The free AI models are at their per-minute limit — wait about a minute and try again." if busy
+        else "The AI models couldn't produce a valid answer. Please try again.")})
+
+
+@app.get("/health")
+def health():
+    return {**core.status(), "vector_error": VECTOR_ERROR}
+
+
+@app.post("/discover")
+def discover(seed: str | None = Body(None), founder: dict = Body({})):
+    return agents.discover(seed, founder)
+
+
+@app.post("/validate")
+def validate(venture: dict = Body(...), founder: dict = Body({})):
+    return agents.validate(venture, founder)
+
+
+@app.post("/boardroom")
+def board(venture: dict = Body(...), question: str = Body(...), rounds: int = Body(2),
+          validation: dict | None = Body(None), owner: str | None = Body(None)):
+    if not 1 <= rounds <= 3:
+        raise HTTPException(400, "rounds must be 1-3")
+
+    def events():
+        try:
+            for e in boardroom.run(venture, question, rounds, validation, owner):
+                yield f"data: {json.dumps(e)}\n\n"
+        except Exception as e:  # surface failures to the client instead of a dropped stream
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)[:300]})}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream")
+
+
+@app.post("/mvp")
+def mvp(venture: dict = Body(...), founder: dict = Body({})):
+    return agents.mvp(venture, founder)
+
+
+@app.post("/landing")
+def landing(venture: dict = Body(..., embed=True)):
+    return agents.landing(venture)
+
+
+@app.post("/competitors/scan")
+def scan(venture: dict = Body(...), competitor: dict = Body(...)):
+    return agents.scan_competitor(venture, competitor)
+
+
+@app.post("/monitor")
+def monitor(venture: dict = Body(..., embed=True)):
+    return agents.monitor_market(venture)
+
+
+@app.post("/experiments/analyze")
+def analyze(venture: dict = Body(...), experiment: dict = Body(...), feedback: list[str] = Body([])):
+    return agents.analyze_experiment(venture, experiment, feedback)
+
+
+@app.post("/knowledge/ingest")
+def ingest(id: str = Body(...), title: str = Body(...), text: str | None = Body(None), url: str | None = Body(None),
+           owner: str = Body(...), category: str = Body("custom")):
+    if not text and url:
+        try:
+            text = core.scrape(url)
+        except Exception as e:
+            raise HTTPException(422, f"Could not fetch {url}: {e}")
+    if not text or not text.strip():
+        raise HTTPException(422, "Document is empty")
+    return {"chunks": core.index_document(id, title, text, owner, category, url), "content": text[:20000]}
+
+
+@app.delete("/knowledge/{doc_id}")
+def delete_doc(doc_id: str):
+    core.delete_document(doc_id)
+    return {"ok": True}
+
+
+@app.post("/knowledge/search")
+def search(query: str = Body(...), owner: str | None = Body(None), k: int = Body(6)):
+    return {"results": core.search_knowledge(query, owner, k)}
+
+
+@app.post("/knowledge/ask")
+def ask(question: str = Body(...), owner: str | None = Body(None)):
+    return agents.ask_library(question, owner)
+
+
+@app.post("/memory/add")
+def memory_add(venture_id: str = Body(...), id: str = Body(...), kind: str = Body(...), title: str = Body(...), content: str = Body(...)):
+    core.remember(venture_id, id, kind, title, content)
+    return {"ok": True}
+
+
+@app.post("/memory/search")
+def memory_search(venture_id: str = Body(...), query: str = Body(...), k: int = Body(8)):
+    return {"results": core.recall(venture_id, query, k)}
+
+
+@app.delete("/memory/{venture_id}")
+def memory_forget(venture_id: str):
+    core.forget_venture(venture_id)
+    return {"ok": True}

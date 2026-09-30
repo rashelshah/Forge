@@ -1,0 +1,15 @@
+{
+  "name": "foundry-ai",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix frontend install && npm --prefix backend install && python3 -m venv ai/.venv && ai/.venv/bin/pip install -r ai/requirements.txt",
+    "dev": "concurrently -k -n ai,api,web -c magenta,blue,green \"npm:dev:ai\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:ai": "cd ai && .venv/bin/uvicorn main:app --port 8000 --reload --reload-exclude '.venv/*'",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
