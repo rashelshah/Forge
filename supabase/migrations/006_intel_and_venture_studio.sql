@@ -1,4 +1,4 @@
--- Foundry AI — Competitive Intelligence Officer + Product Studio as the venture Prototype builder.
+-- Forge AI — Competitive Intelligence Officer + Product Studio as the venture Prototype builder.
 
 -- Product Studio projects can belong to a venture: the result becomes the venture's prototype.
 alter table public.studio_projects add column if not exists venture_id uuid references public.ventures(id) on delete cascade;

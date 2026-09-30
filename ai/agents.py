@@ -40,7 +40,7 @@ def venture_text(v: dict) -> str:
 
 
 def lib_block(lib: list[dict]) -> str:
-    return core.sources_block([{"title": d["title"], "url": d.get("url") or "Foundry library", "content": d["text"][:700]} for d in lib], "K")
+    return core.sources_block([{"title": d["title"], "url": d.get("url") or "Forge library", "content": d["text"][:700]} for d in lib], "K")
 
 
 def _norm(t: str) -> str:
@@ -96,7 +96,7 @@ def discover(seed: str | None, founder: dict):
         return {"opportunities": demo.discover(topic, web), "sources_scanned": len(web), "mode": "demo"}
     out = core.structured(
         DiscoveryOut,
-        "You are Foundry's Opportunity Discovery Agent. Mine real user complaints for startup opportunities. "
+        "You are Forge's Opportunity Discovery Agent. Mine real user complaints for startup opportunities. "
         "Each opportunity must be a recurring, specific pain supported by at least one source; merge duplicates. "
         "Return 3-5 distinct opportunities ranked by pain x frequency x reachable customers. Use one consistent set of "
         "base assumptions (e.g. the same customer count) across opportunities and label estimates as assumptions. " + GROUNDING
@@ -182,7 +182,7 @@ def validate(venture: dict, founder: dict):
     else:
         res = core.structured(
             ValidationOut,
-            "You are Foundry's Validation Engine, a rigorous startup analyst. Score the venture on five dimensions. "
+            "You are Forge's Validation Engine, a rigorous startup analyst. Score the venture on five dimensions. "
             + RUBRIC + "\n" + GROUNDING + "\nSummaries and risks: " + core.PLAIN,
             f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\nVenture memory:\n"
             f"{core.context_block(mem, 'Memory')}\n\nWeb sources:\n{core.sources_block(web)}\n\nLibrary:\n{lib_block(lib)}",
@@ -391,7 +391,7 @@ def mvp(venture: dict, founder: dict, context: dict | None = None):
     ctx = f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\n{_strategy_context(context)}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}"
     product = core.structured(
         MvpProduct,
-        "You are Foundry's MVP Architect. Design the smallest product that tests the riskiest assumption, scoped for a "
+        "You are Forge's MVP Architect. Design the smallest product that tests the riskiest assumption, scoped for a "
         "6-8 week build by a lean team. Respect boardroom decisions, key risks and experiment results in memory; prefer a "
         "stack that matches the founder's skills. Keep descriptions short. Give every feature a one-sentence reason for its "
         "priority, a user_impact and an effort. Only a few features may be 'must'; be ruthless.",
@@ -399,7 +399,7 @@ def mvp(venture: dict, founder: dict, context: dict | None = None):
     )
     scope = f"\n\nMVP scope:\n{product.summary}\nFeatures: " + "; ".join(f"{f.name} ({f.priority})" for f in product.features)
     eng_prompt = (
-        "You are Foundry's MVP Architect designing the engineering blueprint for this MVP. Table and column names are "
+        "You are Forge's MVP Architect designing the engineering blueprint for this MVP. Table and column names are "
         "snake_case; API paths must operate on those tables; architecture edges reference existing node ids only.")
     strat_prompt = (
         "You are a senior product architect, startup CTO and product manager advising a founder on how to execute this MVP. "
@@ -423,7 +423,7 @@ def mvp(venture: dict, founder: dict, context: dict | None = None):
 
 # ---------------------------------------------------------------- Prototype builder (Lovable-style)
 
-PROTO_SYSTEM = r"""You are Foundry's Prototype Builder — the world's best UI engineer.
+PROTO_SYSTEM = r"""You are Forge's Prototype Builder — the world's best UI engineer.
 Generate a STUNNING, FULLY FUNCTIONAL prototype of the exact product described.
 This runs in a browser iframe with React 18 + Babel standalone. Make it look like a real, shipped product.
 
@@ -1039,7 +1039,7 @@ def scan_competitor(venture: dict, comp: dict):
                 "description": comp.get("description"), "mode": "demo"}
     out = core.structured(
         SignalsOut,
-        "You are Foundry's Competitor Intelligence Agent. Compare the previous and current snapshot of a competitor "
+        "You are Forge's Competitor Intelligence Agent. Compare the previous and current snapshot of a competitor "
         "and recent news. Report only meaningful changes (pricing, feature launches, funding, acquisitions, product "
         "updates). For each, recommend a concrete response for our venture. If this is the first snapshot, return one "
         "'product' signal summarising their positioning (severity info). Return an empty list if nothing changed. "
@@ -1061,7 +1061,7 @@ def monitor_market(venture: dict):
         return {"signals": [], "mode": core.MODE, "note": "Connect an LLM + Tavily for market, sentiment and opportunity monitoring."}
     out = core.structured(
         SignalsOut,
-        "You are Foundry's Monitoring Agent. From this week's news and community chatter, extract at most 4 signals "
+        "You are Forge's Monitoring Agent. From this week's news and community chatter, extract at most 4 signals "
         "that matter to the venture: market shifts, user sentiment, new opportunities. Cite source_url from the sources. "
         "Only include items that directly affect the venture's target customers, competitors or business model; "
         "rate relevance honestly. Generic industry news, crime or policy stories are not signals. An empty list is a "
@@ -1088,7 +1088,7 @@ def analyze_experiment(venture: dict, exp: dict, feedback: list[str]):
         return {**demo.experiment(exp, conv, feedback), "conversion": conv, "mode": "demo"}
     out = core.structured(
         ExperimentOut,
-        "You are Foundry's Experiment Analyst. Judge whether the hypothesis is supported. Under 100 visitors is "
+        "You are Forge's Experiment Analyst. Judge whether the hypothesis is supported. Under 100 visitors is "
         "inconclusive unless the effect is extreme. Pull themes only from the feedback given — never invent quotes. "
         "Recommend the next 2-3 experiments. " + core.PLAIN,
         f"{venture_text(venture)}\nExperiment: {exp['name']} ({exp.get('type')})\nHypothesis: {exp.get('hypothesis')}\n"

@@ -77,7 +77,7 @@ function Hero() {
 
 function Pricing() {
   const plans = [
-    { name: 'Free', price: '$0', note: 'For exploring ideas', features: ['3 ventures', '150 agent runs / month', 'Boardroom & validation', 'Foundry library'] },
+    { name: 'Free', price: '$0', note: 'For exploring ideas', features: ['3 ventures', '150 agent runs / month', 'Boardroom & validation', 'Forge library'] },
     { name: 'Pro', price: '$49', note: 'For active founders', features: ['25 ventures', '3,000 agent runs / month', 'Daily competitor monitoring', 'Hosted experiments', 'Private knowledge base'], hl: true },
     { name: 'Studio', price: '$199', note: 'For studios & accelerators', features: ['Unlimited ventures', '20,000 agent runs / month', 'Team workspaces', 'Priority models'] },
   ]
@@ -126,7 +126,7 @@ function Footer() {
       <div className="mx-auto grid max-w-[1120px] gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Logo />
-          <p className="mt-4 max-w-xs text-sm text-muted">Foundry AI — the AI venture studio for startup discovery, validation and execution.</p>
+          <p className="mt-4 max-w-xs text-sm text-muted">Forge AI — the AI venture studio for startup discovery, validation and execution.</p>
           <p className="mt-6 flex items-center gap-2 text-xs text-muted"><Lock className="size-3.5" />Row-level security · Your data never trains models</p>
         </div>
         {Object.entries(cols).map(([h, items]) => (
@@ -137,7 +137,7 @@ function Footer() {
         ))}
       </div>
       <div className="mx-auto mt-14 flex max-w-[1120px] flex-col justify-between gap-2 border-t border-line pt-6 text-xs text-faint sm:flex-row">
-        <span>© {new Date().getFullYear()} Foundry AI</span>
+        <span>© {new Date().getFullYear()} Forge AI</span>
         <span>Built with LangGraph · pgvector · Supabase</span>
       </div>
     </footer>

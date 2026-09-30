@@ -177,7 +177,7 @@ def profile_for(comp: dict, venture: dict, mvp: list[str]) -> dict:
     prev_metrics = "; ".join(f"{m['name']}={m['value']}" for m in (history[-1]["metrics"] if history else []))
     p: Profile = _retry(lambda: core.structured(
         Profile,
-        "You are Foundry's Competitive Intelligence Officer analysing ONE competitor for a founder. Decide what matters for OUR venture: "
+        "You are Forge's Competitive Intelligence Officer analysing ONE competitor for a founder. Decide what matters for OUR venture: "
         "be specific, evidence-based and strategic, never generic. " + RULES + " " + core.PLAIN,
         f"{agents.venture_text(venture)}\nOur MVP features: {', '.join(mvp) or 'not defined yet'}\n\n"
         f"Competitor: {comp['name']} ({comp.get('url') or 'no website known'})\nFounder notes: {comp.get('description') or 'none'}\n"
@@ -240,7 +240,7 @@ def run(venture: dict, competitors: list[dict], mvp_features: list[str], recent_
         "changes_since_we_started_tracking": r["changes"]} for r in results]
     s: Synthesis = _retry(lambda: core.structured(
         Synthesis,
-        "You are Foundry's Competitive Intelligence Officer advising a founder. You answer: what should we do next based on competitor "
+        "You are Forge's Competitive Intelligence Officer advising a founder. You answer: what should we do next based on competitor "
         "activity? Every action needs a reason, expected impact, honest confidence and evidence copied from the profiles below (competitor "
         "name, the fact, and its source_url when it has one). Prefer decisions over observations. Choose map axes that separate us "
         "from the pack and place every competitor and 'us' on them. " + RULES + " " + core.PLAIN,

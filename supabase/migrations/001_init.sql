@@ -1,4 +1,4 @@
--- Foundry AI — core schema
+-- Forge AI — core schema
 create extension if not exists pgcrypto;
 
 -- Profiles mirror auth.users (created by trigger below)
@@ -82,7 +82,7 @@ create table if not exists public.agent_runs (
 
 create table if not exists public.knowledge_documents (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid references public.users(id) on delete cascade, -- null = Foundry library (shared)
+  user_id uuid references public.users(id) on delete cascade, -- null = Forge library (shared)
   title text not null,
   category text not null default 'custom',
   source text,

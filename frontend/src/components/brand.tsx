@@ -21,11 +21,13 @@ export function Spark({ className, gradient = true }: { className?: string; grad
 
 export function Logo({ className, to = '/' }: { className?: string; to?: string }) {
   return (
-    <Link to={to} className={cn('flex items-center gap-2 text-ink', className)} aria-label="Foundry AI home">
-      <span className="grid size-7 place-items-center rounded-[9px] bg-ink">
-        <Spark className="size-4" />
+    <Link to={to} className={cn('flex items-center gap-2 text-ink', className)} aria-label="Forge AI home">
+      <span 
+        className="text-[34px] leading-none font-semibold tracking-[-0.06em]"
+        style={{ fontFamily: '"Outfit", sans-serif' }}
+      >
+        forge
       </span>
-      <span className="font-display text-[22px] leading-none font-semibold tracking-[-0.04em]">foundry</span>
     </Link>
   )
 }

@@ -1,4 +1,4 @@
--- Foundry AI — Go-To-Market Studio: brand, positioning, messaging, launch assets, growth plan and investor deck for a venture.
+-- Forge AI — Go-To-Market Studio: brand, positioning, messaging, launch assets, growth plan and investor deck for a venture.
 create table if not exists public.gtm_runs (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,

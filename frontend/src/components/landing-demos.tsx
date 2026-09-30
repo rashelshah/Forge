@@ -129,7 +129,7 @@ export function TryBoardroom() {
 
   return (
     <section id="try" className="px-4 py-24 sm:px-6">
-      <SectionTitle eyebrow="Try it" title={<>Watch an idea get <span className="text-saffron">cross-examined</span></>} sub="Pick an idea and convene the board. Foundry scores it on evidence, then six AI advisors debate it — and sometimes the answer is no." />
+      <SectionTitle eyebrow="Try it" title={<>Watch an idea get <span className="text-saffron">cross-examined</span></>} sub="Pick an idea and convene the board. Forge scores it on evidence, then six AI advisors debate it — and sometimes the answer is no." />
       <motion.div {...fade} className="relative mx-auto mt-12 max-w-[1040px]">
         <div className="absolute -inset-x-6 -inset-y-4 -z-10 rounded-[44px] bg-[radial-gradient(60%_80%_at_15%_0%,rgb(236_138_68/.18),transparent_70%),radial-gradient(60%_90%_at_90%_100%,rgb(165_187_252/.42),transparent_70%)] blur-2xl" />
         <div className="relative overflow-hidden rounded-[28px] border border-line bg-white shadow-float">

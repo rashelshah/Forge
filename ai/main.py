@@ -1,4 +1,4 @@
-"""Foundry AI — agent service (FastAPI). Internal: only the Node API should call it."""
+"""Forge AI — agent service (FastAPI). Internal: only the Node API should call it."""
 import json
 import os
 import threading
@@ -15,7 +15,7 @@ import gtm
 import intel
 import studio
 
-app = FastAPI(title="Foundry AI agents")
+app = FastAPI(title="Forge AI agents")
 VECTOR_ERROR = None
 try:
     core.seed_library()

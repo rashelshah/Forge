@@ -1,4 +1,4 @@
--- Foundry AI — Design Intelligence Knowledge Base.
+-- Forge AI — Design Intelligence Knowledge Base.
 -- Analysed SaaS products (screenshots + structured design analysis). Embeddings live in Qdrant.
 create table if not exists public.design_references (
   id uuid primary key default gen_random_uuid(),

@@ -1,8 +1,8 @@
--- Foundry AI — vector store on pgvector (replaces Qdrant).
+-- Forge AI — vector store on pgvector (replaces Qdrant).
 -- Embeddings: BAAI/bge-small-en-v1.5 (384 dims), computed by the AI service.
 create extension if not exists vector with schema extensions;
 
--- RAG chunks for the Foundry library (owner = 'system') and each user's documents (owner = user id).
+-- RAG chunks for the Forge library (owner = 'system') and each user's documents (owner = user id).
 create table if not exists public.knowledge_chunks (
   id uuid primary key,
   doc_id uuid not null,

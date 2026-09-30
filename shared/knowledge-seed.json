@@ -3,7 +3,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000001",
     "title": "The Mom Test — asking questions that can't lie to you",
     "category": "The Mom Test",
-    "source": "Foundry library summary of Rob Fitzpatrick, The Mom Test",
+    "source": "Forge library summary of Rob Fitzpatrick, The Mom Test",
     "url": "https://www.momtestbook.com",
     "content": "Customer conversations fail when founders pitch instead of learn. People are polite: if you describe your idea and ask whether they would use it, they will say yes to protect your feelings. The fix is to talk about their life, not your idea. Ask about specific past behaviour (the last time the problem happened, what they did about it, what it cost them) rather than hypotheticals about the future. Compliments, generic claims ('I usually', 'I would') and feature requests are weak data; commitments are strong data. Commitment currencies are time (a follow-up meeting, a trial), reputation (an introduction to a boss or peer) and money (a pre-order, a letter of intent). A meeting that ends with no commitment and a warm feeling is a failed meeting. Signals that a problem is real: the person has already tried to solve it, spent money or built a spreadsheet workaround, and can describe the last occurrence in detail. Keep conversations casual, keep them short, and go in with the three most important things you want to learn."
   },
@@ -11,7 +11,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000002",
     "title": "Lean Startup — build, measure, learn",
     "category": "Lean Startup",
-    "source": "Foundry library summary of Eric Ries, The Lean Startup",
+    "source": "Forge library summary of Eric Ries, The Lean Startup",
     "url": "https://theleanstartup.com",
     "content": "A startup is an institution designed to create a new product under conditions of extreme uncertainty, so its real unit of progress is validated learning rather than features shipped. Every plan rests on two leap-of-faith assumptions: the value hypothesis (customers get value from this) and the growth hypothesis (new customers will discover it). The build-measure-learn loop should be run as fast as possible: build the smallest experiment (a minimum viable product) that tests the riskiest assumption, measure real behaviour with actionable metrics rather than vanity metrics such as total signups, and decide to persevere or pivot. Innovation accounting sets a baseline, tunes the engine toward an ideal, and then makes the pivot decision explicit. Common pivot types include zoom-in (one feature becomes the product), zoom-out, customer segment, customer need, platform, business architecture, value capture, engine of growth, channel and technology pivots. Cohort analysis and split tests are preferred over aggregate dashboards."
   },
@@ -19,7 +19,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000003",
     "title": "Zero to One — monopoly, secrets and the power law",
     "category": "Zero to One",
-    "source": "Foundry library summary of Peter Thiel, Zero to One",
+    "source": "Forge library summary of Peter Thiel, Zero to One",
     "url": "https://en.wikipedia.org/wiki/Zero_to_One",
     "content": "Competition erodes profits; durable companies build a monopoly in a small market and then expand. Characteristics of defensible businesses: proprietary technology that is roughly ten times better than the closest substitute, network effects, economies of scale, and brand. Start with a market small enough to dominate, then grow in concentric circles. Great companies are built on secrets: important truths that few people agree with. Founders should be able to answer seven questions: engineering (breakthrough, not incremental), timing, monopoly (big share of a small market), people, distribution, durability over the next decade, and the secret. Distribution is systematically underrated; a product that is not sold is not a business. Venture returns follow a power law, so a single company can outperform an entire portfolio, which pushes investors toward businesses that could become very large."
   },
@@ -27,7 +27,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000004",
     "title": "Paul Graham — how to get startup ideas",
     "category": "Paul Graham essays",
-    "source": "Foundry library summary of the essay 'How to Get Startup Ideas'",
+    "source": "Forge library summary of the essay 'How to Get Startup Ideas'",
     "url": "https://paulgraham.com/startupideas.html",
     "content": "The best startup ideas are noticed rather than invented: they come from problems the founders themselves have. Good ideas tend to be something the founders want, that they can build, and that few others realise is worth doing. A strong early signal is a small number of people who want the product urgently, a well rather than a shallow puddle, rather than many people who want it a little. Ideas that sound bad or unsexy (schlep blindness) are often good because others avoid them. Made-up ideas that merely sound plausible, sitcom startup ideas, are dangerous because nobody actually has the problem. Live in the future and build what is missing. Useful questions: who wants this right now, who wants it so much they will use a crappy first version, and what is the path from that initial group to a large market."
   },
@@ -35,7 +35,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000005",
     "title": "Paul Graham — do things that don't scale",
     "category": "Paul Graham essays",
-    "source": "Foundry library summary of the essay 'Do Things That Don't Scale'",
+    "source": "Forge library summary of the essay 'Do Things That Don't Scale'",
     "url": "https://paulgraham.com/ds.html",
     "content": "Startups do not take off on their own; founders make them take off. The most common manual work early on is recruiting users one at a time: going out and getting them rather than waiting for them to come. Founders should make early users extremely happy, even through unscalable delightful service, because a small group of users who love the product is worth more than a large group of lukewarm ones. Consulting-style work for a single customer can reveal what a general product should be. Narrow launches in a contained market (a single campus, a single city, a single vertical) make it easier to reach critical mass. Doing things manually that software will later automate is a way to learn the problem deeply. The founder mindset should be to work on growth deliberately every week rather than hoping for a big launch."
   },
@@ -43,7 +43,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000006",
     "title": "Y Combinator — startup advice essentials",
     "category": "YC",
-    "source": "Foundry library summary of commonly shared Y Combinator advice",
+    "source": "Forge library summary of commonly shared Y Combinator advice",
     "url": "https://www.ycombinator.com/library",
     "content": "Core YC advice: launch now, because you learn nothing before real users touch the product. Build something people want and talk to users constantly. Do things that do not scale. Find the ninety-ten solution that delivers most of the value with a fraction of the work. Choose one metric that matters (usually revenue or active users) and aim for a weekly growth rate; five to seven percent week over week is considered good early on. Ignore fake work such as fundraising theatre, conferences and partnerships that do not move the metric. Solve a hair-on-fire problem for a specific user. Default alive versus default dead: know whether current growth and costs reach profitability before cash runs out. Keep burn low. Founders should write the first code and make the first sales themselves."
   },
@@ -51,7 +51,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000007",
     "title": "Startup School — evaluating a startup idea",
     "category": "Startup School",
-    "source": "Foundry library summary of Startup School idea-evaluation frameworks",
+    "source": "Forge library summary of Startup School idea-evaluation frameworks",
     "url": "https://www.startupschool.org",
     "content": "A practical checklist for evaluating ideas: founder-market fit (why are you the right team), market size today and in ten years, problem acuteness (how painful, how frequent), competition (existing solutions and why they are insufficient), whether you personally want the product, whether it has only recently become possible or necessary (a change in technology, regulation or behaviour), whether there are proxy businesses that prove the market, whether it is an idea you would work on for years, whether it can scale, and whether the idea space is good (a space rich in adjacent ideas if the first one fails). Red flags: solutions looking for problems, tarpit ideas that many people have tried and failed at for structural reasons, and waiting for the perfect idea instead of starting."
   },
@@ -59,7 +59,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000008",
     "title": "Startup Playbook — product, market, execution",
     "category": "Startup Playbook",
-    "source": "Foundry library summary of Sam Altman, Startup Playbook",
+    "source": "Forge library summary of Sam Altman, Startup Playbook",
     "url": "https://playbook.samaltman.com",
     "content": "The first thing to get right is a great product; everything else, including growth, fundraising and hiring, is easier afterwards. Aim for users who love the product and tell their friends, which shows up as organic growth. A market that will be large in ten years matters more than one that is large today, because it leaves room to be early. Founders should be determined, formidable and articulate about the idea in a single sentence. Execution means focus and intensity: pick the two or three most important things each week and ignore the rest. Hire slowly and deliberately, fire quickly. Growth should come from a product good enough to spread, supported by a repeatable sales or marketing channel. Competitors rarely kill startups; startups usually die by suicide, running out of money or motivation."
   },
@@ -67,7 +67,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000009",
     "title": "Failure postmortems — why startups die",
     "category": "Failure postmortems",
-    "source": "Foundry library synthesis of public startup postmortem analyses (e.g. CB Insights reports)",
+    "source": "Forge library synthesis of public startup postmortem analyses (e.g. CB Insights reports)",
     "url": "https://www.cbinsights.com/research/report/startup-failure-reasons-top/",
     "content": "Analyses of public startup postmortems repeatedly surface the same causes. The most common is building something without market need: the problem was not painful enough for customers to change behaviour or pay. Next are running out of cash or failing to raise, being out-competed, flawed business models (unit economics that never work, customer acquisition cost above lifetime value), regulatory and legal problems, pricing and cost issues, team misalignment, poor product timing (too early or too late), a weak product, loss of focus, and burnout. Postmortems frequently mention ignoring early negative signals, scaling spend before retention was proven, relying on a single distribution channel or platform, and underestimating the switching cost that keeps customers with incumbents. The lesson for early teams is to test demand and willingness to pay before building, track retention cohorts, and keep burn aligned with evidence."
   },
@@ -75,7 +75,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000010",
     "title": "Failure postmortem patterns — marketplaces and consumer apps",
     "category": "Failure postmortems",
-    "source": "Foundry library synthesis of marketplace and consumer postmortems",
+    "source": "Forge library synthesis of marketplace and consumer postmortems",
     "url": null,
     "content": "Marketplaces fail most often on liquidity: not enough supply to satisfy demand in any single market, so neither side sticks around. Launching everywhere at once spreads supply thin; winning marketplaces usually dominate one city, campus or category first. Disintermediation (buyers and sellers taking the transaction offline) kills take rates when the marketplace adds little value after the first match. Subsidised growth hides weak unit economics until subsidies stop. Consumer apps fail on retention: strong launches followed by steep cohort decay, because the product was a novelty rather than a habit. Student-focused products face seasonal usage, graduation churn every year and low willingness to pay, so they often monetise through the other side of the market (employers, brands, universities). Trust and safety costs are regularly underestimated in peer-to-peer products."
   },
@@ -83,7 +83,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000011",
     "title": "SaaS business models and unit economics",
     "category": "Business model examples",
-    "source": "Foundry library summary of standard SaaS metrics",
+    "source": "Forge library summary of standard SaaS metrics",
     "url": null,
     "content": "Healthy SaaS businesses are judged on a handful of unit economics. Lifetime value to customer acquisition cost ratio should be at least three to one. CAC payback period under twelve months is strong for SMB products; enterprise products tolerate longer paybacks with larger contracts. Gross margin for software is typically seventy to eighty percent or more; AI-heavy products may have lower margins because of inference costs, which must be priced in. Net revenue retention above one hundred percent means expansion from existing customers outweighs churn. Monthly logo churn for SMB tools is often two to five percent; lower is better. Common pricing models: per seat, usage based, tiered feature plans, and hybrid platform fee plus usage. Product-led growth relies on self-serve onboarding and free tiers, while sales-led growth relies on outbound and demos for larger contract values."
   },
@@ -91,7 +91,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000012",
     "title": "Marketplace and platform business model examples",
     "category": "Business model examples",
-    "source": "Foundry library summary of marketplace economics",
+    "source": "Forge library summary of marketplace economics",
     "url": null,
     "content": "Marketplaces earn revenue through take rates (commission on transactions), listing fees, subscriptions for sellers, promoted placements and payments or financial services. Typical take rates range from roughly five to thirty percent depending on how much value the platform adds (trust, payments, logistics, demand generation). Managed marketplaces charge more because they guarantee quality. Key metrics are gross merchandise value, liquidity (percentage of listings that transact), repeat purchase rate and the balance of supply and demand in each local market. Network effects are usually local rather than global, which means each new city or category must be won separately. Chicken-and-egg problems are typically solved by seeding one side manually, focusing on a narrow niche, or offering single-player utility to one side before the network exists."
   },
@@ -99,7 +99,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000013",
     "title": "Open startups — lessons from public revenue dashboards",
     "category": "Open Startups",
-    "source": "Foundry library synthesis of indie founders publishing open metrics",
+    "source": "Forge library synthesis of indie founders publishing open metrics",
     "url": null,
     "content": "Founders who publish revenue and traffic openly show common trajectories. Most bootstrapped SaaS products take twelve to twenty-four months to reach meaningful recurring revenue; growth is slow and compounding rather than explosive. Products that succeed usually solve a narrow problem for a specific audience the founder already has access to. SEO and content take six to twelve months to pay off but become the largest acquisition channel for many small SaaS companies. Pricing increases rarely cause the churn founders fear and are one of the highest-leverage changes available. Annual plans improve cash flow. Building in public creates distribution and trust, but audience does not automatically convert into customers unless the product fits that audience."
   },
@@ -107,7 +107,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000014",
     "title": "Product Hunt launches — what drives a strong launch",
     "category": "Product Hunt",
-    "source": "Foundry library summary of Product Hunt launch practices",
+    "source": "Forge library summary of Product Hunt launch practices",
     "url": "https://www.producthunt.com",
     "content": "Product Hunt launches work best as a distribution spike for products with a clear, visual, instantly understandable value proposition. Strong launches prepare a waitlist or community in advance, have a crisp tagline, a short demo video or GIF, and an active maker present in the comments all day. The launch is a moment of feedback and credibility rather than a durable acquisition channel: traffic usually drops sharply within days, so the goal is to convert visitors into email subscribers or trial users. Reviews and comments on Product Hunt are a useful source of real user sentiment about competitors, including missing features and complaints."
   },
@@ -115,7 +115,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000015",
     "title": "SaaS case study patterns — how breakout products grew",
     "category": "SaaS case studies",
-    "source": "Foundry library synthesis of public SaaS growth stories",
+    "source": "Forge library synthesis of public SaaS growth stories",
     "url": null,
     "content": "Breakout SaaS products share recurring patterns. Many started with a single painful workflow and expanded into adjacent jobs once they owned it. Collaborative products grew virally inside companies as users invited teammates, which made bottom-up adoption cheaper than top-down sales. Freemium worked when the free tier delivered real value and the upgrade trigger was tied to team size or usage. Integrations with widely used tools created distribution and switching costs. Several companies won against incumbents by being dramatically simpler, faster or better designed for a neglected segment. Vertical SaaS succeeded by embedding payments or other financial services. The failure mode on the other side was horizontal tools with no wedge competing on features against well-funded incumbents."
   },
@@ -123,7 +123,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000016",
     "title": "Public startup reports — market sizing done honestly",
     "category": "Public startup reports",
-    "source": "Foundry library summary of market sizing practice",
+    "source": "Forge library summary of market sizing practice",
     "url": null,
     "content": "Top-down market sizing (a percentage of a large analyst number) is weak evidence. Bottom-up sizing is more credible: number of target customers multiplied by realistic annual contract value. Separate total addressable market (everyone who could conceivably buy), serviceable addressable market (those your product and channels can reach) and serviceable obtainable market (what you can realistically win in three to five years). Investors look for markets that are large now or growing fast because of a clear driver. Proxy evidence, such as existing companies making money from the same customers, spending on workarounds, search volume and job postings, often says more than analyst reports. Always state assumptions next to the number so it can be challenged."
   },
@@ -131,7 +131,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000017",
     "title": "Distribution and go-to-market channels",
     "category": "Startup Playbook",
-    "source": "Foundry library synthesis of traction channel frameworks",
+    "source": "Forge library synthesis of traction channel frameworks",
     "url": null,
     "content": "Most startups have one channel that dominates their growth; the job early on is to find it quickly by running cheap tests across several candidates (SEO, content, communities, paid search, paid social, outbound sales, partnerships, marketplaces and app stores, referral loops, events, PR). Pick the three most promising channels, run small experiments with clear targets, then double down on the one that works. Channel-product fit matters as much as product-market fit: a low-price self-serve product cannot support enterprise sales costs, and a high-touch enterprise product will not spread through viral loops. Customer acquisition cost must stay well below lifetime value in each channel. Relying on a single platform (one app store, one social network, one search engine) is a concentration risk."
   },
@@ -139,7 +139,7 @@
     "id": "5d0b1f0e-0001-4a00-9000-000000000018",
     "title": "Defensibility — moats for software and AI products",
     "category": "Zero to One",
-    "source": "Foundry library synthesis of moat frameworks",
+    "source": "Forge library synthesis of moat frameworks",
     "url": null,
     "content": "Software moats come from network effects (direct, data, marketplace), switching costs (embedded workflows, integrations, stored data), scale economies, brand, proprietary data, and counter-positioning against incumbents whose business model prevents them from copying you. AI products built on commodity foundation models are easy to copy at the model layer; defensibility has to come from proprietary data and feedback loops, deep workflow integration, distribution, and domain-specific evaluation and trust. A useful test: if a well-funded competitor copied the product tomorrow, what would still make customers stay? Early startups rarely have a moat; they need a credible path to one and speed in the meantime."
   }

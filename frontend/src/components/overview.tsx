@@ -80,7 +80,7 @@ function FounderBrief({ c, refreshing, onRefresh }: { c: VentureCommand; refresh
 
 function Actions({ c, ventureId, stage }: { c: VentureCommand; ventureId: string; stage: string }) {
   const [, setParams] = useSearchParams()
-  const key = `foundry:actions-done:${ventureId}`
+  const key = `forge:actions-done:${ventureId}`
   const [done, setDone] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(key) ?? '[]') } catch { return [] } })
   const toggle = (t: string) => setDone((d) => {
     const next = d.includes(t) ? d.filter((x) => x !== t) : [...d, t]

@@ -1,4 +1,4 @@
--- Foundry AI — Product Studio: an autonomous AI product team that turns an idea into a reviewed, refined prototype.
+-- Forge AI — Product Studio: an autonomous AI product team that turns an idea into a reviewed, refined prototype.
 create table if not exists public.studio_projects (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,

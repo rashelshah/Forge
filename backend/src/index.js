@@ -27,7 +27,7 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.status ? err.message : 'Something went wrong' })
 })
 
-// Foundry library rows (the AI service indexes the same seed file into pgvector).
+// Forge library rows (the AI service indexes the same seed file into pgvector).
 const seed = JSON.parse(fs.readFileSync(new URL('../../shared/knowledge-seed.json', import.meta.url), 'utf8'))
 for (const d of seed) {
   if (!(await db.get('knowledge_documents', d.id))) {
@@ -47,4 +47,4 @@ setInterval(async () => {
   }
 }, DAY)
 
-app.listen(PORT, () => console.log(`Foundry API on :${PORT} (db: ${DB_MODE})`))
+app.listen(PORT, () => console.log(`Forge API on :${PORT} (db: ${DB_MODE})`))

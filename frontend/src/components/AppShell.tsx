@@ -89,7 +89,7 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
     <div className="flex h-full flex-col">
       <div className={cn('flex items-center', collapsed ? 'h-[88px] flex-col justify-center gap-2' : 'h-16 justify-between pr-3 pl-5')}>
         {collapsed
-          ? <NavLink to="/app" aria-label="Foundry AI home" className="grid size-9 place-items-center rounded-[11px] bg-ink"><Spark className="size-[18px]" /></NavLink>
+          ? <NavLink to="/app" aria-label="Forge AI home" className="grid size-9 place-items-center rounded-[11px] bg-ink"><Spark className="size-[18px]" /></NavLink>
           : <Logo to="/app" />}
         {onToggle && (
           <button onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -141,10 +141,10 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
 export function AppShell() {
   const [mobile, setMobile] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('foundry:sidebar') === 'collapsed' } catch { return false } })
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('forge:sidebar') === 'collapsed' } catch { return false } })
   const loc = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
-  const toggle = () => setCollapsed((c) => { try { localStorage.setItem('foundry:sidebar', c ? 'expanded' : 'collapsed') } catch { /* private mode */ } return !c })
+  const toggle = () => setCollapsed((c) => { try { localStorage.setItem('forge:sidebar', c ? 'expanded' : 'collapsed') } catch { /* private mode */ } return !c })
   const style = { '--sbw': collapsed ? '5rem' : '16rem' } as React.CSSProperties
   return (
     <div className="relative min-h-screen bg-canvas transition-[padding] duration-200 lg:pl-[var(--sbw)]" style={style}>

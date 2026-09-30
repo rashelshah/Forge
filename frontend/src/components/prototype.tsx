@@ -18,9 +18,9 @@ import { ago, cn } from '@/lib/utils'
 // The prototype runs in a sandboxed iframe with an opaque origin: generated code can't touch this app.
 // Sandboxed frames can't use localStorage, so give it an in-memory stand-in, and report runtime errors to us.
 const SHIM = `<script>try{window.localStorage.getItem('x')}catch(e){var __m={};Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem:function(k){return k in __m?__m[k]:null},setItem:function(k,v){__m[k]=String(v)},removeItem:function(k){delete __m[k]},clear:function(){__m={}},key:function(i){return Object.keys(__m)[i]||null},get length(){return Object.keys(__m).length}}})}
-window.addEventListener('error',function(e){var m=String(e.message||'');if(!m||m==='Script error.')return;parent.postMessage({__foundry:'error',message:m},'*')});
-window.addEventListener('unhandledrejection',function(e){parent.postMessage({__foundry:'error',message:'Unhandled promise rejection: '+String(e.reason)},'*')});
-function __qa(){var t=(document.body&&document.body.innerText)||'';var m=t.match(/\\b(undefined|NaN)\\b|\\[object Object\\]/);if(m)parent.postMessage({__foundry:'error',message:'The '+(location.hash||'#/home')+' screen shows "'+m[0]+'" where a value should be — a field is missing from the data or miscalculated'},'*')}
+window.addEventListener('error',function(e){var m=String(e.message||'');if(!m||m==='Script error.')return;parent.postMessage({__forge:'error',message:m},'*')});
+window.addEventListener('unhandledrejection',function(e){parent.postMessage({__forge:'error',message:'Unhandled promise rejection: '+String(e.reason)},'*')});
+function __qa(){var t=(document.body&&document.body.innerText)||'';var m=t.match(/\\b(undefined|NaN)\\b|\\[object Object\\]/);if(m)parent.postMessage({__forge:'error',message:'The '+(location.hash||'#/home')+' screen shows "'+m[0]+'" where a value should be — a field is missing from the data or miscalculated'},'*')}
 window.addEventListener('load',function(){setTimeout(__qa,700)});window.addEventListener('hashchange',function(){setTimeout(__qa,400)});</script>`
 const withShim = (html: string) => (/<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => m + SHIM) : SHIM + html)
 
@@ -41,7 +41,7 @@ function PrototypeFrame({ html, width = 1280, height = 720, onError }: { html: s
   useEffect(() => {
     if (!onError) return
     const on = (e: MessageEvent) => {
-      if (e.source === ref.current?.contentWindow && e.data?.__foundry === 'error') onError(String(e.data.message).slice(0, 400))
+      if (e.source === ref.current?.contentWindow && e.data?.__forge === 'error') onError(String(e.data.message).slice(0, 400))
     }
     window.addEventListener('message', on)
     return () => window.removeEventListener('message', on)

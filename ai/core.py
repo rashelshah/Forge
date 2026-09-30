@@ -350,7 +350,7 @@ def forget_venture(venture_id: str):
 
 
 def seed_library():
-    """Index the shared Foundry library once."""
+    """Index the shared Forge library once."""
     if PGVECTOR:
         if _rest("GET", "knowledge_chunks?owner=eq.system&select=id&limit=1"):
             return

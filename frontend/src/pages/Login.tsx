@@ -49,7 +49,7 @@ export default function Login() {
       <div className="mt-14 w-full max-w-[420px] text-center">
         <Ornament className="mx-auto w-[130px]" />
         <div className="mt-5"><Eyebrow>{mode === 'signin' ? 'Welcome back, founder' : 'Open your venture studio'}</Eyebrow></div>
-        <h1 className="mt-5 text-[40px] leading-tight font-[425]">{mode === 'signin' ? 'Log in to Foundry' : 'Create your account'}</h1>
+        <h1 className="mt-5 text-[40px] leading-tight font-[425]">{mode === 'signin' ? 'Log in to Forge' : 'Create your account'}</h1>
       </div>
 
       <div className="mt-8 w-full max-w-[420px] rounded-[20px] border border-line bg-white/90 p-7 shadow-float backdrop-blur">
@@ -74,7 +74,7 @@ export default function Login() {
             <Button type="submit" className="w-full" loading={busy}>{mode === 'signin' ? 'Log in' : 'Create account'}</Button>
             {mode === 'signin' && <Button type="button" variant="light" className="w-full" onClick={magicLink} disabled={busy}>Email me a magic link</Button>}
             <p className="pt-1 text-center text-sm text-muted">
-              {mode === 'signin' ? 'New to Foundry? ' : 'Already have an account? '}
+              {mode === 'signin' ? 'New to Forge? ' : 'Already have an account? '}
               <button type="button" className="font-medium text-azure hover:underline cursor-pointer" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
                 {mode === 'signin' ? 'Create an account' : 'Log in'}
               </button>

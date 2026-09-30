@@ -1,5 +1,5 @@
 {
-  "name": "foundry-ai",
+  "name": "forge-ai",
   "private": true,
   "scripts": {
     "setup": "npm --prefix frontend install && npm --prefix backend install && python3 -m venv ai/.venv && ai/.venv/bin/pip install -r ai/requirements.txt && ai/.venv/bin/playwright install chromium",

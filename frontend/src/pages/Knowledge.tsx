@@ -22,7 +22,7 @@ function AddDoc({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boole
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>Add to knowledge base</DialogTitle>
-        <DialogDescription>Documents are chunked, embedded into Supabase pgvector and retrieved by every agent alongside the Foundry library.</DialogDescription>
+        <DialogDescription>Documents are chunked, embedded into Supabase pgvector and retrieved by every agent alongside the Forge library.</DialogDescription>
         <form className="mt-5 space-y-4" onSubmit={(e) => { e.preventDefault(); add.mutate(undefined, { onSuccess: () => { onOpenChange(false); setF({ title: '', category: 'Playbook', url: '', text: '' }) } }) }}>
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_160px]">
             <div><Label htmlFor="kt">Title</Label><Input id="kt" required value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Our pricing research" /></div>
@@ -67,7 +67,7 @@ export default function Knowledge() {
 
   return (
     <>
-      <PageHeader eyebrow="Startup intelligence RAG" title="Knowledge Base" description="The Foundry library of startup wisdom plus your own documents — retrieved by every agent to ground its reasoning."
+      <PageHeader eyebrow="Startup intelligence RAG" title="Knowledge Base" description="The Forge library of startup wisdom plus your own documents — retrieved by every agent to ground its reasoning."
         actions={<Button onClick={() => setOpen(true)}><Plus />Add document</Button>} />
 
       <Card className="relative isolate mb-8 overflow-hidden p-6">

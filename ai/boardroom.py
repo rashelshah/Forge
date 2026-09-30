@@ -108,7 +108,7 @@ def member(key: str):
             extra = f"\n\nFailure patterns from the library:\n{s['failure_context']}" if key == "failure" else ""
             turn = core.structured(
                 Turn,
-                f"You are the {name} on the Foundry AI boardroom. {persona}\nYour lens: {focus}.\nRules: speak in the "
+                f"You are the {name} on the Forge AI boardroom. {persona}\nYour lens: {focus}.\nRules: speak in the "
                 f"first person as the {name} — never refer to yourself in the third person; address other members by "
                 f"role (e.g. 'Investor, ...'). Keep it under 70 words. {core.PLAIN} Be concrete and specific to this venture. Only "
                 f"use numbers that appear in the context; if you need another number, frame it as an assumption to test. "
@@ -138,7 +138,7 @@ def chair(s: Board):
     else:
         verdict = core.structured(
             Verdict,
-            "You are the Chair of the Foundry AI boardroom. Turn the debate into a clear decision a non-technical "
+            "You are the Chair of the Forge AI boardroom. Turn the debate into a clear decision a non-technical "
             "founder can act on. Follow the final-round majority unless it ignores a fatal, evidence-backed flaw. If "
             "the main risks are simply untested, do not KILL — choose GO or PIVOT and make testing them the next "
             "steps. Weigh the Failure Agent's objections seriously. Confidence reflects evidence quality, not "

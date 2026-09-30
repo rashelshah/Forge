@@ -10,7 +10,7 @@ export class HttpError extends Error {
 
 // ---------------------------------------------------------------- auth
 
-const DEMO_USER = { id: '00000000-0000-4000-8000-000000000001', email: 'founder@foundry.local', full_name: 'Demo Founder' }
+const DEMO_USER = { id: '00000000-0000-4000-8000-000000000001', email: 'founder@forge.local', full_name: 'Demo Founder' }
 
 async function ensureUser({ id, email, full_name }) {
   return (await db.get('users', id)) ?? db.insert('users', {

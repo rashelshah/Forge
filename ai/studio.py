@@ -456,7 +456,7 @@ def forget(project_id: str):
 
 # ---------------------------------------------------------------- agent prompts
 
-STUDIO = ("You are part of Foundry's autonomous product team building a startup-quality SaaS prototype — the bar is products like Linear, "
+STUDIO = ("You are part of Forge's autonomous product team building a startup-quality SaaS prototype — the bar is products like Linear, "
           "Stripe, Notion, Ramp, Mercury, Vercel, Perplexity and Lovable. Everything you produce is specific to THIS product and its "
           "audience: no generic SaaS filler, no template thinking. Be concrete enough that the next specialist can act on your output without asking questions.")
 
@@ -468,7 +468,7 @@ UX_ARCHITECT = (STUDIO + "\n\nROLE: UX Architect. From the product spec design t
                 "never a dashboard of generic stat cards (Users/Revenue/Growth) unless the product is analytics. Every screen defines its sections, key "
                 "components, primary CTA and its empty, loading and error states in the product's own language. Routes are lowercase kebab-case like '/pipeline'. "
                 "Navigation items must point at real screen routes and use valid lucide icon names.")
-RESEARCHER = (STUDIO + "\n\nROLE: Design Researcher. You are given the product spec and real analyses of best-in-class SaaS products from the Foundry Design "
+RESEARCHER = (STUDIO + "\n\nROLE: Design Researcher. You are given the product spec and real analyses of best-in-class SaaS products from the Forge Design "
               "Intelligence knowledge base. Synthesize what to borrow — landing, dashboard, onboarding and component patterns — cite the reference products "
               "by name, say exactly what to take from each, and what to avoid. Only reference products that appear in the provided data.")
 DESIGNER = (STUDIO + "\n\nROLE: Product Designer. Create a distinctive visual identity for this product from the UX blueprint and design research. Avoid the "
@@ -638,7 +638,7 @@ def build(run: Run):
 
     def strategist_user(s):
         lib = core.search_knowledge(f"{s['idea']} customers problem positioning", s["user_id"], 4)
-        return "\n\n".join(filter(None, [intake(run.project), "STARTUP KNOWLEDGE (Foundry library):\n" + core.context_block(lib, "Library"),
+        return "\n\n".join(filter(None, [intake(run.project), "STARTUP KNOWLEDGE (Forge library):\n" + core.context_block(lib, "Library"),
                                          _past_block(s, run.project["idea"])]))
 
     def researcher_user(s):

@@ -1,8 +1,8 @@
-# Foundry AI
+# Forge AI
 
 **AI Venture Studio for Startup Discovery, Validation, and Execution**
 
-Foundry AI is an autonomous venture creation platform that discovers startup opportunities, validates market demand, conducts multi-agent boardroom debates, generates MVP architectures, creates launch strategies, and continuously monitors competitors using Agentic AI, RAG, and long-term memory.
+Forge AI is an autonomous venture creation platform that discovers startup opportunities, validates market demand, conducts multi-agent boardroom debates, generates MVP architectures, creates launch strategies, and continuously monitors competitors using Agentic AI, RAG, and long-term memory.
 
 ---
 
@@ -16,7 +16,7 @@ npm run dev            # AI :8000 · API :4000 · web :5173
 
 Open http://localhost:5173.
 
-With no keys, Foundry runs fully offline in **demo mode**: local JSON database, no login, a local vector file, and template-driven agents (clearly labelled "Demo data" in the UI). Add keys to switch each capability to live:
+With no keys, Forge runs fully offline in **demo mode**: local JSON database, no login, a local vector file, and template-driven agents (clearly labelled "Demo data" in the UI). Add keys to switch each capability to live:
 
 | Capability | Key(s) | Without it |
 | --- | --- | --- |
@@ -98,7 +98,7 @@ Public: `GET /p/:slug` (hosted prototype, sandboxed), `POST /p/:slug/signup`.
 frontend/   React app — pages/, components/ (ui/ = shadcn primitives), lib/
 backend/    Express API — src/index.js, core.js, db.js, routes/
 ai/         FastAPI agents — main.py, core.py, agents.py, boardroom.py, demo.py
-shared/     knowledge-seed.json (the Foundry library)
+shared/     knowledge-seed.json (the Forge library)
 supabase/   migrations/001_init.sql
 ```
 
