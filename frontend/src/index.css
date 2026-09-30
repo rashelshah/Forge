@@ -105,3 +105,5 @@
 .scrollbar-none { scrollbar-width: none; }
 
 @keyframes fill { from { width: 0 } to { width: 100% } }
+
+@keyframes ring { 0% { box-shadow: 0 0 0 0 rgb(236 138 68 / .45) } 70% { box-shadow: 0 0 0 14px rgb(236 138 68 / 0) } 100% { box-shadow: 0 0 0 0 rgb(236 138 68 / 0) } }

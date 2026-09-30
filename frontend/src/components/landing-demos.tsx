@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, animate, motion } from 'framer-motion'
 import {
   ArrowRight, AppWindow, Brain, CalendarDays, Check, Compass, FileText, FlaskConical, Gauge, Layers, ListChecks, Megaphone, MessagesSquare,
   Palette, Play, Presentation, Radar, RotateCcw, ShieldAlert, Sparkles, Store, Target, Wallet,
@@ -6,7 +6,6 @@ import {
 import { useEffect, useRef, useState, type ComponentType, type MouseEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { AGENTS, AgentAvatar } from '@/components/bits'
-import { Spark } from '@/components/brand'
 import { Button } from '@/components/ui/button'
 import type { AgentKey } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -64,14 +63,53 @@ const IDEAS = [
     verdict: { decision: 'KILL' as Decision, confidence: 71, headline: 'Do not build this as a standalone product.', next: 'If you still believe in it, test a plug-in for one CRM first.' },
   },
 ]
-const TONE: Record<Decision, string> = { GO: 'bg-[#e8f3dc] text-[#3f6b17]', PIVOT: 'bg-[#fbf0d9] text-[#8a5e12]', KILL: 'bg-[#fbe4e0] text-rose' }
-const STAGES = ['Scanning the market', 'Scoring the idea', 'Board debate', 'Verdict']
+const VERDICT_STYLE: Record<Decision, { chip: string; glow: string; ring: string }> = {
+  GO: { chip: 'bg-[#e8f3dc] text-[#3f6b17]', glow: 'rgb(132 204 22 / .16)', ring: '#5d8a2b' },
+  PIVOT: { chip: 'bg-[#fbf0d9] text-[#8a5e12]', glow: 'rgb(234 179 8 / .18)', ring: '#c08827' },
+  KILL: { chip: 'bg-[#fbe4e0] text-rose', glow: 'rgb(244 63 94 / .14)', ring: '#c43d2b' },
+}
+const STAGES = ['Scan the market', 'Score the idea', 'Board debate', 'Verdict']
+const ORDER: AgentKey[] = ['ceo', 'investor', 'product', 'growth', 'technical', 'failure']
+const SOURCES = ['r/college', 'Hacker News', 'G2 reviews', 'App Store', 'Product Hunt']
+
+/** Types `text` out character by character; restarts whenever the text changes. */
+function useTyped(text: string) {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    setN(0)
+    const t = setInterval(() => setN((k) => (k >= text.length ? (clearInterval(t), k) : k + 1)), 16)
+    return () => clearInterval(t)
+  }, [text])
+  return text.slice(0, n)
+}
+
+function Count({ to, run, className }: { to: number; run: boolean; className?: string }) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    if (!run) { setV(0); return }
+    const c = animate(0, to, { duration: 0.9, ease: 'easeOut', onUpdate: (x) => setV(Math.round(x)) })
+    return () => c.stop()
+  }, [to, run])
+  return <span className={className}>{run ? v : '—'}</span>
+}
+
+function Ring({ value, color, run }: { value: number; color: string; run: boolean }) {
+  const c = 2 * Math.PI * 34
+  return (
+    <div className="relative grid size-[84px] shrink-0 place-items-center">
+      <svg viewBox="0 0 80 80" className="-rotate-90"><circle cx="40" cy="40" r="34" fill="none" stroke="#f0f0f0" strokeWidth="6" />
+        <motion.circle cx="40" cy="40" r="34" fill="none" stroke={color} strokeWidth="6" strokeLinecap="round" strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: run ? c * (1 - value / 100) : c }} transition={{ duration: 1, ease: 'easeOut' }} /></svg>
+      <span className="absolute text-center"><Count to={value} run={run} className="font-display text-[22px] font-medium tabular-nums" /><span className="block -mt-0.5 text-[9px] tracking-wide text-muted uppercase">sure</span></span>
+    </div>
+  )
+}
 
 export function TryBoardroom() {
   const [idx, setIdx] = useState(0)
-  const [stage, setStage] = useState(0) // 0 idle, 1-4 running, 5 done
+  const [stage, setStage] = useState(0) // 0 ready, 1-3 running, 4 verdict
   const [msgs, setMsgs] = useState(0)
   const idea = IDEAS[idx]
+  const typed = useTyped(idea.idea)
   const timers = useRef<number[]>([])
   const clear = () => { timers.current.forEach(clearTimeout); timers.current = [] }
   useEffect(() => clear, [])
@@ -79,95 +117,136 @@ export function TryBoardroom() {
   const run = () => {
     clear(); setStage(1); setMsgs(0)
     const at = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, ms)) }
-    at(1300, () => setStage(2))
-    at(2600, () => setStage(3))
-    for (let i = 1; i <= 4; i++) at(2600 + i * 1100, () => setMsgs(i))
-    at(2600 + 5 * 1100, () => setStage(4))
+    at(1500, () => setStage(2))
+    at(3000, () => setStage(3))
+    for (let i = 1; i <= 4; i++) at(3000 + i * 1500, () => setMsgs(i))
+    at(3000 + 4 * 1500 + 1500, () => setStage(4))
   }
-  const v = idea.verdict
+  const running = stage > 0 && stage < 4
+  const v = idea.verdict, vs = VERDICT_STYLE[v.decision]
+  const speaker = stage === 3 && msgs > 0 ? idea.debate[msgs - 1].agent : null
+  const involved = new Set(idea.debate.map((d) => d.agent))
 
   return (
     <section id="try" className="px-4 py-24 sm:px-6">
       <SectionTitle eyebrow="Try it" title={<>Watch an idea get <span className="text-saffron">cross-examined</span></>} sub="Pick an idea and convene the board. Foundry scores it on evidence, then six AI advisors debate it — and sometimes the answer is no." />
-      <motion.div {...fade} className="mx-auto mt-12 grid max-w-[1000px] overflow-hidden rounded-[22px] border border-line bg-white shadow-float md:grid-cols-[320px_1fr]">
-        <div className="border-b border-line bg-canvas p-5 md:border-r md:border-b-0">
-          <p className="text-[13px] text-muted">1 · Choose an idea</p>
-          <div className="mt-3 space-y-2">
-            {IDEAS.map((x, i) => (
-              <button key={x.id} onClick={() => pick(i)} className={cn('flex w-full items-start gap-3 rounded-2xl border p-3 text-left transition cursor-pointer', idx === i ? 'border-saffron/40 bg-[#fdf6ef] shadow-press-light' : 'border-line bg-white hover:border-line-2')}>
-                <span className={cn('grid size-9 shrink-0 place-items-center rounded-xl', idx === i ? 'bg-saffron text-white' : 'bg-soft text-ink-2')}><x.icon className="size-4" strokeWidth={1.75} /></span>
-                <span className="min-w-0"><span className="block text-[14px] font-medium">{x.name}</span><span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-muted">{x.idea}</span></span>
+      <motion.div {...fade} className="relative mx-auto mt-12 max-w-[1040px]">
+        <div className="absolute -inset-x-6 -inset-y-4 -z-10 rounded-[44px] bg-[radial-gradient(60%_80%_at_15%_0%,rgb(236_138_68/.18),transparent_70%),radial-gradient(60%_90%_at_90%_100%,rgb(165_187_252/.42),transparent_70%)] blur-2xl" />
+        <div className="relative overflow-hidden rounded-[28px] border border-line bg-white shadow-float">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-64"><div className="aurora-soft" /></div>
+          <div className="relative p-5 sm:p-8">
+            {/* prompt bar */}
+            <div className="flex flex-col gap-2 rounded-[20px] border border-line bg-white p-3 shadow-float sm:flex-row sm:items-center sm:p-2 sm:pl-5">
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 px-1 sm:items-center sm:px-0">
+                <Sparkles className="mt-1 size-4 shrink-0 text-saffron sm:mt-0" />
+                <p className="flex min-h-[46px] min-w-0 flex-1 flex-wrap items-center gap-x-2 text-[15px] leading-snug sm:flex-nowrap sm:text-[16px]">
+                  <span className="shrink-0 font-medium">{idea.name}</span><span className="hidden text-line-2 sm:inline">|</span>
+                  <span className="min-w-0 text-ink-2 sm:truncate">{typed}<span className="ml-0.5 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-ink" /></span>
+                </p>
+              </div>
+              <button onClick={run} disabled={running} className={cn('relative inline-flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-ink px-5 text-[15px] font-medium text-white transition cursor-pointer hover:bg-dark disabled:cursor-default sm:w-auto', stage === 0 && 'animate-[ring_2.2s_ease-out_infinite]')}>
+                {running ? <><Loader /> Board in session</> : stage === 4 ? <><RotateCcw className="size-4" />Run again</> : <><Play className="size-4" />Convene the board</>}
               </button>
-            ))}
-          </div>
-          <Button onClick={run} disabled={stage > 0 && stage < 4} className="mt-5 w-full">
-            {stage === 0 ? <><Play />Convene the board</> : stage < 4 ? <>Board in session…</> : <><RotateCcw />Run it again</>}
-          </Button>
-          <p className="mt-3 text-center text-[11px] text-faint">Illustrative run · real ventures use live web evidence</p>
-        </div>
-
-        <div className="dot-grid relative min-h-[470px] bg-white p-5 sm:p-7">
-          <div className="flex flex-wrap gap-1.5">
-            {STAGES.map((s, i) => (
-              <span key={s} className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] transition', stage > i + 1 || stage === 5 ? 'border-[#d8e9c2] bg-[#f5faef] text-[#3f6b17]' : stage === i + 1 ? 'border-periwinkle bg-mist text-indigo' : 'border-line bg-white text-faint')}>
-                {(stage > i + 1 || stage === 5) ? <Check className="size-3" /> : <span className={cn('size-1.5 rounded-full', stage === i + 1 ? 'animate-pulse bg-azure' : 'bg-line-2')} />}{s}
-              </span>
-            ))}
-          </div>
-
-          {stage === 0 && (
-            <div className="grid h-[360px] place-items-center text-center">
-              <div><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-ink"><Spark className="size-7" /></span>
-                <p className="mt-4 text-[17px] font-medium">{idea.name}</p><p className="mx-auto mt-1 max-w-xs text-sm text-muted">{idea.idea}</p>
-                <p className="mt-5 text-[13px] text-muted">Press “Convene the board” to begin.</p></div>
             </div>
-          )}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-[12px] text-muted">Try an idea:</span>
+              {IDEAS.map((x, i) => (
+                <button key={x.id} onClick={() => pick(i)} className={cn('inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] transition cursor-pointer', idx === i ? 'border-saffron/40 bg-[#fdf6ef] font-medium text-[#a2511c]' : 'border-line bg-white text-ink-2 hover:border-line-2')}>
+                  <x.icon className="size-3.5" strokeWidth={1.75} />{x.name}
+                </button>
+              ))}
+            </div>
 
-          {stage >= 1 && (
-            <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <div>
-                <p className="text-[12px] font-medium text-muted">Evidence scores</p>
-                <div className="mt-3 space-y-3">
+            {/* progress */}
+            <div className="mt-8 flex items-center" aria-label="Progress">
+              {STAGES.map((s, i) => {
+                const done = stage > i + 1 || stage === 4, now = stage === i + 1 || (stage === 4 && i === 3)
+                return (
+                  <div key={s} className={cn('flex items-center', i < STAGES.length - 1 && 'flex-1')}>
+                    <span className={cn('flex shrink-0 items-center gap-2 text-[12.5px] transition', done || now ? 'text-ink' : 'text-faint')}>
+                      <span className={cn('grid size-6 place-items-center rounded-full border text-[11px] transition', done ? 'border-leaf bg-leaf text-white' : now ? 'border-azure bg-mist text-azure' : 'border-line-2 bg-white')}>{done ? <Check className="size-3.5" /> : i + 1}</span>
+                      <span className="hidden sm:inline">{s}</span>
+                    </span>
+                    {i < STAGES.length - 1 && <span className="relative mx-3 h-0.5 flex-1 overflow-hidden rounded-full bg-soft"><motion.span className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#ec8a44,#6a88e2)]" initial={false} animate={{ width: stage > i + 1 || stage === 4 ? '100%' : stage === i + 1 ? '55%' : '0%' }} transition={{ duration: 1 }} /></span>}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* evidence + boardroom */}
+            <div className="mt-6 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="rounded-2xl border border-line bg-white/90 p-5">
+                <p className="text-[13px] font-medium">Evidence</p>
+                <div className="mt-4 space-y-3.5">
                   {idea.scores.map(([k, n], i) => (
                     <div key={k}>
-                      <div className="mb-1 flex justify-between text-xs"><span className="text-muted">{k}</span><span className="font-medium tabular-nums">{stage >= 2 ? n : '—'}</span></div>
-                      <div className="h-1.5 rounded-full bg-soft"><motion.div initial={{ width: 0 }} animate={{ width: stage >= 2 ? `${n}%` : 0 }} transition={{ delay: i * 0.1, duration: 0.7 }} className="h-full rounded-full bg-[linear-gradient(90deg,#ec8a44,#6a88e2)]" /></div>
+                      <div className="mb-1.5 flex justify-between text-[12.5px]"><span className="text-ink-2">{k}</span><Count to={n} run={stage >= 2} className="font-medium tabular-nums" /></div>
+                      <div className="h-2 overflow-hidden rounded-full bg-soft"><motion.div initial={false} animate={{ width: stage >= 2 ? `${n}%` : 0 }} transition={{ delay: i * 0.1, duration: 0.8, ease: 'easeOut' }} className="h-full rounded-full bg-[linear-gradient(90deg,#ec8a44,#6a88e2)]" /></div>
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 rounded-xl bg-canvas px-3 py-2 text-[12px] text-muted">{stage === 1 ? 'Mining Reddit, Hacker News, G2 and the App Store…' : `Cited: ${idea.evidence}`}</p>
+                <div className="mt-4 flex flex-wrap gap-1.5">{SOURCES.map((x, i) => <motion.span key={x} animate={stage === 1 ? { opacity: [0.35, 1, 0.35] } : { opacity: stage >= 2 ? 1 : 0.55 }} transition={stage === 1 ? { repeat: Infinity, duration: 1.2, delay: i * 0.18 } : { duration: 0.3 }} className={cn('rounded-full border px-2.5 py-0.5 text-[10.5px] whitespace-nowrap', stage >= 2 ? 'border-[#d8e9c2] bg-[#f5faef] text-[#3f6b17]' : 'border-line bg-canvas text-muted')}>{x}</motion.span>)}</div>
+                <p className="mt-2.5 text-[12px] text-muted">{stage === 0 ? 'Scores appear here, each with its sources.' : stage === 1 ? 'Mining Reddit, Hacker News, G2 and the App Store…' : `Cited: ${idea.evidence}`}</p>
               </div>
-              <div className="min-h-[260px]">
-                <p className="text-[12px] font-medium text-muted">The boardroom</p>
-                <div className="mt-3 space-y-2.5">
-                  <AnimatePresence>
-                    {idea.debate.slice(0, stage >= 3 ? Math.max(msgs, stage === 4 ? 4 : 0) : 0).map((m) => (
-                      <motion.div key={m.agent + m.text} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2">
-                        <AgentAvatar agent={m.agent} size={24} />
-                        <div className={cn('rounded-xl rounded-tl-sm border px-3 py-2 text-[12.5px] leading-snug', AGENTS[m.agent].bubble)}><p className="mb-0.5 text-[10px] font-medium text-muted">{AGENTS[m.agent].name}</p>{m.text}</div>
+
+              <div className="rounded-2xl border border-line bg-white/90 p-5">
+                <div className="flex items-center justify-between"><p className="text-[13px] font-medium">The boardroom</p><span className="text-[11px] text-muted">{stage === 3 ? 'Debating…' : stage === 4 ? 'Adjourned' : 'Seated'}</span></div>
+                <div className="mt-4 grid grid-cols-6 gap-1">
+                  {ORDER.map((a) => {
+                    const on = speaker === a, dim = stage >= 3 && !involved.has(a)
+                    return (
+                      <div key={a} className={cn('flex flex-col items-center gap-1.5 transition', dim && 'opacity-35')}>
+                        <motion.span animate={{ scale: on ? 1.16 : 1 }} transition={{ type: 'spring', stiffness: 300, damping: 18 }} className={cn('rounded-full p-0.5 transition', on ? 'ring-2 ring-ink ring-offset-2' : stage === 0 && 'opacity-70')}><AgentAvatar agent={a} size={40} /></motion.span>
+                        <span className="text-[10px] text-muted">{AGENTS[a].name.replace(' Agent', '')}</span>
+                        <span className="flex h-3 items-end gap-0.5">{on ? [0, 1, 2].map((k) => <motion.i key={k} className="w-0.5 rounded bg-ink" animate={{ height: [3, 11, 4] }} transition={{ repeat: Infinity, duration: 0.7, delay: k * 0.15 }} />) : null}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="mt-3 min-h-[188px] space-y-2">
+                  {stage < 3 && <p className="grid h-[188px] place-items-center text-center text-[13px] text-muted">{stage === 0 ? 'Six advisors are waiting for the scores.' : 'The board reads the evidence before speaking…'}</p>}
+                  <AnimatePresence initial={false}>
+                    {stage >= 3 && idea.debate.slice(0, stage === 4 ? 4 : msgs).map((m, i, all) => (
+                      <motion.div key={m.agent + m.text} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: i === all.length - 1 || stage === 4 ? 1 : 0.55, y: 0 }} className={cn('rounded-xl rounded-tl-sm border px-3 py-2 text-[12.5px] leading-snug', AGENTS[m.agent].bubble)}>
+                        <span className="mr-1.5 text-[10px] font-medium text-muted">{AGENTS[m.agent].name}</span>{m.text}
                       </motion.div>
                     ))}
                   </AnimatePresence>
-                  {stage < 3 && <p className="text-[12px] text-faint">Waiting for the scores…</p>}
                 </div>
               </div>
             </div>
-          )}
 
-          <AnimatePresence>
-            {stage >= 4 && (
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mt-6 flex flex-wrap items-center gap-4 rounded-2xl border border-line bg-white p-4 shadow-float">
-                <span className={cn('rounded-xl px-4 py-2 font-display text-2xl font-medium tracking-tight', TONE[v.decision])}>{v.decision}</span>
-                <div className="min-w-0 flex-1"><p className="text-[15px] font-medium">{v.headline}</p><p className="text-[13px] text-muted">{v.next}</p></div>
-                <div className="text-right"><p className="text-xl font-medium tabular-nums">{v.confidence}%</p><p className="text-[10px] tracking-wide text-muted uppercase">confidence</p></div>
-                <Button asChild size="sm"><Link to="/app">Run it on your idea <ArrowRight /></Link></Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* verdict */}
+            <AnimatePresence>
+              {stage === 4 && (
+                <motion.div initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+                  className="relative mt-4 overflow-hidden rounded-2xl border border-line bg-white p-5 shadow-float sm:p-6">
+                  <div className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(60% 140% at 0% 50%, ${vs.glow}, transparent 70%)` }} />
+                  <div className="relative flex flex-wrap items-center gap-5">
+                    <Ring value={v.confidence} color={vs.ring} run />
+                    <div className="min-w-[200px] flex-1">
+                      <span className={cn('inline-block rounded-lg px-3 py-1 font-display text-xl font-medium tracking-tight', vs.chip)}>{v.decision}</span>
+                      <p className="mt-2 text-[18px] leading-snug font-medium tracking-[-0.01em]">{v.headline}</p>
+                      <p className="mt-1 text-[14px] text-muted">{v.next}</p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:items-end">
+                      <Button asChild><Link to="/app">Run this on your idea <ArrowRight /></Link></Button>
+                      <button onClick={() => pick((idx + 1) % IDEAS.length)} className="text-[13px] text-muted transition hover:text-ink cursor-pointer">Try another idea →</button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <p className="mt-5 text-center text-[11px] text-faint">Illustrative run — real ventures use live web evidence and cited sources.</p>
+          </div>
         </div>
       </motion.div>
     </section>
   )
+}
+
+function Loader() {
+  return <svg viewBox="0 0 24 24" className="size-4 animate-spin" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity=".3" strokeWidth="3" /><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
 }
 
 // ================================================================ 2. how it works: stepper with live mock-ups
