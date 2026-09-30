@@ -4,7 +4,7 @@ import {
   AlertTriangle, AppWindow, Download, FlaskConical, Loader2, Maximize2, Monitor, RefreshCw, Send, Smartphone, Sparkles, Tablet, Undo2, Wand2, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { Empty, ModeBadge } from '@/components/bits'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,6 @@ const withShim = (html: string) => (/<head[^>]*>/i.test(html) ? html.replace(/<h
 
 const DEVICES = { desktop: { icon: Monitor, width: 1280 }, tablet: { icon: Tablet, width: 820 }, mobile: { icon: Smartphone, width: 390 } } as const
 const SUGGESTIONS = ['Make it dark mode', 'Add a dashboard with charts', 'Add a checkout / booking flow', 'Use a calmer colour palette', 'Add an onboarding screen']
-const BUILD_STEPS = ['Reading your research and MVP plan', 'Planning screens and user flows', 'Designing the interface', 'Writing working code', 'Checking the code for errors']
 
 function PrototypeFrame({ html, width = 1280, height = 720, onError }: { html: string; width?: number; height?: number; onError?: (m: string) => void }) {
   const ref = useRef<HTMLIFrameElement>(null)
@@ -70,11 +69,11 @@ export function PrototypePreview({ content }: { content: PrototypeContent }) {
   )
 }
 
-type Build = NonNullable<PrototypeContent['build']>
+type Build = NonNullable<PrototypeContent['build']> & { studio_project_id?: string }
 const STAGES: { key: NonNullable<Build['stage']>; label: (b: Build) => string }[] = [
-  { key: 'spec', label: () => 'Designing the product around your idea' },
+  { key: 'spec', label: (b) => (b.studio_project_id ? 'Strategy, UX, design research and architecture' : 'Designing the product around your idea') },
   { key: 'code', label: (b) => (b.app_name ? `Building ${b.app_name}${b.screens?.length ? `: ${b.screens.join(', ')}` : ''}` : 'Writing the app') },
-  { key: 'check', label: () => 'Checking the code and fixing any errors' },
+  { key: 'check', label: (b) => (b.studio_project_id ? 'Running it in a browser, reviewing the screenshots and refining' : 'Checking the code and fixing any errors') },
 ]
 
 function Elapsed({ since }: { since?: string }) {
@@ -93,7 +92,8 @@ function Building({ build, compact }: { build: Build; compact?: boolean }) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-mist bg-[#f4f7fe] px-4 py-3 text-sm">
         <Loader2 className="size-4 animate-spin text-azure" />
-        <span className="flex-1">Building a new version — {STAGES[idx].label(build).toLowerCase()}… <span className="text-muted">(you can keep using this one)</span></span>
+        <span className="flex-1">Building a new version — {STAGES[idx].label(build).toLowerCase()}… <span className="text-muted">(you can keep using this one)</span>
+          {build.studio_project_id && <span className="ml-1">{build.agent && <span className="text-ink-2">· now: <b className="font-medium">{build.agent}</b>{build.iteration ? ` (v${build.iteration})` : ''} · </span>}<Link to={`/app/studio/${build.studio_project_id}`} className="text-azure hover:underline">watch the team →</Link></span>}</span>
         <span className="font-mono text-xs text-muted"><Elapsed since={build.started_at} /></span>
       </div>
     )
@@ -104,7 +104,8 @@ function Building({ build, compact }: { build: Build; compact?: boolean }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-medium">Building your prototype…</p>
-          <p className="mt-1 text-sm text-muted">Usually 1–3 minutes on the free AI models. You can leave this page — we'll notify you when it's ready.</p>
+          <p className="mt-1 text-sm text-muted">{build.studio_project_id ? "A team of AI agents is designing, building, screenshotting and reviewing it — usually 8–12 minutes. You can leave this page; we'll notify you when it's ready." : "Usually 1–3 minutes on the free AI models. You can leave this page — we'll notify you when it's ready."}</p>
+          {build.studio_project_id && <p className="mt-2 text-sm">{build.agent && <span className="text-ink-2">Now: <b className="font-medium">{build.agent}</b>{build.iteration ? ` · version ${build.iteration}` : ''} · </span>}<Link to={`/app/studio/${build.studio_project_id}`} className="text-azure hover:underline">Watch the team work →</Link></p>}
         </div>
         <span className="rounded-full bg-white px-3 py-1 font-mono text-xs text-muted shadow-press-light"><Elapsed since={build.started_at} /></span>
       </div>
@@ -177,7 +178,7 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
       <div className="space-y-3">
         {build?.status === 'error' && <p className="rounded-xl border border-[#f4cfc8] bg-[#fdf3f1] p-3 text-sm text-rose">{build.error}</p>}
         <Empty icon={<AppWindow />} title="Build a working prototype" action={<Button onClick={() => generate.mutate()}><Sparkles />{build?.status === 'error' ? 'Try again' : 'Generate prototype'}</Button>}>
-          Foundry designs a product around your idea and builds a clickable first version — real screens, realistic data, and working actions — that you can refine by just describing changes.
+          A team of AI agents designs a product around your idea, builds it, checks it in a real browser, reviews the screenshots and refines it — a clickable first version — real screens, realistic data, and working actions — that you can refine by just describing changes.
         </Empty>
       </div>
     )
@@ -214,6 +215,7 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
           <Button size="sm" variant="ghost" onClick={() => setFull(true)}><Maximize2 />Full screen</Button>
           <Button size="sm" variant="ghost" onClick={download}><Download />Download code</Button>
           <div className="ml-auto flex items-center gap-2">
+            {c.studio_project_id && <Link to={`/app/studio/${c.studio_project_id}`} className="text-xs text-azure hover:underline">Built by Product Studio{c.studio_score != null && ` · quality ${c.studio_score}/10`} — see how →</Link>}
             <ModeBadge mode={c.mode} />
             <Button size="sm" onClick={() => launch.mutate(undefined, { onSuccess: (e) => nav(`/app/experiments/${e.id}`) })} loading={launch.isPending}><FlaskConical />Test with real users</Button>
           </div>

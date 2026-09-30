@@ -1,7 +1,8 @@
 // Ventures and the venture pipeline: discovery -> validation -> boardroom -> MVP -> prototype -> memory.
 import vm from 'node:vm'
 import { Router } from 'express'
-import { db } from '../db.js'
+import { db, supabase } from '../db.js'
+import { startVenturePrototype, studioEdit } from './studio.js'
 import { HttpError, ai, latestReport, log, notify, own, remember, requireQuota, runAgent, ventureCtx } from '../core.js'
 
 const r = Router()
@@ -205,9 +206,10 @@ r.post('/ventures/:id/mvp', async (req, res) => {
 
 // ---------------------------------------------------------------- prototype builder
 
-// Compile (never execute) inline scripts to catch syntax errors the model introduced.
+// Compile (never execute) inline scripts to catch syntax errors the model introduced. JSX (text/babel) can't be compiled
+// here; those prototypes are verified by actually running them in a browser (Product Studio) or by the preview's error reporter.
 export function scriptError(html) {
-  for (const [, code] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+  for (const [, code] of html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*text\/babel)[^>]*>([\s\S]*?)<\/script>/gi)) {
     try {
       new vm.Script(code)
     } catch (e) {
@@ -293,6 +295,8 @@ async function buildPrototype(user, v, report) {
 
 r.post('/ventures/:id/prototype', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
+  // With Supabase the venture prototype is built by the Product Studio team (strategy, UX, design research, build, visual review, refinement).
+  if (supabase) return res.status(202).json(await startVenturePrototype(req.user, v))
   await requireQuota(req.user, 'agentRuns')
   const existing = await latestReport(v.id, 'prototype')
   const building = existing?.content.build?.status === 'building' && Date.now() - new Date(existing.content.build.started_at).getTime() < 15 * 60_000
@@ -312,8 +316,11 @@ r.post('/research/:id/prototype/edit', async (req, res) => {
   const instruction = text(req.body.instruction, 1500)
   if (!instruction) throw new HttpError(400, 'Describe the change you want')
   const v = await own('ventures', report.venture_id, req.user)
-  const out = await runAgent(req.user, v.id, 'Prototype Builder', '/prototype/edit', { venture: ventureCtx(v), html: report.content.html, instruction }, (o) => o.summary)
-  const html = await repairScripts(v, out.html)
+  const studio = !!report.content.studio_project_id
+  const out = studio
+    ? await studioEdit(req.user, v, report.content.html, instruction)
+    : await runAgent(req.user, v.id, 'Prototype Builder', '/prototype/edit', { venture: ventureCtx(v), html: report.content.html, instruction }, (o) => o.summary)
+  const html = studio ? out.html : await repairScripts(v, out.html)
   const history = [...(report.content.history ?? []), { instruction, summary: out.summary, at: new Date().toISOString() }].slice(-30)
   const updated = await db.update('research_reports', report.id, {
     content: { ...report.content, html, history, previous_html: report.content.html }, summary: out.summary,

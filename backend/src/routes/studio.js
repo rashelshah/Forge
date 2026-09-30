@@ -2,7 +2,7 @@
 // The AI service writes progress straight to Supabase; this router owns auth, quota, the job queue and exports.
 import { Router } from 'express'
 import { db, supabase } from '../db.js'
-import { HttpError, ai, own, requireQuota } from '../core.js'
+import { HttpError, ai, latestReport, log, notify, own, remember, requireQuota } from '../core.js'
 
 const r = Router()
 const TABLE = 'studio_projects'
@@ -19,18 +19,48 @@ r.use('/studio', (req, res, next) => {
 const queue = []
 let draining = false
 
+// A venture's Prototype tab mirrors the Studio run: progress while it builds, the best version when it's done.
+const STAGE = { 'UI Engineer': 'code', 'Screenshot Agent': 'check', 'Vision Reviewer': 'check', 'Design Critic': 'check', 'Failure Agent': 'check', 'Quality Scorer': 'check', 'Refinement Agent': 'check', Studio: 'check' }
+
+async function setPrototype(p, patchContent, extra = {}) {
+  const rep = await latestReport(p.venture_id, 'prototype')
+  if (rep) await db.update('research_reports', rep.id, { ...extra, content: { ...rep.content, ...patchContent(rep.content) } })
+  return rep
+}
+
+async function mirrorProgress(p) {
+  const cur = await db.get(TABLE, p.id)
+  await setPrototype(p, (c) => (c.build?.status === 'building' ? { build: { ...c.build, stage: STAGE[cur.stage] ?? 'spec', agent: cur.stage, iteration: cur.iteration, app_name: p.name } } : {}))
+}
+
+async function finishPrototype(p, out) {
+  const [html, spec] = await Promise.all([versionHtml(p.id, out.best_iteration), supabase.from('studio_artifacts').select('tagline:content->>tagline').eq('project_id', p.id).eq('kind', 'product_spec').limit(1).then(check)])
+  const summary = `${p.name} — ${spec[0]?.tagline ?? 'built by the Product Studio team'}`
+  const rep = await setPrototype(p, (c) => ({ title: p.name, html, summary, history: [], previous_html: c.html ?? null, build: null, mode: 'live', studio_project_id: p.id, studio_score: out.average }), { summary, created_at: now() })
+  const user = await db.get('users', p.user_id)
+  await remember(user, p.venture_id, 'roadmap', 'Prototype built', `A clickable prototype of ${p.name} was built and visually reviewed by the Product Studio team (quality ${out.average}/10): ${summary}.`)
+  await log(user, p.venture_id, 'Product Studio', 'Built a working prototype', p.name)
+  await notify(user, p.venture_id, 'prototype', `Your ${p.name} prototype is ready`, summary, `/app/ventures/${p.venture_id}?tab=prototype`)
+  return rep
+}
+
 async function runProject(id) {
   const p = await db.get(TABLE, id)
   if (!p) return
-  const run = await db.insert('agent_runs', { user_id: p.user_id, agent: 'Product Studio', status: 'running' })
+  const run = await db.insert('agent_runs', { user_id: p.user_id, venture_id: p.venture_id ?? null, agent: 'Product Studio', status: 'running' })
   const t0 = Date.now()
   let out, error
+  const timer = p.venture_id ? setInterval(() => mirrorProgress(p).catch(() => {}), 4000) : null
   try {
     await db.update(TABLE, id, { status: 'running', error: null, updated_at: now() })
     out = await ai('/studio/run', { project_id: id }, { timeout: 3 * 3600_000 })
+    if (p.venture_id) await finishPrototype(p, out)
   } catch (e) {
     error = e.message
     await db.update(TABLE, id, { status: 'failed', error: error.slice(0, 500), updated_at: now() }).catch(() => {})
+    if (p.venture_id) await setPrototype(p, () => ({ build: { status: 'error', error: error.slice(0, 300) } })).catch(() => {})
+  } finally {
+    clearInterval(timer)
   }
   await db.update('agent_runs', run.id, {
     status: error ? 'failed' : 'succeeded', mode: 'live', error: error ?? null, duration_ms: Date.now() - t0, finished_at: now(),
@@ -170,5 +200,31 @@ r.delete('/studio/projects/:id', async (req, res) => {
   await ai(`/studio/${p.id}`, undefined, { method: 'DELETE' }).catch((e) => console.error('studio purge failed:', e.message))
   res.json({ ok: true })
 })
+
+/** Build a venture's prototype with the Product Studio team. Returns the prototype report, which shows build progress until done. */
+export async function startVenturePrototype(user, v) {
+  const existing = await latestReport(v.id, 'prototype')
+  const b = existing?.content?.build
+  if (b?.status === 'building' && Date.now() - new Date(b.started_at).getTime() < 45 * 60_000) return existing
+  await requireQuota(user, 'agentRuns')
+  const [mvp, validation] = await Promise.all([latestReport(v.id, 'mvp'), latestReport(v.id, 'validation')])
+  const must = (mvp?.content?.features ?? []).filter((f) => f.priority === 'must').map((f) => `${f.name}: ${f.description}`)
+  const risks = validation?.content?.key_risks ?? []
+  const requirements = [must.length && `Must-have features from the MVP plan:\n- ${must.join('\n- ')}`, risks.length && `Risks the product should address: ${risks.join('; ')}`].filter(Boolean).join('\n\n').slice(0, 1500)
+  const p = await db.insert(TABLE, {
+    user_id: user.id, venture_id: v.id, name: v.name, idea: v.idea, audience: v.opportunity?.potential_customers ?? null, requirements: requirements || null,
+    max_iterations: 2, status: 'queued',
+  })
+  const build = { status: 'building', stage: 'spec', agent: 'Queued', started_at: now(), studio_project_id: p.id }
+  const rep = existing
+    ? await db.update('research_reports', existing.id, { content: { ...existing.content, build } })
+    : await db.insert('research_reports', { user_id: user.id, venture_id: v.id, kind: 'prototype', title: `Prototype · ${v.name}`, summary: 'Building…', mode: 'live',
+      content: { title: v.name, html: null, summary: 'Building…', history: [], previous_html: null, build, mode: 'live' } })
+  enqueue(p.id)
+  return rep
+}
+
+/** Apply a change request to a Studio-built prototype; the AI service verifies the edited app still renders. */
+export const studioEdit = (user, v, html, instruction) => ai('/studio/edit', { html, instruction, name: v.name }, { timeout: 600_000 })
 
 export default r

@@ -1,6 +1,7 @@
 """Foundry AI — agent service (FastAPI). Internal: only the Node API should call it."""
 import json
 import os
+import threading
 
 from fastapi import Body, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -9,6 +10,7 @@ import agents
 import boardroom
 import core
 import design_intel
+import intel
 import studio
 
 app = FastAPI(title="Foundry AI agents")
@@ -37,6 +39,36 @@ async def llm_error(request: Request, exc: core.LLMError):
     return JSONResponse(status_code=503, content={"detail": (
         "The free AI models are at their per-minute limit — wait about a minute and try again." if busy
         else "The AI models couldn't produce a valid answer. Please try again.")})
+
+
+def long_job(fn, *args):
+    """Run a minutes-long job without tripping the Node client's 5-minute response-header limit: headers go out at once, a space is
+    sent every 15s (JSON ignores leading whitespace), and the result — or an {"__error"} — is the final JSON body."""
+    def stream():
+        box: dict = {}
+
+        def work():
+            try:
+                box["out"] = fn(*args)
+            except (studio.StudioError, design_intel.DesignError) as e:
+                box["err"] = (422, str(e))
+            except core.LLMError as e:
+                busy = "429" in str(e) or "rate" in str(e).lower()
+                box["err"] = (503, "The free AI models are at their per-minute limit — wait about a minute and try again." if busy else "The AI models couldn't produce a valid answer. Please try again.")
+            except Exception as e:
+                print("long job failed:", e)
+                box["err"] = (500, str(e)[:300])
+
+        t = threading.Thread(target=work, daemon=True)
+        t.start()
+        yield b" "
+        while t.is_alive():
+            t.join(15)
+            if t.is_alive():
+                yield b" "
+        yield json.dumps(box["out"] if "out" in box else {"__error": box["err"][1], "__status": box["err"][0]}).encode()
+
+    return StreamingResponse(stream(), media_type="application/json")
 
 
 @app.get("/health")
@@ -178,13 +210,23 @@ def design_purge(ref_id: str):
 
 @app.post("/studio/run")
 def studio_run(project_id: str = Body(..., embed=True)):
-    try:
-        return studio.run_project(project_id)
-    except (studio.StudioError, design_intel.DesignError) as e:
-        raise HTTPException(422, str(e))
+    return long_job(studio.run_project, project_id)
 
 
 @app.delete("/studio/{project_id}")
 def studio_forget(project_id: str):
     studio.forget(project_id)
     return {"ok": True}
+
+
+@app.post("/intel/run")
+def intel_run(venture: dict = Body(...), competitors: list[dict] = Body(...), mvp_features: list[str] = Body([]), recent_events: list[dict] = Body([])):
+    return long_job(intel.run, venture, competitors, mvp_features, recent_events)
+
+
+@app.post("/studio/edit")
+def studio_edit(html: str = Body(...), instruction: str = Body(...), name: str = Body("")):
+    try:
+        return studio.edit_html(html, instruction, name)
+    except (studio.StudioError, design_intel.DesignError) as e:
+        raise HTTPException(422, str(e))

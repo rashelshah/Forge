@@ -59,7 +59,9 @@ export interface PrototypeContent {
   title: string
   html: string | null
   summary: string
-  build?: { status: 'building' | 'error'; stage?: 'spec' | 'code' | 'check'; app_name?: string; screens?: string[]; started_at?: string; error?: string } | null
+  build?: { status: 'building' | 'error'; stage?: 'spec' | 'code' | 'check'; app_name?: string; screens?: string[]; started_at?: string; error?: string; agent?: string; iteration?: number; studio_project_id?: string } | null
+  studio_project_id?: string
+  studio_score?: number
   history: { instruction: string; summary: string; at: string }[]
   previous_html: string | null
   mode: Mode
@@ -114,6 +116,9 @@ export interface Competitor {
   description: string | null
   threat_level: 'low' | 'medium' | 'high'
   snapshot: { prices: string[]; headings: string[] } | null
+  category?: string | null
+  strategic_threat?: number | null
+  profile?: CompetitorProfile | null
   last_checked_at: string | null
   created_at: string
 }
@@ -128,6 +133,7 @@ export interface Signal {
   recommended_response: string | null
   severity: 'info' | 'low' | 'medium' | 'high'
   source_url: string | null
+  occurred_on?: string | null
   created_at: string
 }
 
@@ -213,3 +219,29 @@ export interface StudioEvent { id: string; agent: string; status: 'running' | 'd
 export interface StudioArtifact { id: string; kind: string; iteration: number; content: any; created_at: string }
 export interface StudioVersion { iteration: number; created_at: string; summary: string | null; bytes: number | null }
 export interface StudioDetail { project: StudioProject; events: StudioEvent[]; artifacts: StudioArtifact[]; versions: StudioVersion[] }
+
+export interface CompetitorProfile {
+  category: string; summary: string; why_it_matters: string; strategic_threat: number; threat_reason: string
+  strengths: string[]; weaknesses: string[]; features: string[]; metrics: { name: string; value: string }[]
+  recent_activity: { kind: string; title: string; detail: string; date: string | null; source_url: string; response: string }[]
+  potential_impact: string; suggested_response: string; positioning_trend: string
+}
+export interface IntelAction {
+  title: string; kind: string; reason: string; impact: string; confidence: number
+  evidence: { competitor: string; fact: string; source_url: string; basis: 'website' | 'news' | 'history' | 'analysis' }[]
+}
+export interface RadarItem { feature: string; count: number; percent: number; us: boolean }
+export interface IntelReport {
+  brief: { period: string; counts: { label: string; count: number; competitors: string[] }[]; market_trend: string; recommendation: string; baseline?: string[] }
+  insight: { insight: string; recommendation: string }
+  actions: IntelAction[]
+  matrix: { competitors: string[]; rows: { feature: string; us: boolean; competitors: string[] }[] }
+  radar: Record<'emerging' | 'growing' | 'saturated' | 'white_space', RadarItem[]>
+  positioning: { axes: { x_left: string; x_right: string; y_low: string; y_high: string }; points: { name: string; us: boolean; x: number; y: number; reason: string }[] }
+  skipped?: { name: string; reason: string }[]
+  generated_at?: string
+  build?: { status: 'running' | 'error'; started_at?: string; error?: string } | null
+  history?: { at: string; market_trend: string; recommendation: string }[]
+}
+export interface MemoryMetric { name: string; first: { value: string; at: string }; last: { value: string; at: string }; changed: boolean; points: number }
+export interface IntelData { report: Report<IntelReport> | null; competitors: Competitor[]; signals: Signal[]; market: Signal[]; memory: Record<string, MemoryMetric[]> }

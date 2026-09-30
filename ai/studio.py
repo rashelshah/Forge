@@ -594,6 +594,24 @@ def _severity(i: dict) -> int:
     return {"high": 0, "medium": 1, "low": 2}[i["severity"]]
 
 
+def _apply_patches(code: str, patches) -> tuple[str, int, list[str]]:
+    """Apply find/replace patches. Models often copy `find` text with different indentation or line breaks, so when the exact text isn't
+    found exactly once, fall back to a whitespace-insensitive match that must also be unique."""
+    applied, missed = 0, []
+    for p in patches:
+        if not p.find.strip():
+            continue
+        if code.count(p.find) == 1:
+            code, applied = code.replace(p.find, p.replace), applied + 1
+            continue
+        hits = list(re.finditer(r"\s+".join(re.escape(t) for t in p.find.split()), code))
+        if len(hits) == 1:
+            code, applied = code[:hits[0].start()] + p.replace + code[hits[0].end():], applied + 1
+        else:
+            missed.append(p.find[:80])
+    return code, applied, missed
+
+
 def build(run: Run):
     def agent(name, key, schema, system, user, summary, max_tokens=7000):
         def fn(s: State):
@@ -710,17 +728,23 @@ def build(run: Run):
                     f"DESIGN TOKENS: {json.dumps(s['design_spec']['palette'])} heading_font={s['design_spec']['heading_font']} body_font={s['design_spec']['body_font']} radius={s['design_spec']['radius']}\n\n"
                     f"CURRENT CODE:\n{s['app_code']}")
             code, applied, out, missed = s["app_code"], 0, None, []
-            for attempt in range(2):
+            for attempt in range(3):
                 out = ask(Refinement, REFINE_SYSTEM, user + (f"\n\nYour previous patches did not apply (the `find` text was not found exactly once): {missed}. Copy the find text exactly." if missed else ""),
                           max_tokens=9000, temperature=0.2)
-                code, applied, missed = s["app_code"], 0, []
-                for p in out.patches:
-                    if p.find and code.count(p.find) == 1:
-                        code, applied = code.replace(p.find, p.replace), applied + 1
-                    else:
-                        missed.append(p.find[:80])
+                code, applied, missed = _apply_patches(s["app_code"], out.patches)
                 if applied:
                     break
+            rebuilt = False
+            if not applied and not s.get("rendered"):
+                # A crashing app that can't be patched is worth a rewrite: better than losing the whole run.
+                errors = "\n".join(s.get("errors") or [])
+                models = list(dict.fromkeys([m for m in core.CODE if m.startswith("gemini")] + core.VISION + core.HEAVY))
+                fixed = _strip_code(_retry(lambda: core.complete(
+                    UI_SYSTEM, f"This app crashes in the browser with these runtime errors:\n{errors}\n\nReturn the COMPLETE corrected code, same screens and design, "
+                               f"fixing these errors and any similar undefined-variable or missing-import mistakes.\n\nCODE:\n{s['app_code']}", temperature=0.2, max_tokens=16000, models=models)))
+                if re.search(r"(function|const)\s+App\b", fixed) and len(fixed) > 2500:
+                    code, applied, rebuilt = fixed, 1, True
+                    out.summary, out.focus = "Rewrote the app to fix the runtime crash: " + out.summary, out.focus or ["Runtime error"]
             ds = json.loads(json.dumps(s["design_spec"]))
             for tc in out.token_changes:
                 if tc.name in ds["palette"] and kit.norm_hex(tc.value):
@@ -733,12 +757,12 @@ def build(run: Run):
             it = s["iteration"] + 1
             run.iteration = it
             html = kit.assemble(ds, code, s["product_spec"]["product_name"])
-            rec = {"iteration": it, "summary": out.summary, "focus": out.focus, "patches_applied": applied, "patches_total": len(out.patches),
+            rec = {"iteration": it, "summary": out.summary, "focus": out.focus, "patches_applied": applied, "patches_total": len(out.patches), "rebuilt": rebuilt,
                    "token_changes": [t.model_dump() for t in out.token_changes], "errors_fixed": s.get("errors") or []}
             run.save("refinement", rec, it)
             run.save("code", {"app_code": code, "html": html, "bytes": len(html), "summary": out.summary}, it)
             run.patch(iteration=it)
-            box["summary"] = f"v{it}: {out.summary} ({applied}/{len(out.patches)} edits applied)"
+            box["summary"] = f"v{it}: {out.summary}" + (" (full rewrite)" if rebuilt else f" ({applied}/{len(out.patches)} edits applied)")
             box["detail"] = out.reasoning + "\n\nFocus: " + "; ".join(out.focus)
         return {"app_code": code, "html": html, "design_spec": ds, "iteration": it, "repairs": s["repairs"] + (0 if s.get("rendered") else 1),
                 "refinements": s["refinements"] + [rec]}
@@ -812,3 +836,26 @@ def run_project(project_id: str) -> dict:
         raise
     best = max(s["history"], key=lambda h: (h["average"], -h["iteration"]))
     return {"best_iteration": best["iteration"], "average": best["average"]}
+
+
+EDIT_SYSTEM = """You edit a single-file React prototype (Babel standalone + Tailwind with design tokens + a shadcn-style component kit, then the app code after the '/* ---------- generated app ---------- */' marker). Apply the requested change with the SMALLEST set of edits. Return find/replace patches: each `find` is copied character-for-character from the current file and occurs exactly once; replace WHOLE JSX elements or functions, never fragments of a statement, so the code stays valid. To add something, find a whole existing function or element and replace it with itself plus the addition. Everything you reference must exist (kit components: Button, Card, Badge, Input, Textarea, Select, Tabs, Dialog, Skeleton, EmptyState, ErrorState, useToast, useRoute, useLocalState, Icon ...). New data fields must also be added to the seed data. Use Tailwind token classes (bg-background, text-foreground, bg-primary, border-border ...), never raw hex. Colour tokens live in the :root block as space-separated RGB channels (e.g. --primary:236 138 68); change them there to re-theme. If the request is a runtime error, fix exactly that error. Leave token_changes empty."""
+
+
+def edit_html(html: str, instruction: str, name: str) -> dict:
+    """Apply a change request to a finished prototype as find/replace patches, then prove the edited app still renders."""
+    if "type=\"text/babel\"" not in html:
+        raise StudioError("This prototype wasn't built by the Product Studio, so it can't be edited this way.")
+    user = f"Product: {name}\nRequest: {instruction}\n\nCURRENT FILE:\n{html}"
+    out, new, missed = None, html, []
+    for _ in range(3):
+        out = ask(Refinement, EDIT_SYSTEM, user + (f"\n\nYour previous patches did not apply (find text not found exactly once): {missed}. Copy the find text exactly." if missed else ""),
+                  max_tokens=9000, temperature=0.2)
+        new, applied, missed = _apply_patches(html, out.patches)
+        if applied:
+            break
+    else:
+        raise StudioError("Couldn't apply that change cleanly. Try describing it more specifically.")
+    check = kit.screenshot(new, [("desktop", "/")])
+    if not check["rendered"]:
+        raise StudioError("That change broke the prototype, so it was not applied: " + (check["errors"][0][:160] if check["errors"] else "the page rendered blank") + ". Try rephrasing it.")
+    return {"html": new, "summary": out.summary, "applied": applied, "mode": "live"}

@@ -74,13 +74,18 @@ export async function ai(path, body, { method = body === undefined ? 'GET' : 'PO
   try {
     res = await fetch(AI_URL + path, { method, headers: aiHeaders, body: body && JSON.stringify(body), signal: AbortSignal.timeout(timeout) })
   } catch (e) {
+    if (e.name === 'TimeoutError') throw new HttpError(504, 'The AI service took too long to answer (the free AI models may be rate limited). Please try again in a minute.')
     throw new HttpError(503, `AI service unreachable at ${AI_URL} (${e.cause?.code || e.name}). Start it with: npm run dev:ai`)
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new HttpError([422, 503].includes(res.status) ? res.status : 502, err.detail || `AI service error ${res.status}`)
   }
-  return raw ? res : res.json()
+  if (raw) return res
+  const data = await res.json()
+  // Long jobs stream whitespace keep-alives, so failures arrive inside the body instead of as a status code.
+  if (data?.__error) throw new HttpError([422, 503].includes(data.__status) ? data.__status : 502, data.__error)
+  return data
 }
 
 export const ventureCtx = (v) => ({ id: v.id, name: v.name, idea: v.idea, stage: v.stage, overall_score: v.overall_score, scores: v.scores })

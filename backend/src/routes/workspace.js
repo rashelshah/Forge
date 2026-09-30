@@ -2,6 +2,7 @@
 import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import { DB_MODE, db } from '../db.js'
+import { runIntelForVenture } from './intel.js'
 import { HttpError, PLANS, ai, isAdmin, log, notify, own, remember, runAgent, usage, ventureCtx } from '../core.js'
 
 const r = Router()
@@ -87,8 +88,10 @@ export async function monitorUser(user) {
   let signals = 0
   for (const v of await db.list('ventures', { user_id: user.id })) {
     if (['killed', 'paused'].includes(v.stage)) continue
-    for (const c of await db.list('competitors', { venture_id: v.id })) {
-      signals += await scanCompetitor(user, v, c).catch((e) => (console.error('scan failed', c.name, e.message), 0))
+    const comps = await db.list('competitors', { venture_id: v.id })
+    // The Competitive Intelligence Officer covers every competitor in one run; fall back to per-competitor scans if it fails.
+    if (comps.length && !(await runIntelForVenture(user, v).then(() => true, (e) => (console.error('intel failed', v.name, e.message), false)))) {
+      for (const c of comps) signals += await scanCompetitor(user, v, c).catch((e) => (console.error('scan failed', c.name, e.message), 0))
     }
     const out = await runAgent(user, v.id, 'Monitoring Agent', '/monitor', { venture: ventureCtx(v) }, (o) => `${o.signals.length} market signal(s)`)
       .catch((e) => (console.error('monitor failed', v.name, e.message), { signals: [] }))
