@@ -118,10 +118,10 @@ function Recommendation({ s }: { s: MvpStrategy }) {
   const r = s.recommendation
   return (
     <Card className="overflow-hidden">
-      <div className="bg-dark p-6 text-white sm:p-8">
-        <p className="font-mono text-[11px] tracking-[0.14em] text-white/60 uppercase">Product architect recommendation</p>
+      <div className="hero-light border-b border-line p-6 sm:p-8">
+        <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Product architect recommendation</p>
         <h2 className="mt-2 max-w-3xl text-[26px] leading-[1.2] sm:text-[30px]">{r.headline}</h2>
-        <p className="mt-3 max-w-3xl text-[15px] text-white/75"><span className="font-medium text-white">Biggest challenge:</span> {r.biggest_challenge}</p>
+        <p className="mt-3 max-w-3xl text-[15px] text-ink-2"><span className="font-medium text-ink">Biggest challenge:</span> {r.biggest_challenge}</p>
       </div>
       <div className="grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
         <div>

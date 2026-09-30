@@ -64,23 +64,41 @@
   border-image: linear-gradient(90deg, transparent, #cfd3f3 20%, #cfd3f3 80%, transparent) 1;
 }
 
-/* The saffron → periwinkle aurora used behind heroes */
+/* One gradient identity for every section: warm peach into soft periwinkle. */
+:root { --ga: 236 138 68; --gb: 165 187 252; --gc: 246 201 164; }
 .aurora {
   position: absolute;
   pointer-events: none;
   inset: 0;
   background:
-    radial-gradient(95% 34% at 50% 10%, rgb(232 119 46 / 0.95) 0%, rgb(238 146 82 / 0.72) 38%, rgb(246 201 164 / 0.3) 62%, transparent 80%),
-    radial-gradient(120% 42% at 50% 50%, rgb(165 187 252 / 0.85) 0%, rgb(199 210 254 / 0.55) 42%, transparent 78%);
+    radial-gradient(95% 34% at 50% 10%, rgb(var(--ga) / 0.95) 0%, rgb(var(--ga) / 0.6) 38%, rgb(var(--gc) / 0.3) 62%, transparent 80%),
+    radial-gradient(120% 42% at 50% 50%, rgb(var(--gb) / 0.85) 0%, rgb(var(--gb) / 0.5) 42%, transparent 78%);
   filter: blur(24px);
 }
+/* The standard hero-box gradient (identical in every section): peach top-left, periwinkle top-right. */
 .aurora-soft {
   position: absolute;
   pointer-events: none;
   inset: 0;
   background:
-    radial-gradient(45% 60% at 18% 0%, rgb(236 138 68 / 0.18) 0%, transparent 70%),
-    radial-gradient(50% 70% at 70% 0%, rgb(165 187 252 / 0.32) 0%, transparent 70%);
+    radial-gradient(60% 110% at 6% 0%, rgb(var(--ga) / 0.17) 0%, transparent 70%),
+    radial-gradient(62% 120% at 90% 0%, rgb(var(--gb) / 0.4) 0%, transparent 70%);
+}
+/* The wash at the top of every page (below the top bar), as it was originally. */
+.page-wash {
+  position: absolute;
+  pointer-events: none;
+  inset: 0;
+  background:
+    radial-gradient(45% 60% at 18% 0%, rgb(var(--ga) / 0.18) 0%, transparent 70%),
+    radial-gradient(50% 70% at 70% 0%, rgb(var(--gb) / 0.32) 0%, transparent 70%);
+}
+/* Light hero surface for recommendation cards: the same peach → periwinkle wash, on white. */
+.hero-light {
+  background:
+    radial-gradient(60% 110% at 6% 0%, rgb(var(--ga) / 0.17) 0%, transparent 70%),
+    radial-gradient(62% 120% at 90% 0%, rgb(var(--gb) / 0.4) 0%, transparent 70%),
+    #fff;
 }
 
 .prose-foundry p { @apply text-ink-2 leading-relaxed; }

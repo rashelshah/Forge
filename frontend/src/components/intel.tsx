@@ -49,7 +49,7 @@ const BASIS = { website: 'Website', news: 'News', history: 'Our history', analys
 function Brief({ r }: { r: IntelReport }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-      <Card className="p-6">
+      <Card className="relative isolate overflow-hidden p-6"><div className="aurora-soft -z-10" />
         <div className="flex items-center gap-2"><Badge tone="indigo">{r.brief.period}</Badge><span className="text-sm font-medium">Competitive intelligence summary</span></div>
         <ul className="mt-4 space-y-1.5 text-[15px]">
           {r.brief.counts.length === 0
@@ -64,11 +64,11 @@ function Brief({ r }: { r: IntelReport }) {
           <p className="mt-1 text-[15px] leading-relaxed">{r.brief.recommendation}</p>
         </div>
       </Card>
-      <Card className="relative overflow-hidden bg-dark p-6 text-white">
-        <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-white/60 uppercase"><Sparkles className="size-3.5" />Strategic insight</p>
+      <Card className="hero-light p-6">
+        <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase"><Sparkles className="size-3.5" />Strategic insight</p>
         <p className="mt-3 text-lg leading-snug">{r.insight.insight}</p>
-        <p className="mt-5 font-mono text-[10px] tracking-[0.14em] text-white/60 uppercase">How your strategy should change</p>
-        <p className="mt-1 text-[15px] leading-relaxed text-white/85">{r.insight.recommendation}</p>
+        <p className="mt-5 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">How your strategy should change</p>
+        <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{r.insight.recommendation}</p>
       </Card>
     </div>
   )

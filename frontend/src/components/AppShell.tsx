@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, Bell, FileSearch, FlaskConical, LayoutGrid, Library, LogOut, Palette, Sparkles, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, X,
+  Activity, Bell, FileSearch, FlaskConical, LayoutGrid, Library, LogOut, Palette, PanelLeft, Sparkles, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router'
-import { Logo } from '@/components/brand'
+import { Logo, Spark } from '@/components/brand'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -81,25 +81,35 @@ function Notifications() {
   )
 }
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () => void; collapsed?: boolean; onToggle?: () => void }) {
   const { data: me } = useMe()
   const { signOut, demo } = useAuth()
   const pct = me ? Math.min(100, (100 * me.usage.agentRuns) / me.limits.agentRuns) : 0
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center px-5"><Logo to="/app" /></div>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+      <div className={cn('flex items-center', collapsed ? 'h-[88px] flex-col justify-center gap-2' : 'h-16 justify-between pr-3 pl-5')}>
+        {collapsed
+          ? <NavLink to="/app" aria-label="Foundry AI home" className="grid size-9 place-items-center rounded-[11px] bg-ink"><Spark className="size-[18px]" /></NavLink>
+          : <Logo to="/app" />}
+        {onToggle && (
+          <button onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="grid size-8 place-items-center rounded-lg text-ink-2 transition hover:bg-soft hover:text-ink cursor-pointer">
+            <PanelLeft className="size-[19px]" strokeWidth={1.75} />
+          </button>
+        )}
+      </div>
+      <nav className={cn('flex-1 space-y-0.5 overflow-y-auto py-2', collapsed ? 'px-2' : 'px-3')}>
         {NAV.filter((n) => !n.admin || me?.admin).map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} onClick={onNavigate}
-            className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition',
+          <NavLink key={to} to={to} end={end} onClick={onNavigate} title={collapsed ? label : undefined} aria-label={label}
+            className={({ isActive }) => cn('flex items-center rounded-xl py-2 text-[14px] transition', collapsed ? 'justify-center px-0' : 'gap-3 px-3',
               isActive ? 'bg-soft font-medium text-ink shadow-press-light' : 'text-ink-2 hover:bg-soft/60 hover:text-ink')}>
-            <Icon className="size-[17px]" strokeWidth={1.75} />
-            {label}
+            <Icon className="size-[17px] shrink-0" strokeWidth={1.75} />
+            {!collapsed && label}
           </NavLink>
         ))}
       </nav>
-      <div className="space-y-3 p-3">
-        {me && (
+      <div className={cn('space-y-3 p-3', collapsed && 'px-2')}>
+        {me && !collapsed && (
           <div className="rounded-2xl border border-line bg-[linear-gradient(180deg,#fff,#f5f7fe)] p-4">
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium">{me.limits.name} plan</span>
@@ -109,15 +119,19 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <p className="mt-2 text-[11px] text-muted">{me.usage.agentRuns} / {me.limits.agentRuns} agent runs this month</p>
           </div>
         )}
-        <div className="flex items-center gap-3 rounded-xl px-2 py-1.5">
-          <span className="grid size-8 place-items-center rounded-full bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] text-xs font-medium text-white">
+        <div className={cn('flex items-center rounded-xl py-1.5', collapsed ? 'justify-center' : 'gap-3 px-2')}>
+          <span title={collapsed ? me?.full_name || me?.email : undefined} className="grid size-8 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] text-xs font-medium text-white">
             {(me?.full_name || me?.email || 'F').slice(0, 1).toUpperCase()}
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{me?.full_name || 'Founder'}</p>
-            <p className="truncate text-xs text-muted">{demo ? 'Local demo workspace' : me?.email}</p>
-          </div>
-          {!demo && <button onClick={signOut} className="rounded-lg p-1.5 text-muted hover:bg-soft hover:text-ink cursor-pointer" aria-label="Sign out"><LogOut className="size-4" /></button>}
+          {!collapsed && (
+            <>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{me?.full_name || 'Founder'}</p>
+                <p className="truncate text-xs text-muted">{demo ? 'Local demo workspace' : me?.email}</p>
+              </div>
+              {!demo && <button onClick={signOut} className="rounded-lg p-1.5 text-muted hover:bg-soft hover:text-ink cursor-pointer" aria-label="Sign out"><LogOut className="size-4" /></button>}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -127,12 +141,15 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell() {
   const [mobile, setMobile] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('foundry:sidebar') === 'collapsed' } catch { return false } })
   const loc = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
+  const toggle = () => setCollapsed((c) => { try { localStorage.setItem('foundry:sidebar', c ? 'expanded' : 'collapsed') } catch { /* private mode */ } return !c })
+  const style = { '--sbw': collapsed ? '5rem' : '16rem' } as React.CSSProperties
   return (
-    <div className="min-h-screen bg-canvas lg:pl-64">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white/80 backdrop-blur lg:block">
-        <Sidebar />
+    <div className="relative min-h-screen bg-canvas transition-[padding] duration-200 lg:pl-[var(--sbw)]" style={style}>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden border-r border-line bg-white/85 backdrop-blur transition-[width] duration-200 lg:block lg:w-[var(--sbw)]">
+        <Sidebar collapsed={collapsed} onToggle={toggle} />
       </aside>
       <AnimatePresence>
         {mobile && (
@@ -157,7 +174,7 @@ export function AppShell() {
       </header>
 
       <main className="relative isolate">
-        <div className="aurora-soft -z-10 h-80" />
+        <div className="page-wash -z-10 h-80" />
         <motion.div key={loc.pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
           <Outlet context={{ newVenture: () => setNewOpen(true) } satisfies ShellCtx} />
         </motion.div>

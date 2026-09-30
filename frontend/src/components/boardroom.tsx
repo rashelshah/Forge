@@ -93,7 +93,7 @@ export function VerdictCard({ v }: { v: Verdict }) {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <Card className="overflow-hidden">
         <div className="relative isolate p-6 sm:p-8">
-          <div className="aurora -z-10 opacity-20" />
+          <div className="aurora-soft -z-10" />
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">The board's answer</p>

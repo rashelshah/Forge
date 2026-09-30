@@ -58,8 +58,8 @@ function FounderBrief({ c, refreshing, onRefresh }: { c: VentureCommand; refresh
             <p className="mt-2 text-[17px] leading-snug">{b.risk}</p>
           </div>
         </div>
-        <div className="flex flex-col rounded-2xl bg-dark p-6 text-white">
-          <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-white/60 uppercase"><ArrowRight className="size-3.5" />Recommended direction</p>
+        <div className="flex flex-col rounded-2xl border border-line bg-white/80 p-6">
+          <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase"><ArrowRight className="size-3.5" />Recommended direction</p>
           <p className="mt-3 flex-1 text-lg leading-snug sm:text-xl">{b.recommendation}</p>
         </div>
       </div>
