@@ -1,10 +1,11 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertTriangle, AppWindow, Download, FlaskConical, Loader2, Maximize2, Monitor, RefreshCw, Send, Smartphone, Sparkles, Tablet, Undo2, Wand2, X,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { toast } from 'sonner'
 import { Empty, ModeBadge } from '@/components/bits'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -17,7 +18,7 @@ import { ago, cn } from '@/lib/utils'
 // The prototype runs in a sandboxed iframe with an opaque origin: generated code can't touch this app.
 // Sandboxed frames can't use localStorage, so give it an in-memory stand-in, and report runtime errors to us.
 const SHIM = `<script>try{window.localStorage.getItem('x')}catch(e){var __m={};Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem:function(k){return k in __m?__m[k]:null},setItem:function(k,v){__m[k]=String(v)},removeItem:function(k){delete __m[k]},clear:function(){__m={}},key:function(i){return Object.keys(__m)[i]||null},get length(){return Object.keys(__m).length}}})}
-window.addEventListener('error',function(e){parent.postMessage({__foundry:'error',message:String(e.message||e)},'*')});
+window.addEventListener('error',function(e){var m=String(e.message||'');if(!m||m==='Script error.')return;parent.postMessage({__foundry:'error',message:m},'*')});
 window.addEventListener('unhandledrejection',function(e){parent.postMessage({__foundry:'error',message:'Unhandled promise rejection: '+String(e.reason)},'*')});
 function __qa(){var t=(document.body&&document.body.innerText)||'';var m=t.match(/\\b(undefined|NaN)\\b|\\[object Object\\]/);if(m)parent.postMessage({__foundry:'error',message:'The '+(location.hash||'#/home')+' screen shows "'+m[0]+'" where a value should be — a field is missing from the data or miscalculated'},'*')}
 window.addEventListener('load',function(){setTimeout(__qa,700)});window.addEventListener('hashchange',function(){setTimeout(__qa,400)});</script>`
@@ -57,6 +58,7 @@ function PrototypeFrame({ html, width = 1280, height = 720, onError }: { html: s
 }
 
 export function PrototypePreview({ content }: { content: PrototypeContent }) {
+  if (!content.html) return <Card className="p-6 text-sm text-muted">This prototype is still being built.</Card>
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center gap-1.5 border-b border-line bg-canvas px-4 py-2.5">
@@ -68,23 +70,50 @@ export function PrototypePreview({ content }: { content: PrototypeContent }) {
   )
 }
 
-function Building() {
-  const [step, setStep] = useState(0)
+type Build = NonNullable<PrototypeContent['build']>
+const STAGES: { key: NonNullable<Build['stage']>; label: (b: Build) => string }[] = [
+  { key: 'spec', label: () => 'Designing the product around your idea' },
+  { key: 'code', label: (b) => (b.app_name ? `Building ${b.app_name}${b.screens?.length ? `: ${b.screens.join(', ')}` : ''}` : 'Writing the app') },
+  { key: 'check', label: () => 'Checking the code and fixing any errors' },
+]
+
+function Elapsed({ since }: { since?: string }) {
+  const [, tick] = useState(0)
   useEffect(() => {
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, BUILD_STEPS.length - 1)), 2600)
+    const t = setInterval(() => tick((n) => n + 1), 1000)
     return () => clearInterval(t)
   }, [])
+  const secs = since ? Math.max(0, Math.round((Date.now() - new Date(since).getTime()) / 1000)) : 0
+  return <>{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</>
+}
+
+function Building({ build, compact }: { build: Build; compact?: boolean }) {
+  const idx = Math.max(0, STAGES.findIndex((x) => x.key === build.stage))
+  if (compact) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-mist bg-[#f4f7fe] px-4 py-3 text-sm">
+        <Loader2 className="size-4 animate-spin text-azure" />
+        <span className="flex-1">Building a new version — {STAGES[idx].label(build).toLowerCase()}… <span className="text-muted">(you can keep using this one)</span></span>
+        <span className="font-mono text-xs text-muted"><Elapsed since={build.started_at} /></span>
+      </div>
+    )
+  }
   return (
     <Card className="relative overflow-hidden p-8">
       <div className="aurora-soft -z-10" />
-      <p className="text-lg font-medium">Building your prototype…</p>
-      <p className="mt-1 text-sm text-muted">Usually 10–30 seconds.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-lg font-medium">Building your prototype…</p>
+          <p className="mt-1 text-sm text-muted">Usually 1–3 minutes on the free AI models. You can leave this page — we'll notify you when it's ready.</p>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 font-mono text-xs text-muted shadow-press-light"><Elapsed since={build.started_at} /></span>
+      </div>
       <ol className="mt-6 space-y-3">
-        {BUILD_STEPS.map((s, i) => (
-          <li key={s} className={cn('flex items-center gap-3 text-sm transition', i > step && 'opacity-35')}>
-            {i < step ? <span className="grid size-5 place-items-center rounded-full bg-leaf text-[10px] text-white">✓</span>
-              : i === step ? <Loader2 className="size-5 animate-spin text-saffron" /> : <span className="size-5 rounded-full border border-line-2" />}
-            {s}
+        {STAGES.map((st, i) => (
+          <li key={st.key} className={cn('flex items-center gap-3 text-sm transition', i > idx && 'opacity-35')}>
+            {i < idx ? <span className="grid size-5 place-items-center rounded-full bg-leaf text-[10px] text-white">✓</span>
+              : i === idx ? <Loader2 className="size-5 animate-spin text-saffron" /> : <span className="size-5 rounded-full border border-line-2" />}
+            {st.label(build)}
           </li>
         ))}
       </ol>
@@ -105,7 +134,22 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
   // Put the new version straight into the cache so the preview updates instantly (no refetch race).
   const key = ['research', { venture_id: venture.id }]
   const put = (r: Report<PrototypeContent>) => qc.setQueryData<Report[]>(key, (old = []) => [r, ...old.filter((x) => x.id !== r.id)])
-  const generate = useAction(() => api<Report<PrototypeContent>>(`/ventures/${venture.id}/prototype`, {}).then((r) => (put(r), r)), inv, 'Prototype ready')
+  const generate = useAction(() => api<Report<PrototypeContent>>(`/ventures/${venture.id}/prototype`, {}).then((r) => (put(r), r)), inv)
+  const build = report?.content.build
+  const building = build?.status === 'building' && Date.now() - new Date(build.started_at ?? 0).getTime() < 15 * 60_000
+  // Follow a background build (survives tab switches and reloads) and drop the result into the cache when it lands.
+  const { data: polled } = useQuery({
+    queryKey: ['research', report?.id, 'build'], queryFn: () => api<Report<PrototypeContent>>(`/research/${report!.id}`),
+    enabled: !!report && building, refetchInterval: 2500,
+  })
+  useEffect(() => {
+    if (!polled || polled.content.build?.status === 'building') return
+    put(polled)
+    if (polled.content.build?.status === 'error') toast.error(polled.content.build.error ?? 'The build failed')
+    else toast.success('Your prototype is ready')
+    qc.invalidateQueries({ queryKey: ['notifications'] })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [polled])
   const edit = useAction((text: string) => api<Report<PrototypeContent>>(`/research/${report!.id}/prototype/edit`, { instruction: text }).then((r) => (put(r), r)), inv, (r) => r.summary ?? 'Updated')
   const undo = useAction(() => api<Report<PrototypeContent>>(`/research/${report!.id}/prototype/undo`, {}).then((r) => (put(r), r)), inv, 'Reverted to the previous version')
   const launch = useAction(() => api<Experiment>('/experiments', {
@@ -115,17 +159,31 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
 
   // A new version clears the previous runtime error.
   useEffect(() => setError(null), [report?.content.html])
+  // Self-healing: the first error a new version throws is fixed automatically, once per version.
+  const healed = useRef(new Set<string>())
+  useEffect(() => {
+    const html = report?.content.html
+    if (!error || !html || edit.isPending) return
+    const key = `${html.length}:${html.slice(-200)}`
+    if (healed.current.has(key)) return
+    healed.current.add(key)
+    edit.mutate(`Fix this runtime error without changing how the app looks or behaves otherwise: ${error}`)
+  }, [error, report?.content.html, edit])
 
-  if (generate.isPending) return <Building />
-  if (!report) {
+  if (generate.isPending) return <Building build={{ status: 'building', stage: 'spec', started_at: new Date().toISOString() }} />
+  if (report && !report.content.html && building) return <Building build={build!} />
+  if (!report || !report.content.html) {
     return (
-      <Empty icon={<AppWindow />} title="Build a working prototype" action={<Button onClick={() => generate.mutate()}><Sparkles />Generate prototype</Button>}>
-        Foundry turns your research and MVP plan into a clickable first version of the product — real screens, sample data, and working actions — that you can refine by just describing changes.
-      </Empty>
+      <div className="space-y-3">
+        {build?.status === 'error' && <p className="rounded-xl border border-[#f4cfc8] bg-[#fdf3f1] p-3 text-sm text-rose">{build.error}</p>}
+        <Empty icon={<AppWindow />} title="Build a working prototype" action={<Button onClick={() => generate.mutate()}><Sparkles />{build?.status === 'error' ? 'Try again' : 'Generate prototype'}</Button>}>
+          Foundry designs a product around your idea and builds a clickable first version — real screens, realistic data, and working actions — that you can refine by just describing changes.
+        </Empty>
+      </div>
     )
   }
 
-  const c = report.content
+  const c = report.content as PrototypeContent & { html: string }
   const busy = edit.isPending || undo.isPending
   const submit = (text: string) => {
     if (!text.trim() || busy) return
@@ -161,10 +219,12 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
           </div>
         </div>
 
+        {building && build && <Building build={build} compact />}
+        {build?.status === 'error' && <p className="rounded-xl border border-[#f4cfc8] bg-[#fdf3f1] px-4 py-3 text-sm text-rose">The new version failed: {build.error}</p>}
         {error && (
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f4cfc8] bg-[#fdf3f1] px-4 py-3 text-sm">
             <AlertTriangle className="size-4 shrink-0 text-rose" />
-            <span className="min-w-0 flex-1 text-ink-2"><span className="font-medium text-rose">The prototype hit an error:</span> {error}</span>
+            <span className="min-w-0 flex-1 text-ink-2"><span className="font-medium text-rose">{busy ? 'Found an error — fixing it automatically…' : 'The prototype hit an error:'}</span> {error}</span>
             <Button size="sm" onClick={() => submit(`Fix this runtime error without changing how the app looks or behaves otherwise: ${error}`)} loading={busy}><Wand2 />Fix it for me</Button>
           </div>
         )}
@@ -202,7 +262,7 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
             </div>
           ))}
         </div>
-        <div className="space-y-2 border-t border-line p-4">
+        <div className="space-y-4 border-t border-line p-4">
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTIONS.map((s) => <button key={s} onClick={() => setInstruction(s)} className="rounded-full border border-line bg-canvas px-2.5 py-1 text-[11px] text-ink-2 hover:border-line-2 cursor-pointer">{s}</button>)}
           </div>
@@ -214,8 +274,12 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
               {c.previous_html && <Button type="button" variant="light" onClick={() => undo.mutate()} disabled={busy} aria-label="Undo last change"><Undo2 /></Button>}
             </div>
           </form>
-          <button onClick={() => confirm('Start over with a brand new prototype? Your current version will be replaced.') && generate.mutate()}
-            className="w-full pt-1 text-center text-xs text-muted hover:text-ink cursor-pointer">Start over from scratch</button>
+          
+          <div className="pt-2 border-t border-line border-dashed">
+            <Button variant="light" className="w-full text-muted hover:text-ink" disabled={building} onClick={() => confirm('Start over with a brand new prototype? Your current version stays until the new one is ready, and you can undo afterwards.') && generate.mutate()}>
+              <Wand2 className="size-4 mr-2" /> Start over from scratch
+            </Button>
+          </div>
         </div>
       </Card>
 

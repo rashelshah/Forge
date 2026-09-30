@@ -8,6 +8,8 @@ from fastapi.responses import StreamingResponse
 import agents
 import boardroom
 import core
+import design_intel
+import studio
 
 app = FastAPI(title="Foundry AI agents")
 VECTOR_ERROR = None
@@ -75,7 +77,18 @@ def mvp(venture: dict = Body(...), founder: dict = Body({})):
 
 @app.post("/prototype")
 def prototype(venture: dict = Body(..., embed=True)):
-    return agents.prototype(venture)
+    def events():
+        try:
+            for e in agents.prototype_steps(venture):
+                yield f"data: {json.dumps(e)}\n\n"
+        except Exception as e:
+            print("prototype build failed:", e)
+            busy = "429" in str(e) or "503" in str(e) or "rate" in str(e).lower()
+            msg = ("The free AI models are busy right now — please try again in a minute." if busy
+                   else str(e)[:300] if isinstance(e, core.LLMError) else "Something went wrong while building. Please try again.")
+            yield f"data: {json.dumps({'type': 'error', 'error': msg})}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @app.post("/prototype/edit")
@@ -141,4 +154,37 @@ def memory_search(venture_id: str = Body(...), query: str = Body(...), k: int = 
 @app.delete("/memory/{venture_id}")
 def memory_forget(venture_id: str):
     core.forget_venture(venture_id)
+    return {"ok": True}
+
+
+@app.post("/design/analyze")
+def design_analyze(id: str = Body(...), url: str = Body(...)):
+    try:
+        return design_intel.run(id, url)
+    except design_intel.DesignError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/design/search")
+def design_search(query: str = Body(...), k: int = Body(8)):
+    return {"results": design_intel.search(query, k)}
+
+
+@app.delete("/design/{ref_id}")
+def design_purge(ref_id: str):
+    design_intel.purge(ref_id)
+    return {"ok": True}
+
+
+@app.post("/studio/run")
+def studio_run(project_id: str = Body(..., embed=True)):
+    try:
+        return studio.run_project(project_id)
+    except (studio.StudioError, design_intel.DesignError) as e:
+        raise HTTPException(422, str(e))
+
+
+@app.delete("/studio/{project_id}")
+def studio_forget(project_id: str):
+    studio.forget(project_id)
     return {"ok": True}

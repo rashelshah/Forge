@@ -2,14 +2,14 @@
 import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import { DB_MODE, db } from '../db.js'
-import { HttpError, PLANS, ai, log, notify, own, remember, runAgent, usage, ventureCtx } from '../core.js'
+import { HttpError, PLANS, ai, isAdmin, log, notify, own, remember, runAgent, usage, ventureCtx } from '../core.js'
 
 const r = Router()
 const text = (v, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 
 // ---------------------------------------------------------------- profile, plan, config
 
-r.get('/me', async (req, res) => res.json({ ...req.user, limits: PLANS[req.user.plan] ?? PLANS.free, usage: await usage(req.user), plans: PLANS }))
+r.get('/me', async (req, res) => res.json({ ...req.user, admin: isAdmin(req.user), limits: PLANS[req.user.plan] ?? PLANS.free, usage: await usage(req.user), plans: PLANS }))
 
 r.patch('/me', async (req, res) => {
   const patch = {}
@@ -165,6 +165,7 @@ r.post('/experiments', async (req, res) => {
   if (req.body.prototype_report_id) {
     const r = await own('research_reports', req.body.prototype_report_id, req.user)
     if (r.kind !== 'prototype') throw new HttpError(400, 'Not a prototype')
+    if (!r.content.html) throw new HttpError(400, 'The prototype is still being built')
     prototype = { title: r.content.title, html: r.content.html }
   }
   if (type === 'prototype' && !prototype) throw new HttpError(400, 'Build a prototype for this venture first')

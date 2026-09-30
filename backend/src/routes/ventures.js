@@ -227,23 +227,88 @@ async function repairScripts(v, html) {
   return html
 }
 
+// Builds run in the background (1-4 min on free models) and save their progress on the report, so the user can
+// switch tabs or reload and still see where the build is.
+async function buildPrototype(user, v, report) {
+  const setBuild = async (build) => {
+    const cur = await db.get('research_reports', report.id)
+    await db.update('research_reports', report.id, { content: { ...cur.content, build } })
+  }
+  const run = await db.insert('agent_runs', { user_id: user.id, venture_id: v.id, agent: 'Prototype Builder', status: 'running' })
+  const t0 = Date.now()
+  let result = null
+  let error = null
+  try {
+    // Enrich the venture context with the latest MVP plan and validation scores so the
+    // prototype builder can produce a product-specific UI instead of a generic dashboard.
+    const [mvpReport, validationReport] = await Promise.all([
+      latestReport(v.id, 'mvp'),
+      latestReport(v.id, 'validation'),
+    ])
+    const enrichedVenture = {
+      ...ventureCtx(v),
+      mvp_plan: mvpReport?.content ?? null,
+      validation: validationReport?.content ?? null,
+    }
+    const aiRes = await ai('/prototype', { venture: enrichedVenture }, { raw: true, timeout: 900_000 })
+    let buf = ''
+    const decoder = new TextDecoder()
+    for await (const chunk of aiRes.body) {
+      buf += decoder.decode(chunk, { stream: true })
+      let i
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const line = buf.slice(0, i).replace(/^data: /, '')
+        buf = buf.slice(i + 2)
+        if (!line) continue
+        const e = JSON.parse(line)
+        if (e.type === 'stage') await setBuild({ status: 'building', stage: e.stage, app_name: e.app_name, screens: e.screens, started_at: new Date(t0).toISOString() })
+        if (e.type === 'done') result = e.result
+        if (e.type === 'error') error = e.error
+      }
+    }
+    if (result) {
+      await setBuild({ status: 'building', stage: 'check', app_name: result.title, started_at: new Date(t0).toISOString() })
+      result.html = await repairScripts(v, result.html)
+    }
+  } catch (e) {
+    error = e.message
+  }
+  const cur = await db.get('research_reports', report.id)
+  if (result) {
+    await db.update('research_reports', report.id, {
+      title: `Prototype · ${v.name}`, summary: result.summary,
+      content: { ...result, history: [], previous_html: cur.content.html ?? null, build: null },
+    })
+    await remember(user, v.id, 'roadmap', 'Prototype built', `A clickable first prototype of ${v.name} was generated: ${result.summary}.`)
+    await log(user, v.id, 'Prototype Builder', 'Built a working prototype', result.title)
+    await notify(user, v.id, 'prototype', `Your ${result.title} prototype is ready`, result.summary, `/app/ventures/${v.id}?tab=prototype`)
+  } else {
+    await db.update('research_reports', report.id, { content: { ...cur.content, build: { status: 'error', error: error || 'The build failed. Please try again.' } } })
+  }
+  await db.update('agent_runs', run.id, {
+    status: result ? 'succeeded' : 'failed', mode: result?.mode, error: result ? null : error, duration_ms: Date.now() - t0,
+    finished_at: new Date().toISOString(), output_summary: result ? `${result.title} · ${Math.round(result.html.length / 1024)}KB` : null,
+  })
+}
+
 r.post('/ventures/:id/prototype', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
-  const out = await runAgent(req.user, v.id, 'Prototype Builder', '/prototype', { venture: ventureCtx(v) }, (o) => `${o.title} · ${Math.round(o.html.length / 1024)}KB`)
-  const html = await repairScripts(v, out.html)
-  // One prototype per venture: starting over replaces it (the old version stays available via undo).
+  await requireQuota(req.user, 'agentRuns')
   const existing = await latestReport(v.id, 'prototype')
+  const building = existing?.content.build?.status === 'building' && Date.now() - new Date(existing.content.build.started_at).getTime() < 15 * 60_000
+  if (building) return res.status(202).json(existing)
+  const build = { status: 'building', stage: 'spec', started_at: new Date().toISOString() }
   const report = existing
-    ? await db.update('research_reports', existing.id, { content: { ...out, html, history: [], previous_html: existing.content.html }, summary: out.summary })
-    : await saveReport(req.user, v.id, 'prototype', `Prototype · ${v.name}`, { ...out, html, history: [], previous_html: null }, out.summary)
-  await remember(req.user, v.id, 'roadmap', 'Prototype built', `A clickable first prototype of ${v.name} was generated ("${out.title}").`)
-  await log(req.user, v.id, 'Prototype Builder', 'Built a working prototype', out.title)
-  res.json(report)
+    ? await db.update('research_reports', existing.id, { content: { ...existing.content, build } })
+    : await saveReport(req.user, v.id, 'prototype', `Prototype · ${v.name}`, { title: v.name, html: null, summary: 'Building…', history: [], previous_html: null, build, mode: 'live' }, 'Building…')
+  buildPrototype(req.user, v, report).catch((e) => console.error('prototype build crashed', e))
+  res.status(202).json(report)
 })
 
 r.post('/research/:id/prototype/edit', async (req, res) => {
   const report = await own('research_reports', req.params.id, req.user)
   if (report.kind !== 'prototype') throw new HttpError(400, 'Not a prototype')
+  if (!report.content.html) throw new HttpError(400, 'The prototype is still being built')
   const instruction = text(req.body.instruction, 1500)
   if (!instruction) throw new HttpError(400, 'Describe the change you want')
   const v = await own('ventures', report.venture_id, req.user)

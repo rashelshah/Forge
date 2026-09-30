@@ -49,3 +49,12 @@ export async function stream<E>(path: string, body: unknown, onEvent: (e: E) => 
 }
 
 export const publicPageUrl = (slug: string) => `${BASE || window.location.origin}/p/${slug}`
+
+/** Authenticated file download (the token lives in a header, so a plain link can't be used). */
+export async function download(path: string, filename: string) {
+  const res = await fetch(`${BASE}/api${path}`, { headers: await headers() })
+  if (!res.ok) throw new ApiError((await res.json().catch(() => ({}))).error || res.statusText, res.status)
+  const url = URL.createObjectURL(await res.blob())
+  Object.assign(document.createElement('a'), { href: url, download: filename }).click()
+  URL.revokeObjectURL(url)
+}

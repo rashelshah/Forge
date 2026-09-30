@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, Bell, FileSearch, FlaskConical, LayoutGrid, Library, LogOut, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, X,
+  Activity, Bell, FileSearch, FlaskConical, LayoutGrid, Library, LogOut, Palette, Sparkles, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router'
@@ -17,12 +17,14 @@ import { ago, cn } from '@/lib/utils'
 
 const NAV = [
   { to: '/app', label: 'Dashboard', icon: LayoutGrid, end: true },
+  { to: '/app/studio', label: 'Product Studio', icon: Sparkles },
   { to: '/app/ventures', label: 'Ventures', icon: Rocket },
   { to: '/app/research', label: 'Research', icon: FileSearch },
   { to: '/app/boardroom', label: 'Boardroom', icon: MessagesSquare },
   { to: '/app/competitors', label: 'Competitors', icon: Radar },
   { to: '/app/experiments', label: 'Experiments', icon: FlaskConical },
   { to: '/app/knowledge', label: 'Knowledge Base', icon: Library },
+  { to: '/app/design', label: 'Design Intelligence', icon: Palette, admin: true },
   { to: '/app/activity', label: 'Activity Feed', icon: Activity },
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
@@ -87,7 +89,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center px-5"><Logo to="/app" /></div>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.filter((n) => !n.admin || me?.admin).map(({ to, label, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} onClick={onNavigate}
             className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] transition',
               isActive ? 'bg-soft font-medium text-ink shadow-press-light' : 'text-ink-2 hover:bg-soft/60 hover:text-ink')}>

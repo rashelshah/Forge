@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
 
 GROQ = bool(os.getenv("GROQ_API_KEY"))
+GEMINI = bool(os.getenv("GEMINI_API_KEY"))
 OPENAI = GROQ or bool(os.getenv("OPENAI_API_KEY"))  # "an LLM is configured"
 TAVILY = bool(os.getenv("TAVILY_API_KEY"))
 FIRECRAWL = bool(os.getenv("FIRECRAWL_API_KEY"))
@@ -30,7 +31,13 @@ PGVECTOR = bool(SB_URL and SB_KEY)
 HEAVY = [os.getenv("LLM_MODEL") or ("openai/gpt-oss-120b" if GROQ else "gpt-4o-mini")]
 FAST = [m.strip() for m in (os.getenv("LLM_FAST_MODELS") or ("openai/gpt-oss-20b,qwen/qwen3.8-27b" if GROQ else "gpt-4o-mini")).split(",") if m.strip()]
 MODEL = HEAVY[0]
+# Prototype code generation uses Groq first (due to Gemini free tier rate limits), then Gemini.
+CODE = HEAVY + FAST + ([m.strip() for m in (os.getenv("CODE_MODELS") or "gemini-flash-latest,gemini-3.5-flash").split(",")] if GEMINI else [])
 MODE = "live" if OPENAI else "demo"
+# Vision-capable models for screenshot analysis (Design Intelligence). Groq has no vision models, so Gemini (each model
+# has its own free quota) leads, then OpenAI if that's the only key.
+VISION = [m.strip() for m in (os.getenv("VISION_MODELS") or ",".join(
+    ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-3.1-flash-lite"] if GEMINI else ["gpt-4o-mini"] if not GROQ and os.getenv("OPENAI_API_KEY") else [])).split(",") if m.strip()]
 
 
 # ---------------------------------------------------------------- LLM
@@ -46,7 +53,10 @@ _rr_lock = threading.Lock()
 def _client(model: str, temperature: float, max_tokens: int):
     from langchain_openai import ChatOpenAI
 
-    kw = {"model": model, "temperature": temperature, "max_retries": 2, "timeout": 120, "max_tokens": max_tokens}
+    kw = {"model": model, "temperature": temperature, "max_retries": 2, "timeout": 300, "max_tokens": max_tokens}
+    if model.startswith("gemini"):
+        return ChatOpenAI(**kw, base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                          api_key=os.getenv("GEMINI_API_KEY"), reasoning_effort="low")
     if GROQ:
         kw |= {"base_url": "https://api.groq.com/openai/v1", "api_key": os.getenv("GROQ_API_KEY")}
         if "gpt-oss" in model:
@@ -56,9 +66,15 @@ def _client(model: str, temperature: float, max_tokens: int):
     return ChatOpenAI(**kw)
 
 
-def structured(schema, system: str, user: str, temperature: float = 0.4, tier: str = "heavy", max_tokens: int = 3500):
+def structured(schema, system: str, user, temperature: float = 0.4, tier: str = "heavy", max_tokens: int = 3500, models: list[str] | None = None):
     """Call the chat model and parse into a Pydantic schema, failing over across models."""
-    if tier == "fast":
+    if models is not None:
+        pass  # explicit chain from the caller
+    elif tier == "vision":
+        models = VISION
+    elif tier == "code":
+        models = CODE + HEAVY
+    elif tier == "fast":
         with _rr_lock:
             _rr["i"] += 1
             start = _rr["i"] % len(FAST)
@@ -67,7 +83,7 @@ def structured(schema, system: str, user: str, temperature: float = 0.4, tier: s
         models = HEAVY + FAST
     errors = []
     for model in dict.fromkeys(models):
-        method = "json_schema" if ("gpt-oss" in model or not GROQ) else "function_calling"
+        method = "json_schema" if ("gpt-oss" in model or model.startswith("gemini") or not GROQ) else "function_calling"
         try:
             out = _client(model, temperature, max_tokens).with_structured_output(schema, method=method, include_raw=True).invoke(
                 [("system", system), ("human", user)])
@@ -80,12 +96,15 @@ def structured(schema, system: str, user: str, temperature: float = 0.4, tier: s
     raise LLMError("All models failed — " + " | ".join(errors))
 
 
-def complete(system: str, user: str, temperature: float = 0.4, max_tokens: int = 6000, models: list[str] | None = None) -> str:
-    """Plain-text completion (used for code generation), failing over across models; rejects truncated output."""
+def complete(system: str, user, temperature: float = 0.4, max_tokens: int = 4000, models: list[str] | None = None) -> str:
+    """Plain-text completion (used for code generation), failing over across models; rejects truncated output.
+    `user` may be a function of the model name, so prompts can adapt to each model's budget."""
     errors = []
     for model in dict.fromkeys(models or HEAVY + FAST):
+        big = model.startswith("gemini")
         try:
-            msg = _client(model, temperature, max_tokens).invoke([("system", system), ("human", user)])
+            prompt = user(model) if callable(user) else user
+            msg = _client(model, temperature, 48000 if big else max_tokens).invoke([("system", system), ("human", prompt)])
         except Exception as e:
             errors.append(f"{model}: {str(e)[:160]}")
             continue
@@ -348,6 +367,7 @@ def status():
         "mode": MODE,
         "openai": OPENAI,
         "llm": "groq" if GROQ else "openai" if OPENAI else None,
+        "code_model": CODE[0] if OPENAI and CODE else None,
         "tavily": TAVILY,
         "firecrawl": FIRECRAWL,
         "vector": "pgvector" if PGVECTOR else "local",

@@ -57,8 +57,9 @@ export interface MvpPlan {
 
 export interface PrototypeContent {
   title: string
-  html: string
+  html: string | null
   summary: string
+  build?: { status: 'building' | 'error'; stage?: 'spec' | 'code' | 'check'; app_name?: string; screens?: string[]; started_at?: string; error?: string } | null
   history: { instruction: string; summary: string; at: string }[]
   previous_html: string | null
   mode: Mode
@@ -161,6 +162,7 @@ export interface Me {
   email: string
   full_name: string
   plan: 'free' | 'pro' | 'studio'
+  admin?: boolean
   founder_profile: FounderProfile
   settings: { daily_monitoring?: boolean }
   limits: Plan
@@ -168,3 +170,46 @@ export interface Me {
   plans: Record<string, Plan>
 }
 export interface Config { db: 'supabase' | 'local'; ai: { mode: Mode | 'offline'; openai?: boolean; tavily?: boolean; firecrawl?: boolean; vector?: 'pgvector' | 'local'; embeddings?: string; model?: string | null; fast_models?: string[] | null; vector_error?: string | null } }
+
+export interface DesignReference {
+  id: string
+  name: string
+  url: string
+  industry: string | null
+  subcategory: string | null
+  target_audience: string | null
+  style: string | null
+  analysis?: string | null
+  metadata_json: Record<string, unknown>
+  homepage_screenshot: string | null
+  dashboard_screenshot: string | null
+  mobile_screenshot: string | null
+  status: 'queued' | 'analyzing' | 'done' | 'failed'
+  error: string | null
+  created_at: string
+  updated_at: string
+  score?: number
+  match?: { kind: string; text: string }
+}
+
+export interface StudioProject {
+  id: string
+  name: string
+  idea: string
+  audience: string | null
+  industry: string | null
+  requirements: string | null
+  max_iterations: number
+  status: 'queued' | 'running' | 'done' | 'failed'
+  stage: string | null
+  iteration: number
+  best_iteration: number | null
+  scores: Record<string, number>
+  error: string | null
+  created_at: string
+  updated_at: string
+}
+export interface StudioEvent { id: string; agent: string; status: 'running' | 'done' | 'failed'; summary: string | null; detail: string | null; iteration: number; created_at: string }
+export interface StudioArtifact { id: string; kind: string; iteration: number; content: any; created_at: string }
+export interface StudioVersion { iteration: number; created_at: string; summary: string | null; bytes: number | null }
+export interface StudioDetail { project: StudioProject; events: StudioEvent[]; artifacts: StudioArtifact[]; versions: StudioVersion[] }

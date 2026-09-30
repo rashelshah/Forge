@@ -9,3 +9,5 @@ langchain-openai>=0.2
 langchain-text-splitters>=0.3
 tavily-python>=0.5
 fastembed>=0.4
+playwright>=1.47
+qdrant-client>=1.12

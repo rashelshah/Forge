@@ -6,10 +6,13 @@ import Activity from './pages/Activity'
 import Boardroom, { BoardroomSession } from './pages/Boardroom'
 import Competitors from './pages/Competitors'
 import Dashboard from './pages/Dashboard'
+import DesignIntelligence from './pages/DesignIntelligence'
 import Experiments, { ExperimentDetail } from './pages/Experiments'
 import Knowledge from './pages/Knowledge'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
+import Studio from './pages/Studio'
+import StudioProject from './pages/StudioProject'
 import Research, { ReportPage } from './pages/Research'
 import Settings from './pages/Settings'
 import VentureDetail from './pages/VentureDetail'
@@ -37,6 +40,9 @@ export default function App() {
         <Route path="competitors" element={<Competitors />} />
         <Route path="experiments" element={<Experiments />} />
         <Route path="experiments/:id" element={<ExperimentDetail />} />
+        <Route path="studio" element={<Studio />} />
+        <Route path="studio/:id" element={<StudioProject />} />
+        <Route path="design" element={<DesignIntelligence />} />
         <Route path="knowledge" element={<Knowledge />} />
         <Route path="activity" element={<Activity />} />
         <Route path="settings" element={<Settings />} />

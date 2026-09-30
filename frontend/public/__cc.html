@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniCatalog — Unified MOOC Search & Curation Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for clean UI */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col md:flex-row text-slate-800 antialiased font-sans">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="w-full md:w-72 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800 shrink-0">
+    <!-- Brand Header -->
+    <div class="p-6 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🎓</span>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white">UniCatalog</h1>
+          <p class="text-xs text-indigo-300 font-medium tracking-wide uppercase">L&D Curation Engine</p>
+        </div>
+      </div>
+      <div class="mt-3 bg-indigo-950/60 border border-indigo-800/50 rounded-lg p-2.5 text-xs text-indigo-200">
+        <span class="font-semibold text-white">Targeting:</span> 30,000+ US Institutions & Corporate L&D Teams
+      </div>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="flex-1 p-4 space-y-1" id="sidebar-nav">
+      <a href="#/search" data-route="#/search" class="nav-link flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          <span>Unified Search</span>
+        </div>
+        <span class="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full" id="total-courses-badge">12</span>
+      </a>
+
+      <a href="#/pathways" data-route="#/pathways" class="nav-link flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <span>Pathway Builder</span>
+        </div>
+        <span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full" id="active-pathways-count">3</span>
+      </a>
+
+      <a href="#/saved-searches" data-route="#/saved-searches" class="nav-link flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+          <span>Saved Alerts</span>
+        </div>
+        <span class="bg-indigo-900 text-indigo-300 text-[10px] font-bold px-2 py-0.5 rounded-full" id="saved-alerts-count">2</span>
+      </a>
+
+      <a href="#/integrations" data-route="#/integrations" class="nav-link flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+          <span>LMS Sync</span>
+        </div>
+        <span class="text-emerald-400 text-xs">● Live</span>
+      </a>
+    </nav>
+
+    <!-- Quick Stats Footer -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/40 text-xs text-slate-400 space-y-2">
+      <div class="flex justify-between">
+        <span>Curated Pathways:</span>
+        <span class="font-semibold text-slate-200" id="stat-pathways">3</span>
+      </div>
+      <div class="flex justify-between">
+        <span>Total Sync Students:</span>
+        <span class="font-semibold text-slate-200">1,420</span>
+      </div>
+      <div class="flex justify-between">
+        <span>Credit-Eligible Courses:</span>
+        <span class="font-semibold text-emerald-400" id="stat-credit-eligible">6</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 flex flex-col overflow-y-auto h-screen relative">
+    
+    <!-- TOAST NOTIFICATION SYSTEM -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- SCREEN: UNIFIED SEARCH -->
+    <section id="screen-search" class="screen-view hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+      
+      <!-- Hero / Header -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">🎓</div>
+        <div class="relative z-10 max-w-3xl">
+          <span class="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">Multi-Provider Catalog</span>
+          <h2 class="text-3xl font-extrabold tracking-tight mt-2">Search &amp; Bundle Global MOOCs</h2>
+          <p class="text-slate-300 mt-1 text-sm md:text-base">
+            Instantly query, filter, and compare courses across Coursera, edX, and Udacity. Build custom learning pathways with credit-eligible modules.
+          </p>
+        </div>
+      </div>
+
+      <!-- Search & Filter Controls -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+        <!-- Search Input with Auto-suggestions -->
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+          <input type="text" id="course-search-input" placeholder="Search by course title, instructor, university, or skills (e.g. 'Python', 'Andrew Ng', 'Stanford')..." class="block w-full pl-11 pr-32 py-3.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-slate-900 placeholder-slate-400 text-sm font-medium shadow-sm">
+          <div class="absolute inset-y-2 right-2 flex items-center gap-2">
+            <button onclick="saveCurrentSearch()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-lg transition-all flex items-center gap-1.5" title="Save this search query to receive alerts">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+              <span>Save Search</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Chips & Checkboxes -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
+          
+          <!-- Providers -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Providers</span>
+            <div class="flex flex-wrap gap-2">
+              <label class="inline-flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition-all">
+                <input type="checkbox" checked value="Coursera" class="provider-filter-checkbox rounded text-indigo-600 focus:ring-brand-500 mr-2">
+                Coursera
+              </label>
+              <label class="inline-flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition-all">
+                <input type="checkbox" checked value="edX" class="provider-filter-checkbox rounded text-indigo-600 focus:ring-brand-500 mr-2">
+                edX
+              </label>
+              <label class="inline-flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium cursor-pointer transition-all">
+                <input type="checkbox" checked value="Udacity" class="provider-filter-checkbox rounded text-indigo-600 focus:ring-brand-500 mr-2">
+                Udacity
+              </label>
+            </div>
+          </div>
+
+          <!-- Credit Eligibility Toggle -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Academic Credit</span>
+            <div>
+              <label class="inline-flex items-center bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 text-xs font-medium text-emerald-800 cursor-pointer transition-all">
+                <input type="checkbox" id="credit-filter-checkbox" class="rounded text-emerald-600 focus:ring-emerald-500 mr-2">
+                🎓 Credit-Eligible Only
+              </label>
+            </div>
+          </div>
+
+          <!-- Cost Tier -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Cost Tier</span>
+            <select id="cost-filter-select" class="block w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 focus:ring-brand-500 focus:border-brand-500">
+              <option value="all">All Prices</option>
+              <option value="free">Free / Audit Only ($0)</option>
+              <option value="under-100">Under $100</option>
+              <option value="under-500">Under $500</option>
+            </select>
+          </div>
+
+          <!-- Sort Options -->
+          <div class="space-y-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block">Sort By</span>
+            <select id="sort-select" class="block w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-700 focus:ring-brand-500 focus:border-brand-500">
+              <option value="relevance">Relevance</option>
+              <option value="duration-asc">Duration (Shortest First)</option>
+              <option value="duration-desc">Duration (Longest First)</option>
+              <option value="cost-asc">Price (Lowest First)</option>
+              <option value="cost-desc">Price (Highest First)</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Course Results Grid Section -->
+      <div>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>Available Courses</span>
+            <span class="bg-slate-200 text-slate-700 text-xs font-semibold px-2 py-0.5 rounded-full" id="search-results-count">0</span>
+          </h3>
+          <div class="text-xs text-slate-500">
+            Showing real-time aggregated MOOC database
+          </div>
+        </div>
+
+        <!-- Course Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="course-results-grid">
+          <!-- Dynamic Course Cards go here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="search-empty-state" class="hidden bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-md mx-auto">
+          <span class="text-4xl">🔍</span>
+          <h4 class="text-lg font-bold text-slate-900 mt-4">No matching courses found</h4>
+          <p class="text-slate-500 text-sm mt-2">Try adjusting your search filters or clear some checkboxes to expand your search.</p>
+          <button onclick="resetSearchFilters()" class="mt-4 bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+            Reset All Filters
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SCREEN: PATHWAY BUILDER -->
+    <section id="screen-pathways" class="screen-view hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+      
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Pathway Builder</h2>
+          <p class="text-sm text-slate-500">Design, sequence, and bundle selected courses into structured curriculums for learners.</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="openNewPathwayModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Create New Pathway
+          </button>
+        </div>
+      </div>
+
+      <!-- Pathway Selector & Active Board -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Sidebar: Pathway List & Metadata -->
+        <div class="space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Select Pathway to Edit</h3>
+            <div class="space-y-2" id="pathway-list-container">
+              <!-- Dynamic list of pathways -->
+            </div>
+          </div>
+
+          <!-- Active Pathway Metadata Panel -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4" id="pathway-meta-panel">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Curriculum Settings</h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Pathway Title</label>
+                <input type="text" id="active-pathway-title" class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500 font-semibold" onchange="updateActivePathwayMeta()">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Target Audience</label>
+                <input type="text" id="active-pathway-audience" class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500" onchange="updateActivePathwayMeta()">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">LMS Sync Status</label>
+                <select id="active-pathway-sync-status" class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500" onchange="updateActivePathwayMeta()">
+                  <option value="Draft">Draft</option>
+                  <option value="Active">Active / Published</option>
+                  <option value="Error">Sync Error</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Board: Course Sequencing & Estimator -->
+        <div class="lg:col-span-2 space-y-6">
+          
+          <!-- Estimator Card -->
+          <div class="bg-gradient-to-br from-indigo-50 to-slate-50 border border-indigo-100 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm">
+            <div class="space-y-1">
+              <span class="text-xs font-medium text-indigo-600 uppercase tracking-wider">Total Duration</span>
+              <div class="text-3xl font-extrabold text-indigo-950" id="est-duration">0 hrs</div>
+              <p class="text-xs text-slate-500">Aggregated learning hours</p>
+            </div>
+            <div class="space-y-1 border-t md:border-t-0 md:border-l border-indigo-100 pt-4 md:pt-0 md:pl-6">
+              <span class="text-xs font-medium text-indigo-600 uppercase tracking-wider">Estimated Cost</span>
+              <div class="text-3xl font-extrabold text-indigo-950" id="est-cost">$0.00</div>
+              <p class="text-xs text-slate-500">Direct platform certificate fees</p>
+            </div>
+            <div class="space-y-1 border-t md:border-t-0 md:border-l border-indigo-100 pt-4 md:pt-0 md:pl-6">
+              <span class="text-xs font-medium text-indigo-600 uppercase tracking-wider">LMS Ready</span>
+              <div class="text-3xl font-extrabold text-emerald-600 flex items-center gap-1.5">
+                <span>LTI 1.3</span>
+              </div>
+              <p class="text-xs text-slate-500">SCORM/Canvas compatible</p>
+            </div>
+          </div>
+
+          <!-- Course Sequence Board -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-base font-bold text-slate-900">Curriculum Sequence</h3>
+              <span class="text-xs text-slate-500">Reorder courses using the sequence buttons</span>
+            </div>
+
+            <div class="space-y-3" id="pathway-courses-container">
+              <!-- Dynamic list of courses in the pathway -->
+            </div>
+
+            <!-- Empty Pathway State -->
+            <div id="pathway-empty-state" class="hidden text-center py-12 border-2 border-dashed border-slate-200 rounded-xl">
+              <span class="text-3xl">🧩</span>
+              <h4 class="text-sm font-bold text-slate-800 mt-2">No courses in this pathway yet</h4>
+              <p class="text-xs text-slate-500 mt-1 max-w-xs mx-auto">Go to the Unified Search screen and click "Add to Pathway" on any course to start building your curriculum.</p>
+              <a href="#/search" class="mt-3 inline-block bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+                Browse Courses
+              </a>
+            </div>
+
+            <!-- LMS Export Action -->
+            <div class="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div class="text-xs text-slate-500">
+                Generate a standardized package to import into Canvas, Blackboard, or Moodle.
+              </div>
+              <button onclick="triggerLMSExport()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Export LTI Integration Package
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SCREEN: SAVED SEARCHES -->
+    <section id="screen-saved-searches" class="screen-view hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+      
+      <div class="border-b border-slate-200 pb-5">
+        <h2 class="text-2xl font-bold text-slate-900">Saved Alerts &amp; Trackers</h2>
+        <p class="text-sm text-slate-500">Track new course releases matching specific institutional curriculum needs.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Saved Queries List -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">Active Search Trackers</h3>
+            <div class="space-y-3" id="saved-searches-list">
+              <!-- Dynamic list of saved searches -->
+            </div>
+          </div>
+
+          <!-- Digest Settings -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Digest Configuration</h3>
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-700">Weekly Email Summary</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
+            <p class="text-[11px] text-slate-400">Sends a consolidated list of newly indexed courses matching your active trackers every Monday morning.</p>
+          </div>
+        </div>
+
+        <!-- Right: Alert Feed with comparison diffs -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-base font-bold text-slate-900">Recent Catalog Updates</h3>
+              <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Alert Feed</span>
+            </div>
+
+            <!-- Feed Items -->
+            <div class="space-y-4" id="alert-feed-container">
+              <!-- Dynamic Alert Feed Items -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SCREEN: LMS SYNC -->
+    <section id="screen-integrations" class="screen-view hidden p-6 max-w-7xl mx-auto w-full space-y-6">
+      
+      <div class="border-b border-slate-200 pb-5">
+        <h2 class="text-2xl font-bold text-slate-900">LMS Sync &amp; Integrations</h2>
+        <p class="text-sm text-slate-500">Manage connections to Canvas, Blackboard, and corporate L&D platforms.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Connection Manager -->
+        <div class="lg:col-span-1 space-y-4">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">LTI 1.3 Credentials</h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Platform Provider</label>
+                <select class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500">
+                  <option>Canvas by Instructure</option>
+                  <option>Blackboard Learn</option>
+                  <option>Moodle LMS</option>
+                  <option>Workday Learning</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Client ID</label>
+                <input type="text" readonly value="lti-client-unicatalog-99381" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-500 font-mono">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Deployment ID</label>
+                <input type="text" readonly value="dep-8847-canvas-prod" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-500 font-mono">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Keyset URL</label>
+                <input type="text" readonly value="https://api.unicatalog.edu/lti/keyset" class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-500 font-mono">
+              </div>
+            </div>
+
+            <button onclick="showToast('LTI credentials refreshed successfully.', 'success')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 rounded-lg transition-all">
+              Rotate Credentials
+            </button>
+          </div>
+
+          <!-- Webhook Generator -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">API Webhooks</h3>
+            <p class="text-xs text-slate-500">Trigger automated catalog syncs whenever a pathway is updated.</p>
+            <div class="bg-slate-900 text-slate-200 p-3 rounded-lg font-mono text-[10px] break-all">
+              POST https://api.unicatalog.edu/v1/sync?token=uc_live_8f3a92b...
+            </div>
+            <button onclick="showToast('Webhook endpoint test payload sent.', 'info')" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold py-2 rounded-lg transition-all">
+              Test Webhook Connection
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Sync History & Enrollment Mapping -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-base font-bold text-slate-900">Sync History &amp; Student Enrollment</h3>
+              <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">LMS Active</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 text-slate-400 text-xs uppercase tracking-wider">
+                    <th class="pb-3 font-semibold">Pathway</th>
+                    <th class="pb-3 font-semibold">LMS Target</th>
+                    <th class="pb-3 font-semibold">Enrolled Students</th>
+                    <th class="pb-3 font-semibold">Last Sync</th>
+                    <th class="pb-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100" id="sync-history-table">
+                  <!-- Dynamic rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- MODAL: NEW PATHWAY CREATION -->
+  <div id="new-pathway-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-slate-900">Create New Pathway</h3>
+        <button onclick="closeNewPathwayModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <form id="new-pathway-form" onsubmit="handleCreatePathway(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Pathway Title *</label>
+          <input type="text" id="modal-pathway-title" required placeholder="e.g. Cybersecurity Fundamentals" class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Target Audience</label>
+          <input type="text" id="modal-pathway-audience" placeholder="e.g. Junior Network Engineers" class="w-full text-sm border border-slate-200 rounded-lg p-2 focus:ring-brand-500 focus:border-brand-500">
+        </div>
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" onclick="closeNewPathwayModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+            Cancel
+          </button>
+          <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+            Create Pathway
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPORT LTI DRAWER/MODAL -->
+  <div id="export-lti-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-slate-900">LTI 1.3 Integration Package</h3>
+        <button onclick="closeLTIModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-slate-500">
+          This XML/JSON manifest configuration enables direct integration of your custom curriculum pathway into Canvas or Blackboard.
+        </p>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="font-semibold text-slate-600">Pathway:</span>
+            <span id="lti-modal-pathway-title" class="font-bold text-slate-900">Cloud Architecture Essentials</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="font-semibold text-slate-600">LTI Version:</span>
+            <span class="text-slate-900">LTI Advantage 1.3</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="font-semibold text-slate-600">Deep Linking:</span>
+            <span class="text-emerald-600 font-semibold">Enabled</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">LTI Config XML (Copy for LMS Import)</label>
+          <textarea readonly id="lti-xml-box" class="w-full h-32 font-mono text-[10px] bg-slate-900 text-slate-300 p-3 rounded-lg border border-slate-800 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="closeLTIModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+          Close
+        </button>
+        <button onclick="copyLTIConfig()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all">
+          Copy Configuration
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT CODE -->
+  <script>
+    // -------------------------------------------------------------------------
+    // DATA LAYER & INITIAL SEEDING
+    // -------------------------------------------------------------------------
+    const DEFAULT_COURSES = [
+      { id: 'c1', title: 'Machine Learning', provider: 'Coursera', instructor: 'Andrew Ng', duration_hours: 64, cost_usd: 49, credit_eligible: true, syllabus_summary: 'Comprehensive introduction to supervised learning, unsupervised learning, and best practices in AI development.' },
+      { id: 'c2', title: 'CS50 Introduction to Computer Science', provider: 'edX', instructor: 'David J. Malan', duration_hours: 120, cost_usd: 0, credit_eligible: true, syllabus_summary: 'Rigorous entry-level programming course covering C, Python, SQL, HTML/CSS, and algorithms.' },
+      { id: 'c3', title: 'Become a Cloud Developer', provider: 'Udacity', instructor: 'AWS Experts', duration_hours: 80, cost_usd: 399, credit_eligible: false, syllabus_summary: 'Hands-on cloud architecture projects focusing on AWS services, serverless apps, and Kubernetes.' },
+      { id: 'c4', title: 'AI for Everyone', provider: 'Coursera', instructor: 'Andrew Ng', duration_hours: 12, cost_usd: 49, credit_eligible: false, syllabus_summary: 'Non-technical introduction to AI, machine learning, neural networks, and their societal impacts.' },
+      { id: 'c5', title: 'Data Science MicroMasters', provider: 'edX', instructor: 'UC San Diego Faculty', duration_hours: 300, cost_usd: 1200, credit_eligible: true, syllabus_summary: 'Advanced mathematical data science, probability, statistics, and big data analysis using Spark.' },
+      { id: 'c6', title: 'Front-End Web Developer', provider: 'Udacity', instructor: 'Google Developers', duration_hours: 160, cost_usd: 399, credit_eligible: false, syllabus_summary: 'Intensive JavaScript, CSS layout frameworks, and interactive web application design.' },
+      { id: 'c7', title: 'Introduction to Financial Accounting', provider: 'Coursera', instructor: 'Brian Bushee', duration_hours: 20, cost_usd: 79, credit_eligible: true, syllabus_summary: 'Fundamentals of balance sheets, income statements, cash flows, and corporate financial reporting.' },
+      { id: 'c8', title: 'Circuits and Electronics', provider: 'edX', instructor: 'Anant Agarwal', duration_hours: 150, cost_usd: 149, credit_eligible: true, syllabus_summary: 'Foundational electrical engineering principles, circuit analysis, and operational amplifier design.' },
+      { id: 'c9', title: 'Deep Learning Specialization', provider: 'Coursera', instructor: 'Andrew Ng', duration_hours: 80, cost_usd: 49, credit_eligible: true, syllabus_summary: 'Build and train Deep Neural Networks, structure ML projects, and work with CNNs and RNNs.' },
+      { id: 'c10', title: 'Introduction to Algorithms', provider: 'edX', instructor: 'MIT Faculty', duration_hours: 110, cost_usd: 199, credit_eligible: true, syllabus_summary: 'Mathematical analysis of algorithms, sorting, searching, graph algorithms, and dynamic programming.' },
+      { id: 'c11', title: 'Self-Driving Car Engineer', provider: 'Udacity', instructor: 'Sebastian Thrun', duration_hours: 240, cost_usd: 999, credit_eligible: false, syllabus_summary: 'Deep learning, computer vision, sensor fusion, and localization for autonomous vehicles.' },
+      { id: 'c12', title: 'Introduction to Psychology', provider: 'Coursera', instructor: 'Paul Bloom', duration_hours: 15, cost_usd: 0, credit_eligible: true, syllabus_summary: 'Scientific study of thought and behavior, exploring brain function, memory, and social interactions.' }
+    ];
+
+    const DEFAULT_PATHWAYS = [
+      { id: 'p1', title: 'Cloud Architecture Essentials', target_audience: 'Junior DevOps Engineers', course_ids: ['c3', 'c2'], total_cost: 399, lms_sync_status: 'Active' },
+      { id: 'p2', title: 'AI & Machine Learning Track', target_audience: 'Data Analyst Candidates', course_ids: ['c1', 'c4', 'c9'], total_cost: 147, lms_sync_status: 'Active' },
+      { id: 'p3', title: 'Foundational CS & Math', target_audience: 'Undergraduate Prep', course_ids: ['c2', 'c10'], total_cost: 199, lms_sync_status: 'Draft' }
+    ];
+
+    const DEFAULT_SAVED_SEARCHES = [
+      { id: 's1', query: 'Andrew Ng', filters: { creditOnly: false, providers: ['Coursera'] }, lastChecked: '2 hours ago', matchCount: 3 },
+      { id: 's2', query: 'Computer Science', filters: { creditOnly: true, providers: ['edX', 'Coursera'] }, lastChecked: '1 day ago', matchCount: 4 }
+    ];
+
+    const DEFAULT_ALERTS = [
+      { id: 'a1', queryId: 's1', title: 'New Course Added', description: 'Deep Learning Specialization by Andrew Ng on Coursera (80 hrs, $49) matches your "Andrew Ng" alert.', timestamp: 'Just now' },
+      { id: 'a2', queryId: 's2', title: 'Syllabus Update', description: 'CS50 Introduction to Computer Science updated its syllabus to include Python 3.11 modules.', timestamp: 'Yesterday' }
+    ];
+
+    // LocalStorage helper
+    function getStorage(key, fallback) {
+      try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function setStorage(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {
+        console.error("Error saving data to localStorage", e);
+      }
+    }
+
+    // Initialize State
+    let courses = getStorage('uc_courses', DEFAULT_COURSES);
+    let pathways = getStorage('uc_pathways', DEFAULT_PATHWAYS);
+    let savedSearches = getStorage('uc_saved_searches', DEFAULT_SAVED_SEARCHES);
+    let alerts = getStorage('uc_alerts', DEFAULT_ALERTS);
+
+    let activePathwayId = pathways[0]?.id || '';
+
+    // Save helpers
+    function saveAll() {
+      setStorage('uc_courses', courses);
+      setStorage('uc_pathways', pathways);
+      setStorage('uc_saved_searches', savedSearches);
+      setStorage('uc_alerts', alerts);
+      updateAppStats();
+    }
+
+    // Toast notifications
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-semibold text-white transition-all transform translate-y-2 opacity-0 duration-300 ${
+        type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-indigo-600'
+      }`;
+      
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+      toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+      container.appendChild(toast);
+
+      // Trigger animation
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      // Remove after 3s
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3000);
+    }
+
+    // -------------------------------------------------------------------------
+    // ROUTING SYSTEM
+    // -------------------------------------------------------------------------
+    function handleRoute() {
+      const hash = window.location.hash || '#/search';
+      
+      // Hide all screens
+      document.querySelectorAll('.screen-view').forEach(screen => {
+        screen.classList.add('hidden');
+      });
+
+      // Show target screen
+      const targetScreen = document.getElementById(`screen-${hash.replace('#/', '')}`);
+      if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+      }
+
+      // Update active navigation styling
+      document.querySelectorAll('#sidebar-nav a').forEach(link => {
+        if (link.getAttribute('data-route') === hash) {
+          link.classList.add('bg-slate-800', 'text-white', 'border-l-4', 'border-brand-500');
+          link.classList.remove('text-slate-400');
+        } else {
+          link.classList.remove('bg-slate-800', 'text-white', 'border-l-4', 'border-brand-500');
+          link.classList.add('text-slate-400');
+        }
+      });
+
+      // Screen-specific load triggers
+      if (hash === '#/search') {
+        renderSearch();
+      } else if (hash === '#/pathways') {
+        renderPathwayBuilder();
+      } else if (hash === '#/saved-searches') {
+        renderSavedSearches();
+      } else if (hash === '#/integrations') {
+        renderIntegrations();
+      }
+    }
+
+    window.addEventListener('hashchange', handleRoute);
+    window.addEventListener('DOMContentLoaded', () => {
+      handleRoute();
+      updateAppStats();
+    });
+
+    // Update global state counters
+    function updateAppStats() {
+      document.getElementById('total-courses-badge').textContent = courses.length;
+      document.getElementById('active-pathways-count').textContent = pathways.length;
+      document.getElementById('saved-alerts-count').textContent = savedSearches.length;
+      document.getElementById('stat-pathways').textContent = pathways.length;
+      document.getElementById('stat-credit-eligible').textContent = courses.filter(c => c.credit_eligible).length;
+    }
+
+    // -------------------------------------------------------------------------
+    // UNIFIED SEARCH SCREEN
+    // -------------------------------------------------------------------------
+    const searchInput = document.getElementById('course-search-input');
+    const creditCheckbox = document.getElementById('credit-filter-checkbox');
+    const costSelect = document.getElementById('cost-filter-select');
+    const sortSelect = document.getElementById('sort-select');
+
+    // Listeners
+    searchInput.addEventListener('input', renderSearch);
+    creditCheckbox.addEventListener('change', renderSearch);
+    costSelect.addEventListener('change', renderSearch);
+    sortSelect.addEventListener('change', renderSearch);
+    document.querySelectorAll('.provider-filter-checkbox').forEach(cb => {
+      cb.addEventListener('change', renderSearch);
+    });
+
+    function getSelectedProviders() {
+      const checked = [];
+      document.querySelectorAll('.provider-filter-checkbox:checked').forEach(cb => {
+        checked.push(cb.value);
+      });
+      return checked;
+    }
+
+    function resetSearchFilters() {
+      searchInput.value = '';
+      creditCheckbox.checked = false;
+      costSelect.value = 'all';
+      sortSelect.value = 'relevance';
+      document.querySelectorAll('.provider-filter-checkbox').forEach(cb => cb.checked = true);
+      renderSearch();
+      showToast('Filters reset successfully.', 'info');
+    }
+
+    function renderSearch() {
+      const query = searchInput.value.toLowerCase().trim();
+      const creditOnly = creditCheckbox.checked;
+      const costLimit = costSelect.value;
+      const selectedProviders = getSelectedProviders();
+      const sortBy = sortSelect.value;
+
+      let filtered = courses.filter(course => {
+        // Provider Match
+        if (!selectedProviders.includes(course.provider)) return false;
+
+        // Credit Match
+        if (creditOnly && !course.credit_eligible) return false;
+
+        // Cost Match
+        if (costLimit === 'free' && course.cost_usd > 0) return false;
+        if (costLimit === 'under-100' && course.cost_usd >= 100) return false;
+        if (costLimit === 'under-500' && course.cost_usd >= 500) return false;
+
+        // Query Match
+        if (query) {
+          const titleMatch = course.title.toLowerCase().includes(query);
+          const instructorMatch = course.instructor.toLowerCase().includes(query);
+          const syllabusMatch = course.syllabus_summary.toLowerCase().includes(query);
+          return titleMatch || instructorMatch || syllabusMatch;
+        }
+
+        return true;
+      });
+
+      // Sorting
+      if (sortBy === 'duration-asc') {
+        filtered.sort((a, b) => a.duration_hours - b.duration_hours);
+      } else if (sortBy === 'duration-desc') {
+        filtered.sort((a, b) => b.duration_hours - a.duration_hours);
+      } else if (sortBy === 'cost-asc') {
+        filtered.sort((a, b) => a.cost_usd - b.cost_usd);
+      } else if (sortBy === 'cost-desc') {
+        filtered.sort((a, b) => b.cost_usd - a.cost_usd);
+      }
+
+      // Render
+      const grid = document.getElementById('course-results-grid');
+      const emptyState = document.getElementById('search-empty-state');
+      document.getElementById('search-results-count').textContent = filtered.length;
+
+      grid.innerHTML = '';
+
+      if (filtered.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      filtered.forEach(course => {
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between";
+        
+        // Provider Badge styling
+        let providerBadgeColor = 'bg-blue-100 text-blue-800';
+        if (course.provider === 'edX') providerBadgeColor = 'bg-red-100 text-red-800';
+        if (course.provider === 'Udacity') providerBadgeColor = 'bg-cyan-100 text-cyan-800';
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start gap-2 mb-3">
+              <span class="text-xs font-bold px-2.5 py-1 rounded-full ${providerBadgeColor}">
+                ${course.provider}
+              </span>
+              ${course.credit_eligible ? `
+                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                  🎓 Credit-Eligible
+                </span>
+              ` : ''}
+            </div>
+
+            <h4 class="text-base font-bold text-slate-900 leading-snug hover:text-indigo-600 transition-colors">
+              ${course.title}
+            </h4>
+            <p class="text-xs text-slate-500 mt-1">Instructor: <span class="font-medium text-slate-700">${course.instructor}</span></p>
+            
+            <p class="text-xs text-slate-600 mt-3 line-clamp-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
+              "${course.syllabus_summary}"
+            </p>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-slate-100">
+            <div class="flex justify-between items-center text-xs text-slate-500 mb-3">
+              <span class="flex items-center gap-1">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                ${course.duration_hours} hours
+              </span>
+              <span class="font-bold text-slate-900 text-sm">
+                ${course.cost_usd === 0 ? 'Free (Audit)' : `$${course.cost_usd}`}
+              </span>
+            </div>
+
+            <!-- Pathway Quick Add -->
+            <div class="flex gap-1.5">
+              <select id="add-to-pathway-select-${course.id}" class="bg-slate-50 border border-slate-200 rounded-lg text-[11px] font-medium px-2 py-1.5 text-slate-700 focus:ring-brand-500 focus:border-brand-500 flex-1">
+                ${pathways.map(p => `<option value="${p.id}">${p.title}</option>`).join('')}
+              </select>
+              <button onclick="addCourseToSelectedPathway('${course.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                <span>Add</span>
+              </button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function addCourseToSelectedPathway(courseId) {
+      const select = document.getElementById(`add-to-pathway-select-${courseId}`);
+      const pathwayId = select.value;
+      const pathway = pathways.find(p => p.id === pathwayId);
+
+      if (!pathway) return;
+
+      if (pathway.course_ids.includes(courseId)) {
+        showToast(`Course is already in "${pathway.title}"`, 'error');
+        return;
+      }
+
+      pathway.course_ids.push(courseId);
+      
+      // Re-calculate cost
+      const courseDetails = courses.filter(c => pathway.course_ids.includes(c.id));
+      pathway.total_cost = courseDetails.reduce((sum, c) => sum + c.cost_usd, 0);
+
+      saveAll();
+      showToast(`Added to "${pathway.title}"`, 'success');
+      renderSearch();
+    }
+
+    function saveCurrentSearch() {
+      const query = searchInput.value.trim();
+      if (!query) {
+        showToast('Please type a search query first.', 'error');
+        return;
+      }
+
+      const newSearch = {
+        id: 's_' + Date.now(),
+        query: query,
+        filters: {
+          creditOnly: creditCheckbox.checked,
+          providers: getSelectedProviders()
+        },
+        lastChecked: 'Just now',
+        matchCount: document.getElementById('search-results-count').textContent
+      };
+
+      savedSearches.unshift(newSearch);
+
+      // Add corresponding alert
+      alerts.unshift({
+        id: 'a_' + Date.now(),
+        queryId: newSearch.id,
+        title: 'Search Tracker Saved',
+        description: `Now monitoring global MOOC databases for "${query}".`,
+        timestamp: 'Just now'
+      });
+
+      saveAll();
+      showToast(`Alert created for "${query}"`, 'success');
+    }
+
+    // -------------------------------------------------------------------------
+    // PATHWAY BUILDER SCREEN
+    // -------------------------------------------------------------------------
+    function renderPathwayBuilder() {
+      renderPathwayList();
+      renderActivePathway();
+    }
+
+    function renderPathwayList() {
+      const container = document.getElementById('pathway-list-container');
+      container.innerHTML = '';
+
+      pathways.forEach(p => {
+        const isActive = p.id === activePathwayId;
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          activePathwayId = p.id;
+          renderPathwayBuilder();
+        };
+        btn.className = `w-full text-left p-3 rounded-xl border transition-all flex justify-between items-center ${
+          isActive 
+            ? 'bg-indigo-50 border-indigo-200 text-indigo-950 font-semibold' 
+            : 'bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100'
+        }`;
+
+        btn.innerHTML = `
+          <div class="truncate pr-2">
+            <div class="text-xs font-bold truncate">${p.title}</div>
+            <div class="text-[10px] text-slate-500 truncate">${p.course_ids.length} Courses • ${p.target_audience || 'No target audience'}</div>
+          </div>
+          <span class="text-xs ${p.lms_sync_status === 'Active' ? 'text-emerald-600' : 'text-amber-600'}">●</span>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function renderActivePathway() {
+      const pathway = pathways.find(p => p.id === activePathwayId);
+      if (!pathway) {
+        document.getElementById('pathway-empty-state').classList.remove('hidden');
+        document.getElementById('pathway-courses-container').innerHTML = '';
+        return;
+      }
+
+      // Populate Meta inputs
+      document.getElementById('active-pathway-title').value = pathway.title;
+      document.getElementById('active-pathway-audience').value = pathway.target_audience || '';
+      document.getElementById('active-pathway-sync-status').value = pathway.lms_sync_status;
+
+      // Map course IDs to full Course objects
+      const pathwayCourses = pathway.course_ids
+        .map(id => courses.find(c => c.id === id))
+        .filter(Boolean);
+
+      // Calculations
+      const totalHours = pathwayCourses.reduce((sum, c) => sum + c.duration_hours, 0);
+      const totalCost = pathwayCourses.reduce((sum, c) => sum + c.cost_usd, 0);
+
+      document.getElementById('est-duration').textContent = `${totalHours} hrs`;
+      document.getElementById('est-cost').textContent = `$${totalCost.toFixed(2)}`;
+
+      // Render Sequence
+      const container = document.getElementById('pathway-courses-container');
+      container.innerHTML = '';
+
+      if (pathwayCourses.length === 0) {
+        document.getElementById('pathway-empty-state').classList.remove('hidden');
+        return;
+      } else {
+        document.getElementById('pathway-empty-state').classList.add('hidden');
+      }
+
+      pathwayCourses.forEach((course, index) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-xl p-4 hover:bg-slate-100/50 transition-all";
+        
+        item.innerHTML = `
+          <div class="flex flex-col items-center justify-center bg-indigo-100 text-indigo-800 font-bold rounded-lg w-8 h-8 text-xs shrink-0">
+            <span>${index + 1}</span>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase text-slate-500">${course.provider}</span>
+              <span class="text-slate-300">•</span>
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">${course.credit_eligible ? '🎓 Credit' : 'Audit Only'}</span>
+            </div>
+            <h4 class="text-sm font-bold text-slate-900 truncate">${course.title}</h4>
+            <p class="text-xs text-slate-500 truncate">${course.instructor} • ${course.duration_hours} hrs • $${course.cost_usd}</p>
+          </div>
+
+          <!-- Reorder & Action Buttons -->
+          <div class="flex items-center gap-1">
+            <button onclick="moveCourseInPathway('${pathway.id}', ${index}, 'up')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 transition-all ${index === 0 ? 'opacity-30 pointer-events-none' : ''}" title="Move Up">
+              ▲
+            </button>
+            <button onclick="moveCourseInPathway('${pathway.id}', ${index}, 'down')" class="p-1.5 hover:bg-slate-200 rounded text-slate-600 transition-all ${index === pathwayCourses.length - 1 ? 'opacity-30 pointer-events-none' : ''}" title="Move Down">
+              ▼
+            </button>
+            <button onclick="removeCourseFromPathway('${pathway.id}', '${course.id}')" class="p-1.5 hover:bg-rose-100 rounded text-rose-600 transition-all ml-2" title="Remove Course">
+              🗑️
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function updateActivePathwayMeta() {
+      const pathway = pathways.find(p => p.id === activePathwayId);
+      if (!pathway) return;
+
+      pathway.title = document.getElementById('active-pathway-title').value;
+      pathway.target_audience = document.getElementById('active-pathway-audience').value;
+      pathway.lms_sync_status = document.getElementById('active-pathway-sync-status').value;
+
+      saveAll();
+      renderPathwayList();
+      showToast('Pathway metadata updated.', 'success');
+    }
+
+    function moveCourseInPathway(pathwayId, index, direction) {
+      const pathway = pathways.find(p => p.id === pathwayId);
+      if (!pathway) return;
+
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= pathway.course_ids.length) return;
+
+      // Swap
+      const temp = pathway.course_ids[index];
+      pathway.course_ids[index] = pathway.course_ids[targetIndex];
+      pathway.course_ids[targetIndex] = temp;
+
+      saveAll();
+      renderActivePathway();
+      showToast('Sequence updated.', 'success');
+    }
+
+    function removeCourseFromPathway(pathwayId, courseId) {
+      const pathway = pathways.find(p => p.id === pathwayId);
+      if (!pathway) return;
+
+      pathway.course_ids = pathway.course_ids.filter(id => id !== courseId);
+      
+      // Re-calculate cost
+      const courseDetails = courses.filter(c => pathway.course_ids.includes(c.id));
+      pathway.total_cost = courseDetails.reduce((sum, c) => sum + c.cost_usd, 0);
+
+      saveAll();
+      renderActivePathway();
+      renderPathwayList();
+      showToast('Course removed from pathway.', 'info');
+    }
+
+    // Modal Controls
+    function openNewPathwayModal() {
+      document.getElementById('new-pathway-modal').classList.remove('hidden');
+    }
+
+    function closeNewPathwayModal() {
+      document.getElementById('new-pathway-modal').classList.add('hidden');
+    }
+
+    function handleCreatePathway(event) {
+      event.preventDefault();
+      const title = document.getElementById('modal-pathway-title').value;
+      const audience = document.getElementById('modal-pathway-audience').value;
+
+      const newP = {
+        id: 'p_' + Date.now(),
+        title: title,
+        target_audience: audience,
+        course_ids: [],
+        total_cost: 0,
+        lms_sync_status: 'Draft'
+      };
+
+      pathways.push(newP);
+      activePathwayId = newP.id;
+      saveAll();
+      closeNewPathwayModal();
+      renderPathwayBuilder();
+      showToast(`Pathway "${title}" created!`, 'success');
+    }
+
+    // LTI Export Modal Controls
+    function triggerLMSExport() {
+      const pathway = pathways.find(p => p.id === activePathwayId);
+      if (!pathway || pathway.course_ids.length === 0) {
+        showToast('Add at least one course to export.', 'error');
+        return;
+      }
+
+      document.getElementById('lti-modal-pathway-title').textContent = pathway.title;
+      
+      // Generate realistic LTI XML
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<cartridge_basiclti_link xmlns="http://www.imsglobal.org/xsd/imslticc_v1p0"
+    xmlns:blti = "http://www.imsglobal.org/xsd/imsbasiclti_v1p0"
+    xmlns:lticm ="http://www.imsglobal.org/xsd/imslticm_v1p0"
+    xmlns:lticp ="http://www.imsglobal.org/xsd/imslticp_v1p0"
+    xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation = "http://www.imsglobal.org/xsd/imslticc_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imslticc_v1p0.xsd">
+    <blti:title>${pathway.title}</blti:title>
+    <blti:description>Curated MOOC Pathway via UniCatalog. Target: ${pathway.target_audience || 'L&D'}</blti:description>
+    <blti:custom>
+        <lticm:property name="course_count">${pathway.course_ids.length}</lticm:property>
+        <lticm:property name="unicatalog_pathway_id">${pathway.id}</lticm:property>
+    </blti:custom>
+    <blti:launch_url>https://api.unicatalog.edu/lti/launch/${pathway.id}</blti:launch_url>
+</cartridge_basiclti_link>`;
+
+      document.getElementById('lti-xml-box').value = xml;
+      document.getElementById('export-lti-modal').classList.remove('hidden');
+    }
+
+    function closeLTIModal() {
+      document.getElementById('export-lti-modal').classList.add('hidden');
+    }
+
+    function copyLTIConfig() {
+      const box = document.getElementById('lti-xml-box');
+      box.select();
+      document.execCommand('copy');
+      showToast('LTI XML Config copied to clipboard!', 'success');
+      closeLTIModal();
+    }
+
+    // -------------------------------------------------------------------------
+    // SAVED SEARCHES SCREEN
+    // -------------------------------------------------------------------------
+    function renderSavedSearches() {
+      const list = document.getElementById('saved-searches-list');
+      list.innerHTML = '';
+
+      if (savedSearches.length === 0) {
+        list.innerHTML = `<p class="text-xs text-slate-500 italic">No saved alerts yet.</p>`;
+      }
+
+      savedSearches.forEach(s => {
+        const item = document.createElement('div');
+        item.className = "p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2";
+        item.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-xs font-bold text-slate-900">Query: "${s.query}"</span>
+              <div class="text-[10px] text-slate-500">Checked: ${s.lastChecked}</div>
+            </div>
+            <button onclick="deleteSavedSearch('${s.id}')" class="text-slate-400 hover:text-rose-600 text-xs">
+              🗑️
+            </button>
+          </div>
+          <div class="flex justify-between items-center pt-1 border-t border-slate-200/60">
+            <span class="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-medium">
+              ${s.matchCount} Matches
+            </span>
+            <button onclick="runSavedSearch('${s.query}')" class="text-[10px] text-indigo-600 hover:underline font-bold">
+              Run Search →
+            </button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      // Render alert feed
+      const feed = document.getElementById('alert-feed-container');
+      feed.innerHTML = '';
+
+      alerts.forEach(a => {
+        const item = document.createElement('div');
+        item.className = "flex gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl";
+        item.innerHTML = `
+          <span class="text-xl">🔔</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-900">${a.title}</span>
+              <span class="text-[10px] text-slate-400">${a.timestamp}</span>
+            </div>
+            <p class="text-xs text-slate-600 mt-1">${a.description}</p>
+          </div>
+        `;
+        feed.appendChild(item);
+      });
+    }
+
+    function runSavedSearch(query) {
+      window.location.hash = '#/search';
+      setTimeout(() => {
+        searchInput.value = query;
+        renderSearch();
+      }, 100);
+    }
+
+    function deleteSavedSearch(id) {
+      savedSearches = savedSearches.filter(s => s.id !== id);
+      alerts = alerts.filter(a => a.queryId !== id);
+      saveAll();
+      renderSavedSearches();
+      showToast('Saved alert removed.', 'info');
+    }
+
+    // -------------------------------------------------------------------------
+    // INTEGRATIONS / LMS SYNC SCREEN
+    // -------------------------------------------------------------------------
+    function renderIntegrations() {
+      const table = document.getElementById('sync-history-table');
+      table.innerHTML = '';
+
+      pathways.forEach(p => {
+        const courseCount = p.course_ids.length;
+        // Mocking some student counts based on course count
+        const students = courseCount * 140 + 12;
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-50/80 transition-all";
+        row.innerHTML = `
+          <td class="py-3.5 font-semibold text-slate-900">
+            <div>${p.title}</div>
+            <div class="text-[10px] text-slate-400 font-normal">${courseCount} modules linked</div>
+          </td>
+          <td class="py-3.5 text-slate-600">Canvas Production</td>
+          <td class="py-3.5 font-medium text-slate-900">${students} Learners</td>
+          <td class="py-3.5 text-slate-500 text-xs">Today, 04:12 AM</td>
+          <td class="py-3.5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              p.lms_sync_status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }">
+              <span class="w-1.5 h-1.5 rounded-full ${p.lms_sync_status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+              ${p.lms_sync_status}
+            </span>
+          </td>
+        `;
+        table.appendChild(row);
+      });
+    }
+
+  </script>
+</body>
+</html>

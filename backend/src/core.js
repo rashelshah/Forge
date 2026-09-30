@@ -19,6 +19,9 @@ async function ensureUser({ id, email, full_name }) {
   })
 }
 
+const ADMINS = (process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
+export const isAdmin = (user) => !!user.email && ADMINS.includes(user.email.toLowerCase())
+
 export async function auth(req, res, next) {
   if (!supabase) {
     req.user = await ensureUser(DEMO_USER)

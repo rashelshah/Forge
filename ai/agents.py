@@ -316,51 +316,406 @@ def mvp(venture: dict, founder: dict):
 
 # ---------------------------------------------------------------- Prototype builder (Lovable-style)
 
-PROTO_SYSTEM = """You are Foundry's Prototype Builder, an expert product engineer and designer (like Lovable or v0).
-Build a WORKING first prototype of the product described — the actual app its users would use, not a marketing page.
+PROTO_SYSTEM = r"""You are Foundry's Prototype Builder — the world's best UI engineer.
+Generate a STUNNING, FULLY FUNCTIONAL prototype of the exact product described.
+This runs in a browser iframe with React 18 + Babel standalone. Make it look like a real, shipped product.
 
-Output ONLY one complete HTML document, starting with <!doctype html> and ending with </html>. No explanations.
+═══════════════════════════════════════════════════════════════
+OUTPUT: one complete HTML file starting with <!doctype html> ending with </html>. NOTHING ELSE.
+═══════════════════════════════════════════════════════════════
 
-Stack: Tailwind via <script src="https://cdn.tailwindcss.com"></script> and vanilla JavaScript in a single <script>
-at the end of <body>. No other external resources. No images from the internet: use emoji, initials, inline SVG icons
-or CSS gradients for thumbnails and avatars.
+━━━ REQUIRED BOILERPLATE (copy exactly, fill in the app) ━━━
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APP_NAME</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=FONT_NAME:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>/* FULL CSS DESIGN SYSTEM GOES HERE */</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    /* ALL REACT COMPONENTS HERE */
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
 
-Design: polished, modern product UI (Lovable / Linear quality). Follow this structure and style, adapting the accent
-colour and content to the product:
-- Use exactly this shell (fill in the ... parts):
-  <body class="bg-slate-50 text-slate-800 antialiased">
-    <div class="flex min-h-screen">
-      <aside class="hidden md:flex w-64 shrink-0 flex-col gap-1 border-r border-slate-200 bg-white p-4">logo row + nav links</aside>
-      <div class="flex min-w-0 flex-1 flex-col">
-        <header class="md:hidden sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">product name +
-          a horizontally scrollable row of the same nav links</header>
-        <main id="view" class="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8"></main>
-      </div>
-    </div>
-  </body>
-- Logo row: a coloured rounded-lg square with initials + product name in font-semibold. Nav links:
-  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100" (active: accent-50 bg,
-  accent-700 text, font-medium), each with an inline SVG or emoji icon.
-- Each screen starts with a page header (text-2xl font-semibold + text-slate-500 subtitle + primary action button on
-  the right). The home screen shows stats plus a useful list of recent items — never leave a screen mostly empty.
-- Stat cards: "rounded-xl border border-slate-200 bg-white p-5" with a small label and a text-3xl value.
-- Record cards/grids: rounded-xl white cards with hover:shadow-md, badges "rounded-full px-2 py-0.5 text-xs font-medium".
-- Buttons: primary "rounded-lg bg-<accent>-600 px-4 py-2 text-sm font-medium text-white hover:bg-<accent>-700";
-  secondary "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50".
-- Inputs: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-<accent>-500".
-- Modal: fixed inset-0 bg-slate-900/40 overlay with a centred rounded-2xl white panel; toast bottom-right.
+━━━ CSS DESIGN SYSTEM — write a complete <style> block ━━━
+Create a full design system with CSS custom properties:
 
-Functionality:
-- 3-5 screens with hash routing (#/home, #/..) and working navigation that highlights the current screen.
-- Realistic, domain-specific seed data (8-12 records). No lorem ipsum.
-- The main user flow works end to end: create (modal form with validation), view details, edit, delete, search and
-  filter. Show a summary/stats area on the home screen. Toast messages for feedback. Friendly empty states.
-- Persist data in localStorage under one key, with try/catch around every storage call; seed on first load. When
-  loading stored data, merge it over the defaults (e.g. db = { ...defaults, ...stored }) so newer fields and lists exist.
-- Use a signed-in demo user; no login screens, no backend, no network calls.
-- Never use alert/confirm/prompt. Every function and element you reference must exist. No console errors.
-- Every field you display must exist on every seed record — the UI must never show "undefined", "NaN" or "null".
-- Keep it compact: under 400 lines."""
+:root {
+  --accent: #PICK_A_BEAUTIFUL_HEX;       /* brand accent: indigo/violet/emerald/orange/rose/sky */
+  --accent-light: #LIGHTER_VARIANT;
+  --accent-dark: #DARKER_VARIANT;
+  --bg: #f8fafc;                         /* page background */
+  --surface: #ffffff;                    /* card / panel background */
+  --surface-2: #f1f5f9;                  /* secondary surface */
+  --border: rgba(0,0,0,0.08);
+  --text: #0f172a;
+  --text-2: #64748b;
+  --text-3: #94a3b8;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+  --font: 'FONT_NAME', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ANIMATIONS */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { to { background-position: 200% 0; } }
+
+.fade-in { animation: fadeIn 0.25s ease both; }
+.slide-in { animation: slideIn 0.2s ease both; }
+
+/* GLASSMORPHISM HERO */
+.glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
+}
+.btn-primary {
+  background: var(--accent); color: #fff;
+}
+.btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 4px 16px color-mix(in srgb, var(--accent) 40%, transparent); }
+.btn-ghost { background: transparent; color: var(--text-2); }
+.btn-ghost:hover { background: var(--surface-2); color: var(--text); }
+.btn-outline { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+/* INPUTS */
+input, select, textarea {
+  font-family: var(--font); font-size: 14px; color: var(--text);
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* BADGES */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+}
+.badge-green { background: #dcfce7; color: #16a34a; }
+.badge-blue { background: #dbeafe; color: #2563eb; }
+.badge-amber { background: #fef3c7; color: #d97706; }
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-purple { background: #f3e8ff; color: #7c3aed; }
+.badge-gray { background: var(--surface-2); color: var(--text-2); }
+
+/* AVATAR */
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  flex-shrink: 0;
+}
+
+/* STAR RATING */
+.stars { display: inline-flex; gap: 2px; }
+.star { font-size: 14px; }
+.star-filled { color: #f59e0b; }
+.star-empty { color: #e2e8f0; }
+
+/* SIDEBAR LAYOUT */
+.layout-sidebar { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  padding: 20px 12px; position: fixed; top: 0; left: 0; height: 100vh;
+}
+.main-content { margin-left: 240px; flex: 1; min-height: 100vh; }
+
+/* TOP-NAV LAYOUT */
+.topnav {
+  position: sticky; top: 0; z-index: 50; height: 64px;
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; gap: 16px;
+}
+
+/* NAV ITEMS */
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+  border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--text-2);
+  cursor: pointer; text-decoration: none; transition: all 0.15s; border: none;
+  background: transparent; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent); font-weight: 600; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  animation: fadeIn 0.15s ease;
+}
+.modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.2); padding: 28px;
+  width: 100%; max-width: 520px; animation: scaleIn 0.2s ease;
+}
+
+/* DRAWER */
+.drawer-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(15,23,42,0.5); backdrop-filter: blur(4px);
+}
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 101;
+  width: 440px; background: var(--surface);
+  box-shadow: -8px 0 48px rgba(0,0,0,0.15); padding: 28px;
+  overflow-y: auto; animation: slideIn 0.2s ease;
+}
+
+/* TOAST */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: #1e293b; color: #fff; padding: 12px 18px; border-radius: 10px;
+  font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  animation: scaleIn 0.2s ease; display: flex; align-items: center; gap: 10px; min-width: 240px;
+}
+.toast-success { background: #16a34a; }
+.toast-error { background: #dc2626; }
+
+/* HERO SEARCH */
+.hero-search {
+  display: flex; align-items: center;
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 999px; padding: 12px 20px; gap: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.hero-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent), 0 4px 24px rgba(0,0,0,0.08);
+}
+.hero-search input { border: none; background: transparent; outline: none; font-size: 16px; flex: 1; padding: 0; width: 100%; }
+
+/* PROGRESS */
+.progress-bar { height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); border-radius: 999px; transition: width 0.4s ease; }
+
+/* TABS */
+.tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 4px; }
+.tab { padding: 7px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text-2); transition: all 0.15s; }
+.tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+/* GRADIENT THUMBNAILS */
+.thumbnail { border-radius: 10px; height: 140px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+.grad-1 { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.grad-2 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+.grad-3 { background: linear-gradient(135deg, #10b981, #3b82f6); }
+.grad-4 { background: linear-gradient(135deg, #f43f5e, #ec4899); }
+.grad-5 { background: linear-gradient(135deg, #14b8a6, #6366f1); }
+.grad-6 { background: linear-gradient(135deg, #f97316, #eab308); }
+
+/* EMPTY STATE */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 32px; text-align: center; color: var(--text-2);
+}
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 768px) {
+  .grid-2,.grid-3,.grid-4 { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+  .drawer { width: 100%; }
+}
+
+/* STEP INDICATOR */
+.steps { display: flex; align-items: center; gap: 0; margin-bottom: 28px; }
+.step-item { flex: 1; display: flex; align-items: center; }
+.step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.step-circle.done { background: var(--accent); color: #fff; }
+.step-circle.active { background: var(--surface); color: var(--accent); border: 2px solid var(--accent); }
+.step-circle.pending { background: var(--surface-2); color: var(--text-3); }
+.step-line { flex: 1; height: 2px; background: var(--border); margin: 0 4px; }
+.step-line.done { background: var(--accent); }
+
+/* Add more specific styles as needed for the product */
+
+━━━ REACT COMPONENTS — write inside <script type="text/babel"> ━━━
+
+Structure your React app like this:
+
+const COLORS = { accent: 'VAR_ACCENT', ... }; // mirror CSS vars for inline use
+
+// ── Data Layer ─────────────────────────────────────────────────────
+const SEED = { VERSION: 1, entities: [ ...12-16 realistic records... ] };
+function useDB() {
+  const [db, setDb] = React.useState(() => {
+    try { const s = JSON.parse(localStorage.getItem('app_db') || '{}');
+      return s.VERSION === SEED.VERSION ? { ...SEED, ...s } : SEED; }
+    catch { return SEED; }
+  });
+  const save = React.useCallback(next => {
+    setDb(next); try { localStorage.setItem('app_db', JSON.stringify(next)); } catch {}
+  }, []);
+  return [db, save];
+}
+
+// ── Toast System ───────────────────────────────────────────────────
+function useToast() {
+  const [toasts, setToasts] = React.useState([]);
+  const show = React.useCallback((msg, type='success') => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000);
+  }, []);
+  return { toasts, show };
+}
+
+// ── Shared Components ──────────────────────────────────────────────
+function Avatar({ name, size=36 }) { ... }
+function Badge({ children, color='gray' }) { ... }
+function Stars({ value }) { ... }
+function ProgressBar({ value, max=100 }) { ... }
+function Tabs({ tabs, active, onChange }) { ... }
+function SearchBar({ value, onChange, placeholder }) { ... }
+function Modal({ open, onClose, title, children }) { if (!open) return null; return <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}><div className="modal">...</div></div>; }
+function Drawer({ open, onClose, title, children }) { ... }
+function ToastContainer({ toasts }) { ... }
+function Steps({ steps, current }) { ... }
+
+// ── Screen Components (one per route) ──────────────────────────────
+function ScreenName({ db, save, showToast }) { ... }
+
+// ── App Shell ──────────────────────────────────────────────────────
+function App() {
+  const [route, setRoute] = React.useState(window.location.hash || '#/screen1');
+  const [db, save] = useDB();
+  const { toasts, show: showToast } = useToast();
+
+  React.useEffect(() => {
+    const on = () => setRoute(window.location.hash || '#/screen1');
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+
+  const navigate = r => { window.location.hash = r; setRoute(r); };
+
+  // Render sidebar or topnav based on layout type
+  // Render the correct screen based on route
+  return (<div>...</div>);
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+━━━ ABSOLUTE RULES ━━━
+1. EVERY COMPONENT MUST HAVE REAL INLINE CSS via className="" + the <style> block. NO bare HTML.
+2. NEVER generic dashboard (stat cards for Active Users/Revenue) unless product IS analytics.
+3. Screen 1 = the CORE USER FLOW (search+browse, live feed, booking calendar, kanban board, voice recorder, etc.)
+4. All data is DOMAIN-SPECIFIC. "Item 1", "User A", "Lorem ipsum" = instant fail.
+5. Toast instead of alert/confirm/prompt. All interactions work and update UI instantly.
+6. Rich animations: fade-in class on page loads, card hover effects, button press states.
+7. Minimum 4 screens, all fully implemented, realistic content filling every screen.
+8. NO external images. Use gradient thumbnails (class="thumbnail grad-1"), emoji, initials avatars."""
+
+
+class Screen(BaseModel):
+    route: str = Field(description="Hash route like #/discover")
+    name: str
+    category: str = Field(description="One of: hero-search, feed, kanban, calendar, form-wizard, list-detail, player, map, inbox, settings")
+    purpose: str = Field(description="What the primary user accomplishes on this screen in one sentence")
+    components: list[str] = Field(description="5-8 specific UI elements on this screen named in the product's own language, not generic names")
+
+
+class Entity(BaseModel):
+    name: str
+    fields: list[str] = Field(description="Field names with type hints, e.g. 'provider: string (Coursera/edX)', 'price: number (USD)', 'status: enum (pending/confirmed/cancelled)'")
+
+
+class Brand(BaseModel):
+    accent_hex: str = Field(description="A specific hex color that fits the product personality, e.g. #6366f1 for productivity, #f59e0b for marketplace, #10b981 for health")
+    accent_name: str = Field(description="Tailwind color name, e.g. indigo, amber, emerald, violet, rose, sky, orange")
+    font: str = Field(description="Google Font name that fits the brand, e.g. 'Inter', 'Plus Jakarta Sans', 'DM Sans', 'Outfit', 'Nunito'")
+    vibe: str = Field(description="3-5 words: e.g. 'clean minimal professional', 'warm playful energetic', 'bold dark premium'")
+    logo: str = Field(description="A single emoji that represents the product, e.g. home for real estate, books for e-learning, stethoscope for health")
+    layout: str = Field(description="Either 'top-nav' (consumer/marketplace/social/booking) or 'sidebar' (B2B SaaS/productivity/CRM/workspace)")
+
+
+class SeedRecord(BaseModel):
+    entity: str = Field(description="Which entity this record belongs to")
+    data: str = Field(description="All fields as key: value pairs in one line, with realistic domain-specific values")
+
+
+class ProtoSpec(BaseModel):
+    app_name: str
+    tagline: str
+    primary_user: str = Field(description="The end user who opens the app every day, e.g. 'field sales rep', 'independent yoga teacher', 'student'")
+    core_job: str = Field(description="The #1 job-to-be-done: what the primary user needs to DO on screen 1, e.g. 'search and book a parking spot', 'record a voice note about a client visit'")
+    brand: Brand
+    screens: list[Screen] = Field(description="4-6 screens in user-journey order, starting with the core job. Screen 1 MUST be the primary user flow, not a dashboard.")
+    entities: list[Entity] = Field(description="3-5 main data objects with typed fields")
+    seed_records: list[SeedRecord] = Field(description="12-16 realistic records covering all entities, with domain-specific values (real-sounding names, places, prices, dates)")
+    interactions: list[str] = Field(description="6-10 specific interactions that must work end-to-end, described as user actions, e.g. 'user searches by location -> cards filter live'")
+
+
+def _spec_text(spec: ProtoSpec) -> str:
+    screens = "\n".join(
+        f"  [{i+1}] {sc.route} -- {sc.name} ({sc.category})\n"
+        f"      Purpose: {sc.purpose}\n"
+        f"      UI elements: {', '.join(sc.components)}"
+        for i, sc in enumerate(spec.screens)
+    )
+    entities = "\n".join(
+        f"  * {e.name}: {', '.join(e.fields)}" for e in spec.entities
+    )
+    seeds = "\n".join(f"  * [{r.entity}] {r.data}" for r in spec.seed_records)
+    interactions = "\n".join(f"  - {x}" for x in spec.interactions)
+    return (
+        f"APP: {spec.app_name} -- {spec.tagline}\n"
+        f"PRIMARY USER: {spec.primary_user}\n"
+        f"CORE JOB (Screen 1): {spec.core_job}\n"
+        f"LAYOUT: {spec.brand.layout}\n"
+        f"BRAND: accent {spec.brand.accent_name} ({spec.brand.accent_hex}), font '{spec.brand.font}', "
+        f"logo {spec.brand.logo}, feel: {spec.brand.vibe}\n\n"
+        f"SCREENS (build them ALL -- Screen 1 is the core user flow):\n{screens}\n\n"
+        f"DATA MODEL:\n{entities}\n\n"
+        f"SEED DATA (use all of these -- expand with similar records to reach 12-16 per entity):\n{seeds}\n\n"
+        f"INTERACTIONS (every one of these must work):\n{interactions}"
+    )
 
 
 class Patch(BaseModel):
@@ -373,31 +728,123 @@ class PatchSet(BaseModel):
     summary: str = Field(description="One plain sentence describing what changed")
 
 
+def _clean_html(html: str) -> str:
+    h = html.strip()
+    if h.startswith("```html"): h = h[7:]
+    elif h.startswith("```"): h = h[3:]
+    if h.endswith("```"): h = h[:-3]
+    return h.strip()
+
+
 def _valid_html(html: str) -> bool:
     low = html.lower()
-    return low.lstrip().startswith("<!doctype html") and "</html>" in low and "<script" in low
+    # Accept both vanilla JS and React/Babel prototypes
+    has_script = "<script" in low and ("text/babel" in low or "</script>" in low)
+    return low.startswith("<!doctype html") and "</html>" in low and has_script
 
 
 def _product_brief(venture: dict) -> str:
-    mem = core.recall(venture["id"], "MVP features user stories core workflow target users", k=5)
-    return f"{venture_text(venture)}\n\nWhat we know (research, boardroom, MVP plan):\n{core.context_block(mem, 'Memory')}"
+    """Build a rich brief from venture context, including MVP plan if available."""
+    mem = core.recall(venture["id"], "MVP features user stories core workflow target users validation demand", k=8)
+    mem_block = core.context_block(mem, "Memory")
+
+    # Pull structured MVP plan if passed in the venture dict
+    mvp = venture.get("mvp_plan") or {}
+    validation = venture.get("validation") or {}
+
+    sections = [venture_text(venture)]
+
+    if validation:
+        demand = (validation.get("demand") or {})
+        comp = (validation.get("competition") or {})
+        sections.append(
+            f"VALIDATION SCORES: demand {demand.get('score', '?')}/100, competition {comp.get('score', '?')}/100\n"
+            f"Verdict: {validation.get('verdict', '')} -- {validation.get('summary', '')}\n"
+            f"Key risks: {', '.join(validation.get('key_risks', []))}"
+        )
+
+    if mvp:
+        must_features = [f["name"] + ": " + f["description"] for f in mvp.get("features", []) if f.get("priority") == "must"]
+        should_features = [f["name"] for f in mvp.get("features", []) if f.get("priority") == "should"]
+        stories = [f"As a {s['as_a']}, I want to {s['i_want']} so that {s['so_that']}" for s in (mvp.get("user_stories") or [])[:5]]
+        stack = mvp.get("stack") or []
+        sections.append(
+            f"MVP PLAN SUMMARY: {mvp.get('summary', '')}\n"
+            f"MUST-HAVE FEATURES:\n" + "\n".join(f"  * {f}" for f in must_features) + "\n"
+            f"SHOULD-HAVE FEATURES: {', '.join(should_features)}\n"
+            f"USER STORIES:\n" + "\n".join(f"  * {s}" for s in stories) + "\n"
+            f"TECH STACK: {', '.join(stack)}"
+        )
+
+    sections.append(f"VENTURE MEMORY (research, decisions, experiments):\n{mem_block}")
+    return "\n\n".join(sections)
 
 
-def prototype(venture: dict):
+def prototype_steps(venture: dict):
+    """Build a prototype, yielding progress events: spec -> code -> done."""
     if not core.OPENAI:
-        return {**demo.prototype(venture), "mode": "demo"}
+        yield {"type": "done", "result": {**demo.prototype(venture), "mode": "demo"}}
+        return
+
     brief = _product_brief(venture)
-    # Only gpt-oss models reliably finish a full file inside the free-tier token budget.
-    models = [m for m in core.HEAVY + core.FAST if "gpt-oss" in m or not core.GROQ]
+    yield {"type": "stage", "stage": "spec"}
+
+    # Step 1: Design a product-specific spec -- who uses it, what they DO first, exact screens & data.
+    spec = core.structured(
+        ProtoSpec,
+        "You are a senior product designer at a top-tier startup studio.\n"
+        "Design the FIRST VERSION of this specific product.\n\n"
+        "CRITICAL RULES:\n"
+        "1. Screen 1 MUST be the core user experience (search, feed, booking flow, workspace, player) -- "
+        "NEVER a dashboard with stat cards.\n"
+        "2. Every screen must map to a specific user journey step, not a management view.\n"
+        "3. Seed data must use real-sounding names, places, prices, and dates specific to the product's domain.\n"
+        "4. Layout: use 'top-nav' for consumer/marketplace/social/booking apps; "
+        "'sidebar' for B2B SaaS/CRM/productivity/workspace tools.\n"
+        "5. core_job is what the primary user does in the first 30 seconds after opening the app.\n"
+        "Base your design on the MVP features and user stories in the brief -- match the product's actual scope.",
+        brief, temperature=0.7, tier="code", max_tokens=8000,
+    )
+    yield {"type": "stage", "stage": "code", "app_name": spec.app_name, "screens": [sc.name for sc in spec.screens]}
+
+    # Step 2: Build the React app.
+    def prompt(model: str) -> str:
+        return (
+            f"""Build this product as a single self-contained HTML file using React 18 + Babel standalone.
+
+FOLLOW THE EXACT TECH STACK AND STRUCTURE IN THE SYSTEM PROMPT.
+Do NOT use Tailwind CDN. Use the custom CSS design system described in the system prompt.
+
+{_spec_text(spec)}
+
+VENTURE CONTEXT (use to make copy, labels, and all data authentic):
+{brief}
+
+BUILD INSTRUCTIONS:
+- Write a COMPLETE but COMPACT app (aim for 400-500 lines). Every screen must be implemented, but keep the code concise.
+- The CSS <style> block must contain ALL the classes from the system prompt design system, adapted with the brand's accent color ({spec.brand.accent_hex}) and font ({spec.brand.font}).
+- Screen 1 opens to: '{spec.screens[0].name}' — {spec.core_job}
+  It is NOT a dashboard, NOT a login screen. It is the primary user flow.
+- Include 6-8 realistic seed records (use the provided seed data, expand it).
+- Every button, form, filter, and card click must work and update the UI.
+- Use useDB() hook for data persistence. Use useToast() for feedback.
+- Import nothing. React, ReactDOM are global. Babel compiles JSX in the browser.
+"""
+        )
+
     html = ""
-    for _ in range(2):
-        html = core.complete(PROTO_SYSTEM, f"Build the first prototype of this product.\n\n{brief}", temperature=0.5, models=models)
+    for attempt in range(2):
+        raw = core.complete(PROTO_SYSTEM, prompt, temperature=0.4 if attempt > 0 else 0.5, models=core.CODE)
+        html = _clean_html(raw)
         if _valid_html(html):
             break
     if not _valid_html(html):
         raise core.LLMError("The model returned an incomplete app. Please try again.")
-    title = (re.search(r"<title>(.*?)</title>", html, re.I | re.S) or [None, venture.get("name")])[1].strip()
-    return {"title": title, "html": html, "summary": f"First working prototype of {venture.get('name')}.", "mode": "live"}
+    yield {"type": "done", "result": {
+        "title": spec.app_name, "html": html,
+        "summary": f"{spec.app_name} -- {spec.tagline}",
+        "spec": spec.model_dump(), "mode": "live",
+    }}
 
 
 def prototype_edit(venture: dict, html: str, instruction: str):
