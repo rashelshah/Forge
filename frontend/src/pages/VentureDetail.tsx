@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { AppWindow, Brain, FlaskConical, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
+import { AppWindow, Brain, FlaskConical, Megaphone, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { DECISION_COPY, LiveBoardroom } from '@/components/boardroom'
 import { DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
+import { GtmStudio } from '@/components/gtm'
 import { CommandCenter } from '@/components/overview'
 import { PrototypeStudio } from '@/components/prototype'
 import { MvpView } from '@/components/mvp'
@@ -207,6 +208,7 @@ export default function VentureDetail() {
           <TabsTrigger value="boardroom"><MessagesSquare />Boardroom</TabsTrigger>
           <TabsTrigger value="mvp"><Layers />MVP Architect</TabsTrigger>
           <TabsTrigger value="prototype"><AppWindow />Prototype</TabsTrigger>
+          <TabsTrigger value="gtm"><Megaphone />Go-To-Market</TabsTrigger>
           <TabsTrigger value="competitors"><Radar />Competitors</TabsTrigger>
           <TabsTrigger value="experiments"><FlaskConical />Experiments</TabsTrigger>
           <TabsTrigger value="memory"><Brain />Memory</TabsTrigger>
@@ -243,6 +245,8 @@ export default function VentureDetail() {
         </TabsContent>
 
         <TabsContent value="prototype"><PrototypeStudio venture={v} report={prototype} /></TabsContent>
+
+        <TabsContent value="gtm"><GtmStudio ventureId={v.id} /></TabsContent>
 
         <TabsContent value="competitors"><CompetitorsPanel ventureId={v.id} /></TabsContent>
         <TabsContent value="experiments">

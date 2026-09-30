@@ -275,3 +275,14 @@ export interface VentureCommand {
   generating: boolean
   error: string | null
 }
+
+export interface GtmAsset { key: string; label: string; group: string; filename: string; url: string; bytes: number; preview: boolean }
+export interface GtmRun { id: string; venture_id: string; status: 'queued' | 'running' | 'done' | 'failed'; stage: string | null; launch_score: number | null; error: string | null; updated_at: string }
+export interface GtmEvent { id: string; agent: string; status: 'running' | 'done' | 'failed'; summary: string | null; detail: string | null; created_at: string }
+export interface GtmData {
+  run: GtmRun | null
+  events: GtmEvent[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  artifacts: Record<string, any>
+  prerequisites: { validation: boolean; prototype: boolean; mvp: boolean; ready: boolean }
+}

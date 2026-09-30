@@ -4,6 +4,7 @@ import express from 'express'
 import { DB_MODE, db } from './db.js'
 import { auth } from './core.js'
 import design from './routes/design.js'
+import gtm from './routes/gtm.js'
 import command from './routes/command.js'
 import intel from './routes/intel.js'
 import studio from './routes/studio.js'
@@ -18,7 +19,7 @@ app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }))
 app.use(express.json({ limit: '1mb' }))
 app.get('/api/health', (req, res) => res.json({ ok: true, db: DB_MODE }))
 app.use(publicRoutes)
-app.use('/api', auth, ventures, workspace, design, studio, intel, command)
+app.use('/api', auth, ventures, workspace, design, studio, intel, command, gtm)
 app.use((req, res) => res.status(404).json({ error: 'Not found' }))
 app.use((err, req, res, next) => {
   if (!err.status) console.error(err)

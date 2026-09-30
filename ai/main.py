@@ -11,6 +11,7 @@ import boardroom
 import chief
 import core
 import design_intel
+import gtm
 import intel
 import studio
 
@@ -236,3 +237,15 @@ def studio_edit(html: str = Body(...), instruction: str = Body(...), name: str =
 @app.post("/chief/brief")
 def chief_brief(context: dict = Body(..., embed=True)):
     return chief.run(context)
+
+
+@app.post("/gtm/run")
+def gtm_run(run_id: str = Body(...), context: dict = Body(...)):
+    return long_job(gtm.run_gtm, run_id, context)
+
+
+@app.delete("/gtm/{run_id}")
+def gtm_purge(run_id: str):
+    if core.PGVECTOR:
+        design_intel._clean_storage(run_id, bucket=gtm.BUCKET)
+    return {"ok": True}

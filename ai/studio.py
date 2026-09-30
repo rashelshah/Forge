@@ -333,29 +333,35 @@ def _db(method: str, path: str, **kw):
 
 
 class Run:
-    """Persists everything a project run does."""
+    """Persists everything a run does: its status row, the agent activity timeline and the artifacts each agent produces."""
 
-    def __init__(self, project: dict):
+    def __init__(self, project: dict, tables: tuple[str, str, str, str] = ("studio_projects", "studio_events", "studio_artifacts", "project_id")):
         self.project, self.id, self.iteration = project, project["id"], 0
+        self.t_run, self.t_events, self.t_artifacts, self.fk = tables
 
     def patch(self, **fields):
-        _db("PATCH", f"studio_projects?id=eq.{self.id}", json={**fields, "updated_at": _now()})
+        _db("PATCH", f"{self.t_run}?id=eq.{self.id}", json={**fields, "updated_at": _now()})
 
     def save(self, kind: str, content: dict, iteration: int | None = None):
-        _db("POST", "studio_artifacts", json={"project_id": self.id, "kind": kind, "iteration": self.iteration if iteration is None else iteration, "content": content})
+        _db("POST", self.t_artifacts, json={self.fk: self.id, "kind": kind, "iteration": self.iteration if iteration is None else iteration, "content": content})
+
+    def load(self, kind: str) -> dict | None:
+        """The latest saved artifact of this kind (lets a failed run resume instead of redoing finished agents)."""
+        rows = _db("GET", f"{self.t_artifacts}?{self.fk}=eq.{self.id}&kind=eq.{kind}&select=content&order=created_at.desc&limit=1")
+        return rows[0]["content"] if rows else None
 
     @contextmanager
     def step(self, agent: str):
-        ev = _db("POST", "studio_events", prefer="return=representation", json={"project_id": self.id, "agent": agent, "iteration": self.iteration})[0]
+        ev = _db("POST", self.t_events, prefer="return=representation", json={self.fk: self.id, "agent": agent, "iteration": self.iteration})[0]
         self.patch(stage=agent)
         box: dict = {}
         try:
             yield box
         except Exception as e:
-            _db("PATCH", f"studio_events?id=eq.{ev['id']}", json={"status": "failed", "detail": str(e)[:600], "updated_at": _now()})
+            _db("PATCH", f"{self.t_events}?id=eq.{ev['id']}", json={"status": "failed", "detail": str(e)[:600], "updated_at": _now()})
             raise
-        _db("PATCH", f"studio_events?id=eq.{ev['id']}", json={"status": "done", "summary": (box.get("summary") or "")[:400],
-                                                              "detail": box.get("detail"), "updated_at": _now()})
+        _db("PATCH", f"{self.t_events}?id=eq.{ev['id']}", json={"status": "done", "summary": (box.get("summary") or "")[:400],
+                                                                "detail": box.get("detail"), "updated_at": _now()})
 
 
 def _now():
