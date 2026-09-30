@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Check, Download, Loader2, Megaphone, RefreshCw, Rocket } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { Empty, ErrorNote, ScoreRing } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -255,8 +256,14 @@ function Calendar({ a }: { a: Record<string, any> }) {
 
 function Checklist({ ventureId, a }: { ventureId: string; a: Record<string, any> }) {
   const items: any[] = a.readiness?.checklist ?? []
-  const done = new Set<string>(a.checklist_state?.done ?? [])
-  const toggle = useAction(({ id, done: d }: { id: string; done: boolean }) => api(`/ventures/${ventureId}/gtm/checklist`, { id, done: d }), [['gtm', ventureId]])
+  // Ticks apply instantly; the save happens in the background and is rolled back (with a message) only if it fails.
+  const [done, setDone] = useState<Set<string>>(() => new Set<string>(a.checklist_state?.done ?? []))
+  const toggle = (id: string) => {
+    const on = !done.has(id)
+    const flip = (set: Set<string>, value: boolean) => { const n = new Set(set); if (value) n.add(id); else n.delete(id); return n }
+    setDone((d) => flip(d, on))
+    api(`/ventures/${ventureId}/gtm/checklist`, { id, done: on }).catch((e: Error) => { setDone((d) => flip(d, !on)); toast.error(`Couldn't save that change: ${e.message}`) })
+  }
   if (!items.length) return <Card className="p-5 text-sm text-muted">The Launch Readiness Agent is still working…</Card>
   const cats = [...new Set(items.map((i) => i.category))]
   return (
@@ -265,7 +272,7 @@ function Checklist({ ventureId, a }: { ventureId: string; a: Record<string, any>
       <div className="grid gap-4 lg:grid-cols-2">{cats.map((cat) => (
         <Card key={cat} className="p-5"><Eyebrow>{cat}</Eyebrow><ul className="mt-2 space-y-2">{items.filter((i) => i.category === cat).map((i) => {
           const d = done.has(i.id)
-          return <li key={i.id} className="flex gap-3"><button onClick={() => toggle.mutate({ id: i.id, done: !d })} aria-pressed={d} aria-label={`${d ? 'Uncheck' : 'Check'} ${i.task}`} className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition cursor-pointer', d ? 'border-leaf bg-leaf text-white' : 'border-line-2 bg-white')}>{d && <Check className="size-3" />}</button>
+          return <li key={i.id} className="flex gap-3"><button onClick={() => toggle(i.id)} aria-pressed={d} aria-label={`${d ? 'Uncheck' : 'Check'} ${i.task}`} className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border transition cursor-pointer', d ? 'border-leaf bg-leaf text-white' : 'border-line-2 bg-white')}>{d && <Check className="size-3" />}</button>
             <div className={cn('text-sm', d && 'opacity-50')}><p className={cn('font-medium', d && 'line-through')}>{i.task} <Badge tone={i.priority === 'High' ? 'rose' : i.priority === 'Medium' ? 'amber' : 'neutral'} className="ml-1">{i.priority}</Badge></p><p className="text-xs text-muted">{i.why}</p></div></li>
         })}</ul></Card>))}</div>
     </div>
