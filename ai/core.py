@@ -80,6 +80,34 @@ def structured(schema, system: str, user: str, temperature: float = 0.4, tier: s
     raise LLMError("All models failed — " + " | ".join(errors))
 
 
+def complete(system: str, user: str, temperature: float = 0.4, max_tokens: int = 6000, models: list[str] | None = None) -> str:
+    """Plain-text completion (used for code generation), failing over across models; rejects truncated output."""
+    errors = []
+    for model in dict.fromkeys(models or HEAVY + FAST):
+        try:
+            msg = _client(model, temperature, max_tokens).invoke([("system", system), ("human", user)])
+        except Exception as e:
+            errors.append(f"{model}: {str(e)[:160]}")
+            continue
+        if (msg.response_metadata or {}).get("finish_reason") == "length":
+            errors.append(f"{model}: output too long")
+            continue
+        return re.sub(r"^```[a-z]*\s*|\s*```\s*$", "", msg.content.strip())
+    raise LLMError("All models failed — " + " | ".join(errors))
+
+
+# Plain-language rule shared by every user-facing agent.
+PLAIN = (
+    "Write for a first-time, non-technical founder: plain everyday words and short sentences. Avoid jargon and "
+    "acronyms — say 'cost to win a customer' not 'CAC', 'how long customers stay' not 'retention cohort', "
+    "'how much money a customer brings in' not 'LTV', 'a simple first version' not 'MVP', 'enough buyers and sellers' "
+    "not 'liquidity', 'profit per sale' not 'margins', 'AI running costs' not 'inference', 'a way in' not 'wedge', "
+    "'hard for others to copy' not 'moat/defensibility', 'gets better as more people use it' not 'network effects', "
+    "'data only you have' not 'proprietary data', 'getting enough buyers and sellers at the same time' not "
+    "'chicken-and-egg problem'. Numbers are welcome when you say what they mean."
+)
+
+
 # ---------------------------------------------------------------- Web
 
 def web_search(query: str, domains: list[str] | None = None, k: int = 5, topic: str = "general", days: int | None = None):

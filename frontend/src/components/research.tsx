@@ -3,7 +3,8 @@ import { useState, type ReactNode } from 'react'
 import { SCORE_KEYS, SCORE_LABELS, ScoreRing, scoreColor } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import type { ExperimentAnalysis, LandingContent, MvpPlan, Opportunity, Report, Source, Validation } from '@/lib/types'
+import { PrototypePreview } from '@/components/prototype'
+import type { ExperimentAnalysis, MvpPlan, Opportunity, PrototypeContent, Report, Source, Validation } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 // ---------------------------------------------------------------- sources & evidence
@@ -81,7 +82,7 @@ export function ValidationView({ v }: { v: Validation }) {
           return (
             <Card key={k} className="overflow-hidden">
               <button className="flex w-full items-center gap-4 p-4 text-left cursor-pointer" onClick={() => setOpen(isOpen ? null : k)} aria-expanded={isOpen}>
-                <span className="w-36 shrink-0 text-sm font-medium">{SCORE_LABELS[k]}</span>
+                <span className="w-44 shrink-0 text-sm font-medium">{SCORE_LABELS[k]}</span>
                 <span className="h-1.5 flex-1 rounded-full bg-soft">
                   <span className="block h-full rounded-full" style={{ width: `${s.score}%`, background: scoreColor(s.score) }} />
                 </span>
@@ -262,64 +263,6 @@ export function MvpView({ m }: { m: MvpPlan }) {
   )
 }
 
-// ---------------------------------------------------------------- landing page generator
-
-export function LandingPreview({ l }: { l: LandingContent }) {
-  return (
-    <div className="overflow-hidden rounded-[20px] border border-line bg-white shadow-float">
-      <div className="flex items-center gap-1.5 border-b border-line bg-canvas px-4 py-2.5">
-        {['#f1b0a4', '#f3d28e', '#b9d99b'].map((c) => <span key={c} className="size-2.5 rounded-full" style={{ background: c }} />)}
-        <span className="ml-3 truncate rounded-full bg-white px-3 py-0.5 font-mono text-[11px] text-muted">{l.seo_title}</span>
-      </div>
-      <div className="relative isolate overflow-hidden px-6 pt-16 pb-14 text-center">
-        <div className="aurora -z-10 opacity-60" />
-        <span className="inline-block border-y border-[#c9ccef] px-4 py-1.5 text-sm text-indigo">{l.hero.eyebrow}</span>
-        <h2 className="mx-auto mt-5 max-w-2xl text-[40px] leading-[1.05] sm:text-5xl">{l.hero.headline}</h2>
-        <p className="mx-auto mt-4 max-w-xl text-ink-2">{l.hero.subheadline}</p>
-        <div className="mt-7 flex justify-center gap-2">
-          <span className="rounded-full bg-dark px-5 py-2.5 text-sm font-medium text-white shadow-press-dark">{l.hero.primary_cta}</span>
-          <span className="rounded-full bg-soft px-5 py-2.5 text-sm font-medium shadow-press-light">{l.hero.secondary_cta}</span>
-        </div>
-      </div>
-      <div className="space-y-12 px-6 pb-12">
-        <p className="mx-auto max-w-2xl text-center text-lg text-ink-2">{l.value_proposition}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {l.features.map((f) => <div key={f.title} className="rounded-2xl border border-line p-5"><p className="font-medium">{f.title}</p><p className="mt-1 text-sm text-muted">{f.description}</p></div>)}
-        </div>
-        <div>
-          <h3 className="mb-5 text-center text-3xl">Pricing</h3>
-          <div className="grid gap-3 md:grid-cols-3">
-            {l.pricing.map((t) => (
-              <div key={t.name} className={cn('rounded-2xl border p-5', t.highlighted ? 'border-periwinkle shadow-float' : 'border-line')}>
-                <p className="font-medium">{t.name}</p>
-                <p className="text-sm text-muted">{t.description}</p>
-                <p className="mt-3 font-display text-4xl">{t.price}<span className="ml-1 text-sm text-muted">{t.period}</span></p>
-                <ul className="mt-3 space-y-1 text-sm text-ink-2">{t.features.map((f) => <li key={f}>· {f}</li>)}</ul>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-3xl border border-mist bg-[linear-gradient(#fafcff,#e8effc)] p-8 text-center">
-          <h3 className="text-3xl">{l.waitlist.headline}</h3>
-          <p className="mt-2 text-ink-2">{l.waitlist.subheadline}</p>
-          <div className="mx-auto mt-5 flex max-w-md gap-2">
-            <span className="flex-1 rounded-xl border border-line-2 bg-white px-4 py-2.5 text-left text-sm text-faint">you@example.com</span>
-            <span className="rounded-full bg-dark px-5 py-2.5 text-sm font-medium text-white">{l.waitlist.button}</span>
-          </div>
-          <p className="mt-3 text-xs text-muted">Survey: {l.waitlist.survey_question}</p>
-        </div>
-        <div className="mx-auto max-w-2xl divide-y divide-line">
-          {l.faqs.map((f) => <details key={f.question} className="py-3"><summary className="cursor-pointer font-medium">{f.question}</summary><p className="mt-2 text-sm text-ink-2">{f.answer}</p></details>)}
-        </div>
-        <div>
-          <p className="mb-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">CTA variants for A/B tests</p>
-          <div className="flex flex-wrap gap-2">{l.cta_variants.map((c) => <Badge key={c} tone="outline">{c}</Badge>)}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- experiment analysis
 
 const OUTCOME_TONE = { validated: 'leaf', invalidated: 'rose', inconclusive: 'amber' } as const
@@ -342,7 +285,8 @@ export function ReportBody({ r }: { r: Report }) {
     case 'discovery': return <div className="space-y-3">{(r.content as { opportunities: Opportunity[] }).opportunities.map((o) => <OpportunityCard key={o.title} o={o} />)}</div>
     case 'validation': return <ValidationView v={r.content as Validation} />
     case 'mvp': return <MvpView m={r.content as MvpPlan} />
-    case 'landing': return <LandingPreview l={r.content as LandingContent} />
+    case 'prototype': return <PrototypePreview content={r.content as PrototypeContent} />
+    case 'landing': return <Card className="p-6 text-sm text-muted">Landing pages were replaced by the Prototype Builder. Open the venture's Prototype tab to build a working app.</Card>
     case 'experiment_analysis': return <AnalysisView a={r.content as ExperimentAnalysis} />
   }
 }

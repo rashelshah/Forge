@@ -137,7 +137,7 @@ LINES = {
     ],
     "investor": [
         "Market looks real but I need a credible path to a large outcome. My worry is CAC: reaching {audience} one by one is expensive unless there's a built-in loop.",
-        "Growth's channel thesis helps, but I haven't heard unit economics. Until we see a conversion rate on a real landing page, this is a seed-stage bet on the team, not the market.",
+        "Growth's channel thesis helps, but I haven't heard unit economics. Until real users try a prototype, this is a seed-stage bet on the team, not the market.",
         "I'd back a small experiment, not a full build. Show me 10% waitlist conversion and interviews with past behaviour, then we talk.",
     ],
     "product": [
@@ -198,6 +198,10 @@ def board_verdict(venture: dict, votes: dict):
     return {
         "decision": decision,
         "confidence": 45 + 5 * votes[decision],
+        "headline": f"Test demand with {audience} before building {product} in full.",
+        "reasons": ["The problem sounds real but nobody has proven people will pay yet",
+                    "Getting the first users looks cheap through student communities",
+                    "Big existing apps could copy the idea, so speed and focus matter"],
         "summary": f"The board sees a real opportunity in {product} for {audience}, but demand and willingness to pay are "
                    f"unproven. Proceed only through cheap experiments that test the Failure Agent's objections.",
         "consensus": ["Start with one narrow segment", "Community-led distribution before paid", "MVP limited to one core workflow"],
@@ -210,7 +214,7 @@ def board_verdict(venture: dict, votes: dict):
             {"assumption": "One community channel can deliver 500 signups", "risk": "medium",
              "test": "Seed the waitlist in 3 communities and track referral rate"},
         ],
-        "next_steps": ["Launch the generated landing page as an experiment", "Run 10 customer interviews this week",
+        "next_steps": ["Share the generated prototype with 10 target users", "Run 10 customer interviews this week",
                        "Re-convene the board with experiment results"],
     }
 
@@ -313,48 +317,46 @@ def mvp(venture: dict):
     }
 
 
-# ---------------------------------------------------------------- landing page
+# ---------------------------------------------------------------- prototype
 
-def landing(venture: dict):
-    product, audience = split(venture["idea"])
-    name = venture.get("name") or "Your product"
+PROTO_TEMPLATE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__NAME__</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-slate-50 text-slate-800">
+<header class="bg-white border-b"><div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-6">
+<span class="font-semibold text-indigo-600">__NAME__</span>
+<nav class="flex gap-4 text-sm"><a href="#/home" data-nav>Home</a><a href="#/items" data-nav>__ITEMS__</a></nav>
+<button id="add" class="ml-auto bg-indigo-600 text-white text-sm px-3 py-1.5 rounded-lg">+ New</button></div></header>
+<main class="max-w-5xl mx-auto p-4" id="app"></main>
+<div id="modal" class="hidden fixed inset-0 bg-black/30 grid place-items-center p-4"><form id="form" class="bg-white rounded-xl p-5 w-full max-w-sm space-y-3">
+<h2 class="font-semibold">New __ITEM__</h2><input name="title" required placeholder="Title" class="w-full border rounded-lg px-3 py-2">
+<input name="note" placeholder="Details" class="w-full border rounded-lg px-3 py-2">
+<div class="flex justify-end gap-2"><button type="button" id="cancel" class="px-3 py-1.5">Cancel</button><button class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg">Save</button></div></form></div>
+<script>
+const KEY='proto-items';let items;try{items=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+items=items||__SEED__;const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}};
+const app=document.getElementById('app'),modal=document.getElementById('modal');
+function render(){const r=location.hash||'#/home';document.querySelectorAll('[data-nav]').forEach(a=>a.className=a.getAttribute('href')===r?'text-indigo-600 font-medium':'text-slate-500');
+if(r==='#/home'){app.innerHTML=`<h1 class="text-2xl font-semibold mb-4">Welcome back</h1><div class="grid grid-cols-2 gap-3"><div class="bg-white rounded-xl border p-4"><p class="text-sm text-slate-500">__ITEMS__</p><p class="text-3xl font-semibold">${items.length}</p></div><div class="bg-white rounded-xl border p-4"><p class="text-sm text-slate-500">Demo mode</p><p class="text-sm mt-2">Add a free GROQ_API_KEY to generate a tailored prototype.</p></div></div>`;return}
+app.innerHTML=`<input id="q" placeholder="Search" class="w-full border rounded-lg px-3 py-2 mb-3 bg-white"><div id="list" class="space-y-2"></div>`;
+const draw=()=>{const q=document.getElementById('q').value.toLowerCase();document.getElementById('list').innerHTML=items.filter(i=>i.title.toLowerCase().includes(q)).map((i,n)=>`<div class="bg-white border rounded-xl p-3 flex justify-between"><div><p class="font-medium">${i.title}</p><p class="text-sm text-slate-500">${i.note||''}</p></div><button data-del="${n}" class="text-sm text-rose-500">Delete</button></div>`).join('')||'<p class="text-slate-500">Nothing here yet.</p>'};
+document.getElementById('q').oninput=draw;draw();}
+app.onclick=e=>{const d=e.target.dataset.del;if(d!==undefined){items.splice(+d,1);save();render()}};
+document.getElementById('add').onclick=()=>modal.classList.remove('hidden');document.getElementById('cancel').onclick=()=>modal.classList.add('hidden');
+document.getElementById('form').onsubmit=e=>{e.preventDefault();const f=new FormData(e.target);items.unshift({title:f.get('title'),note:f.get('note')});save();e.target.reset();modal.classList.add('hidden');location.hash='#/items';render()};
+window.onhashchange=render;render();
+</script></body></html>"""
+
+
+def prototype(venture: dict):
+    import json as _json
+    name = venture.get("name") or "Prototype"
     market = _is_marketplace(venture["idea"])
-    return {
-        "hero": {
-            "eyebrow": f"Built for {audience}",
-            "headline": f"{product[0].upper() + product[1:]}, finally done right",
-            "subheadline": f"{name} gives {audience} one place to get it done — faster, cheaper and without the spreadsheet chaos.",
-            "primary_cta": "Join the waitlist",
-            "secondary_cta": "See how it works",
-        },
-        "value_proposition": f"Stop stitching together tools and group chats. {name} handles the busywork so {audience} can focus on what matters.",
-        "features": [
-            {"title": "Set up in minutes", "description": "No onboarding calls, no templates to configure. Start in one click."},
-            {"title": "Verified & trusted" if market else "Everything in one place", "description": "Every member is verified so you know who you're dealing with." if market else "Replace five tools with a single workspace built for you."},
-            {"title": "Smart matching" if market else "AI that does the busywork", "description": "Get matched with the right option automatically." if market else "Automate the repetitive steps you do every week."},
-            {"title": "Fair, transparent pricing", "description": "Know exactly what you pay. No hidden fees, ever."},
-        ],
-        "pricing": [
-            {"name": "Starter", "price": "$0", "period": "forever", "description": "For trying it out", "features": ["Core features", "Up to 3 active items", "Community support"], "highlighted": False},
-            {"name": "Pro", "price": "$9", "period": "per month", "description": f"For busy {audience}", "features": ["Unlimited items", "Priority matching" if market else "AI assistant", "Email support"], "highlighted": True},
-            {"name": "Teams", "price": "$29", "period": "per month", "description": "For groups and organisations", "features": ["Everything in Pro", "Shared workspace", "Admin controls"], "highlighted": False},
-        ],
-        "faqs": [
-            {"question": f"Who is {name} for?", "answer": f"{audience.capitalize()} who are tired of doing this the hard way."},
-            {"question": "When does it launch?", "answer": "We're onboarding waitlist members in small batches over the coming weeks."},
-            {"question": "Is it free?", "answer": "There's a free plan forever. Paid plans unlock unlimited usage."},
-            {"question": "Is my data safe?", "answer": "Yes. Data is encrypted in transit and at rest, and we never sell it."},
-        ],
-        "waitlist": {
-            "headline": "Get early access",
-            "subheadline": "Join the waitlist — early members get Pro free for 3 months.",
-            "button": "Request access",
-            "survey_question": f"What's the last time you struggled with {product}, and what did you do about it?",
-        },
-        "cta_variants": ["Join the waitlist", f"Get {name} early", "Reserve your spot"],
-        "seo_title": f"{name} — {product} for {audience}",
-        "seo_description": f"{name} helps {audience} with {product}. Join the waitlist for early access.",
-    }
+    item, items = ("Listing", "Listings") if market else ("Project", "Projects")
+    seed = [{"title": f"Sample {item.lower()} {i}", "note": "Seed data — edit or delete me"} for i in range(1, 6)]
+    html = (PROTO_TEMPLATE.replace("__NAME__", name).replace("__ITEMS__", items).replace("__ITEM__", item.lower())
+            .replace("__SEED__", _json.dumps(seed)))
+    return {"title": name, "html": html, "summary": "Template prototype (demo mode)."}
 
 
 # ---------------------------------------------------------------- competitor intel

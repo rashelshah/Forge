@@ -73,11 +73,11 @@ export function GradientTile({ tone, icon, className }: { tone: keyof typeof GRA
 // ---------------------------------------------------------------- scores
 
 export const SCORE_LABELS: Record<ScoreKey, string> = {
-  demand: 'Demand',
-  competition: 'Competition',
-  defensibility: 'Defensibility',
-  revenue_potential: 'Revenue potential',
-  founder_fit: 'Founder fit',
+  demand: 'Do people want it?',
+  competition: 'Room vs. competitors',
+  defensibility: 'Hard to copy',
+  revenue_potential: 'Earning potential',
+  founder_fit: 'Fit with you',
 }
 export const SCORE_KEYS = Object.keys(SCORE_LABELS) as ScoreKey[]
 
@@ -123,8 +123,8 @@ const STAGE_TONE = { idea: 'neutral', validating: 'indigo', building: 'saffron',
 export const StageBadge = ({ stage }: { stage: Stage }) => <Badge tone={STAGE_TONE[stage]} className="capitalize">{stage}</Badge>
 
 const DECISION_TONE = { GO: 'leaf', PIVOT: 'amber', KILL: 'rose' } as const
-export const DecisionBadge = ({ decision, className }: { decision: Decision | string; className?: string }) => (
-  <Badge tone={DECISION_TONE[decision as Decision] ?? 'indigo'} className={className}>{decision}</Badge>
+export const DecisionBadge = ({ decision, label, className }: { decision: Decision | string; label?: string; className?: string }) => (
+  <Badge tone={DECISION_TONE[decision as Decision] ?? 'indigo'} className={className}>{label ?? decision}</Badge>
 )
 
 export const ModeBadge = ({ mode }: { mode?: Mode | null }) =>

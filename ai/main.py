@@ -73,9 +73,14 @@ def mvp(venture: dict = Body(...), founder: dict = Body({})):
     return agents.mvp(venture, founder)
 
 
-@app.post("/landing")
-def landing(venture: dict = Body(..., embed=True)):
-    return agents.landing(venture)
+@app.post("/prototype")
+def prototype(venture: dict = Body(..., embed=True)):
+    return agents.prototype(venture)
+
+
+@app.post("/prototype/edit")
+def prototype_edit(venture: dict = Body(...), html: str = Body(...), instruction: str = Body(...)):
+    return agents.prototype_edit(venture, html, instruction)
 
 
 @app.post("/competitors/scan")

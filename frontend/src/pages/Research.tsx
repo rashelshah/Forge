@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Compass, FileSearch, FlaskConical, Gauge, Layers, LayoutTemplate, Trash2 } from 'lucide-react'
+import { AppWindow, ArrowLeft, Compass, FileSearch, FlaskConical, Gauge, Layers, LayoutTemplate, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
@@ -17,7 +17,8 @@ const KINDS: Record<ReportKind, { label: string; icon: typeof Gauge; tone: 'indi
   discovery: { label: 'Discovery', icon: Compass, tone: 'saffron' },
   validation: { label: 'Validation', icon: Gauge, tone: 'indigo' },
   mvp: { label: 'MVP blueprint', icon: Layers, tone: 'leaf' },
-  landing: { label: 'Landing page', icon: LayoutTemplate, tone: 'amber' },
+  prototype: { label: 'Prototype', icon: AppWindow, tone: 'amber' },
+  landing: { label: 'Landing page (legacy)', icon: LayoutTemplate, tone: 'neutral' },
   experiment_analysis: { label: 'Experiment analysis', icon: FlaskConical, tone: 'neutral' },
 }
 

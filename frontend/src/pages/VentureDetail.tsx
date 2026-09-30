@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { Brain, Check, FlaskConical, Gauge, Layers, LayoutTemplate, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
+import { AppWindow, Brain, Check, FlaskConical, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
-import { LiveBoardroom } from '@/components/boardroom'
+import { DECISION_COPY, LiveBoardroom } from '@/components/boardroom'
 import { DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
-import { LandingPreview, MvpView, OpportunityCard, ValidationView } from '@/components/research'
+import { PrototypeStudio } from '@/components/prototype'
+import { MvpView, OpportunityCard, ValidationView } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -12,7 +13,7 @@ import { Input, Select, Textarea } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
 import { useAction, useVenture } from '@/lib/queries'
-import type { BoardSession, Chunk, Experiment, LandingContent, Memory, MvpPlan, Report, Stage, Validation, Venture } from '@/lib/types'
+import type { BoardSession, Chunk, Experiment, Memory, MvpPlan, PrototypeContent, Report, Stage, Validation, Venture } from '@/lib/types'
 import { ago, cn, date, titleCase } from '@/lib/utils'
 import { CompetitorsPanel } from './Competitors'
 import { ExperimentList } from './Experiments'
@@ -77,7 +78,7 @@ function useValidate(id: string) {
 
 // ---------------------------------------------------------------- generators
 
-function Generator<C>({ v, kind, report, label, running, empty, children }: { v: Venture; kind: 'mvp' | 'landing'; report?: Report<C>; label: string; running: string; empty: string; children: (c: C) => React.ReactNode }) {
+function Generator<C>({ v, kind, report, label, running, empty, children }: { v: Venture; kind: 'mvp'; report?: Report<C>; label: string; running: string; empty: string; children: (c: C) => React.ReactNode }) {
   const gen = useAction(() => api(`/ventures/${v.id}/${kind}`, {}), [['research'], ['memory'], ['me'], ['activity']], `${label} ready`)
   return (
     <div className="space-y-4">
@@ -86,25 +87,8 @@ function Generator<C>({ v, kind, report, label, running, empty, children }: { v:
         {report && <Button size="sm" variant="light" onClick={() => gen.mutate()} loading={gen.isPending}><RefreshCw />Regenerate</Button>}
       </div>
       {gen.isPending ? <Generating label={running} /> : report ? children(report.content)
-        : <Empty icon={kind === 'mvp' ? <Layers /> : <LayoutTemplate />} title={`No ${label.toLowerCase()} yet`} action={<Button onClick={() => gen.mutate()}><Sparkles />Generate {label.toLowerCase()}</Button>}>{empty}</Empty>}
+        : <Empty icon={<Layers />} title={`No ${label.toLowerCase()} yet`} action={<Button onClick={() => gen.mutate()}><Sparkles />Generate {label.toLowerCase()}</Button>}>{empty}</Empty>}
     </div>
-  )
-}
-
-function LaunchExperiment({ v, report }: { v: Venture; report: Report<LandingContent> }) {
-  const nav = useNavigate()
-  const launch = useAction(() => api<Experiment>('/experiments', {
-    venture_id: v.id, landing_report_id: report.id, type: 'landing_page', name: `${v.name} waitlist test`,
-    hypothesis: `At least 10% of visitors who see "${report.content.hero.headline}" join the waitlist.`, target_conversion: 10,
-  }), [['experiments'], ['dashboard']], 'Experiment is live')
-  return (
-    <Card className="flex flex-col gap-3 bg-[linear-gradient(90deg,#fff,#f3f6fe)] p-5 sm:flex-row sm:items-center">
-      <div className="flex-1">
-        <p className="font-medium">Turn this page into a live experiment</p>
-        <p className="text-sm text-muted">Foundry hosts it, tracks visitors, signups, survey answers and pricing clicks — then the Experiment Analyst reads the results.</p>
-      </div>
-      <Button onClick={() => launch.mutate(undefined, { onSuccess: (e) => nav(`/app/experiments/${e.id}`) })} loading={launch.isPending}><FlaskConical />Launch experiment</Button>
-    </Card>
   )
 }
 
@@ -204,12 +188,12 @@ export default function VentureDetail() {
 
   const validation = reports.latest<Validation>('validation')
   const mvp = reports.latest<MvpPlan>('mvp')
-  const landing = reports.latest<LandingContent>('landing')
+  const prototype = reports.latest<PrototypeContent>('prototype')
   const steps = [
     { label: 'Validate', done: !!validation, tab: 'overview' },
     { label: 'Boardroom', done: sessions.some((s) => s.status === 'completed'), tab: 'boardroom' },
     { label: 'MVP plan', done: !!mvp, tab: 'mvp' },
-    { label: 'Landing page', done: !!landing, tab: 'landing' },
+    { label: 'Prototype', done: !!prototype, tab: 'prototype' },
     { label: 'Experiment', done: experiments.length > 0, tab: 'experiments' },
     { label: 'Monitor', done: competitors.length > 0, tab: 'competitors' },
   ]
@@ -241,7 +225,7 @@ export default function VentureDetail() {
           <TabsTrigger value="overview"><Gauge />Overview</TabsTrigger>
           <TabsTrigger value="boardroom"><MessagesSquare />Boardroom</TabsTrigger>
           <TabsTrigger value="mvp"><Layers />MVP Architect</TabsTrigger>
-          <TabsTrigger value="landing"><LayoutTemplate />Landing page</TabsTrigger>
+          <TabsTrigger value="prototype"><AppWindow />Prototype</TabsTrigger>
           <TabsTrigger value="competitors"><Radar />Competitors</TabsTrigger>
           <TabsTrigger value="experiments"><FlaskConical />Experiments</TabsTrigger>
           <TabsTrigger value="memory"><Brain />Memory</TabsTrigger>
@@ -251,16 +235,16 @@ export default function VentureDetail() {
 
         <TabsContent value="boardroom" className="space-y-8">
           <LiveBoardroom venture={v} />
-          {sessions.length > 0 && (
+          {sessions.length > 1 && (
             <div>
-              <h3 className="mb-3 text-xl">Past sessions</h3>
+              <h3 className="mb-3 text-xl">Earlier questions</h3>
               <div className="space-y-2">
-                {sessions.map((s) => (
+                {sessions.slice(1).map((s) => (
                   <Link key={s.id} to={`/app/boardroom/${s.id}`}>
                     <Card className="flex items-center gap-3 p-4 transition hover:border-line-2">
                       <MessagesSquare className="size-4 text-muted" />
                       <span className="flex-1 truncate text-sm">{s.question}</span>
-                      {s.verdict && <DecisionBadge decision={s.verdict.decision} />}
+                      {s.verdict && <DecisionBadge decision={s.verdict.decision} label={DECISION_COPY[s.verdict.decision].label} />}
                       <span className="text-xs text-faint">{ago(s.created_at)}</span>
                     </Card>
                   </Link>
@@ -277,18 +261,13 @@ export default function VentureDetail() {
           </Generator>
         </TabsContent>
 
-        <TabsContent value="landing">
-          <Generator v={v} kind="landing" report={landing} label="Landing page" running="Writing hero, value proposition, features, pricing, FAQs and waitlist copy…"
-            empty="Hero, value proposition, features, pricing tiers as a willingness-to-pay probe, FAQs, a waitlist form and CTA variants.">
-            {(l) => <div className="space-y-4">{landing && <LaunchExperiment v={v} report={landing} />}<LandingPreview l={l} /></div>}
-          </Generator>
-        </TabsContent>
+        <TabsContent value="prototype"><PrototypeStudio venture={v} report={prototype} /></TabsContent>
 
         <TabsContent value="competitors"><CompetitorsPanel ventureId={v.id} /></TabsContent>
         <TabsContent value="experiments">
           <ExperimentList ventureId={v.id} empty={
-            <Empty icon={<Rocket />} title="No experiments yet" action={<Button onClick={() => setParams({ tab: 'landing' })}><LayoutTemplate />Go to landing page</Button>}>
-              Generate a landing page, then launch it as a hosted experiment to measure real demand.
+            <Empty icon={<Rocket />} title="No experiments yet" action={<Button onClick={() => setParams({ tab: 'prototype' })}><AppWindow />Go to prototype</Button>}>
+              Build a prototype, then share it with real users to measure demand and collect feedback.
             </Empty>
           } />
         </TabsContent>

@@ -1,5 +1,5 @@
-// Public, unauthenticated: hosted landing pages for experiments. Visits, signups, survey answers and
-// pricing-tier clicks become experiment_events that the Experiment Analyst later reads.
+// Public, unauthenticated: hosted prototypes for user testing. Visits, waitlist signups and feedback
+// become experiment_events that the Experiment Analyst later reads.
 import express, { Router } from 'express'
 import { db } from '../db.js'
 
@@ -35,26 +35,29 @@ details{border-bottom:1px solid #eee;padding:16px 0}summary{cursor:pointer;font-
 footer{text-align:center;color:#999;font-size:13px;padding:40px 0}
 </style></head><body>${body}</body></html>`
 
+// Generated code runs in its own opaque origin (CSP sandbox), so it can never read this app's cookies or storage.
+const SANDBOX_CSP = 'sandbox allow-scripts allow-forms allow-modals allow-popups'
+
+// Sandboxed documents can't use localStorage; give the prototype an in-memory stand-in so its code keeps working.
+export const STORAGE_SHIM = `<script>try{window.localStorage.getItem('x')}catch(e){var __m={};Object.defineProperty(window,'localStorage',{configurable:true,value:{getItem:function(k){return k in __m?__m[k]:null},setItem:function(k,v){__m[k]=String(v)},removeItem:function(k){delete __m[k]},clear:function(){__m={}},key:function(i){return Object.keys(__m)[i]||null},get length(){return Object.keys(__m).length}}})}</script>`
+
+const widget = (e) => `<div style="position:fixed;right:16px;bottom:16px;z-index:2147483647;font:14px/1.45 system-ui,sans-serif;max-width:320px">
+<details style="background:#1f1f1f;color:#fff;border-radius:16px;padding:12px 16px;box-shadow:0 12px 40px -12px rgba(0,0,0,.45)">
+<summary style="cursor:pointer;font-weight:600;list-style:none">💬 This is an early prototype — tell us what you think</summary>
+<form method="post" action="/p/${esc(e.slug)}/signup" style="display:grid;gap:8px;margin-top:10px">
+<input type="email" name="email" required maxlength="200" placeholder="you@example.com" style="padding:8px 10px;border-radius:10px;border:0;color:#111">
+<textarea name="answer" rows="3" maxlength="1500" placeholder="Would you use this? What's missing?" style="padding:8px 10px;border-radius:10px;border:0;color:#111"></textarea>
+<button style="padding:9px;border-radius:999px;border:0;background:#fff;color:#111;font-weight:600;cursor:pointer">Join the waitlist</button>
+</form></details></div>`
+
 r.get('/p/:slug', async (req, res) => {
   const e = await find(req.params.slug)
-  if (!e || !e.landing || e.status === 'draft') return res.status(404).send(page('Not found', '<div class="hero"><h1>Page not found</h1></div>'))
+  if (!e || !e.prototype || e.status === 'draft') return res.status(404).send(page('Not found', '<div class="hero"><h1>Page not found</h1></div>'))
   if (e.status === 'running') await track(e, 'visit', { ref: String(req.get('referer') || '').slice(0, 200) })
-  const L = e.landing
-  res.send(page(L.seo_title || L.hero.headline, `
-<div class="hero"><div class="wrap"><span class="eyebrow">${esc(L.hero.eyebrow)}</span><h1>${esc(L.hero.headline)}</h1>
-<p class="sub">${esc(L.hero.subheadline)}</p><a class="btn dark" href="#waitlist">${esc(L.hero.primary_cta)}</a>
-<a class="btn light" href="#features" style="margin-left:8px">${esc(L.hero.secondary_cta)}</a></div></div>
-<section><div class="wrap"><p class="vp">${esc(L.value_proposition)}</p></div></section>
-<section id="features"><div class="wrap"><div class="grid">${L.features.map((f) => `<div class="card"><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join('')}</div></div></section>
-<section><div class="wrap"><h2>Pricing</h2><div class="grid">${L.pricing.map((t) => `<div class="card tier${t.highlighted ? ' hl' : ''}"><h3>${esc(t.name)}</h3><p>${esc(t.description)}</p>
-<div class="price">${esc(t.price)}<span style="font-size:15px;color:#888"> ${esc(t.period)}</span></div><ul>${t.features.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-<a class="btn ${t.highlighted ? 'dark' : 'light'}" href="#waitlist" onclick="fetch('/p/${esc(e.slug)}/tier',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({tier:${esc(JSON.stringify(t.name))}})})">Choose ${esc(t.name)}</a></div>`).join('')}</div></div></section>
-<section id="waitlist"><div class="wrap"><div class="wl"><h2 style="margin-bottom:8px">${esc(L.waitlist.headline)}</h2><p class="sub">${esc(L.waitlist.subheadline)}</p>
-<form method="post" action="/p/${esc(e.slug)}/signup"><input type="email" name="email" required placeholder="you@example.com" maxlength="200">
-<textarea name="answer" rows="3" maxlength="1500" placeholder="${esc(L.waitlist.survey_question)} (optional)"></textarea>
-<button class="btn dark" type="submit">${esc(L.waitlist.button)}</button></form></div></div></section>
-<section><div class="wrap" style="max-width:720px"><h2>FAQ</h2>${L.faqs.map((f) => `<details><summary>${esc(f.question)}</summary><p>${esc(f.answer)}</p></details>`).join('')}</div></section>
-<footer>Validation experiment · built with Foundry AI</footer>`))
+  let html = e.prototype.html
+  html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => m + STORAGE_SHIM) : STORAGE_SHIM + html
+  if (e.status === 'running') html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, widget(e) + '</body>') : html + widget(e)
+  res.set('Content-Security-Policy', SANDBOX_CSP).send(html)
 })
 
 r.post('/p/:slug/signup', async (req, res) => {
@@ -70,13 +73,7 @@ r.post('/p/:slug/signup', async (req, res) => {
     if (answer) await track(e, 'feedback', { text: answer, email })
   }
   res.send(page("You're on the list", `<div class="hero"><div class="wrap"><span class="eyebrow">Confirmed</span><h1>You're on the list.</h1>
-<p class="sub">Thanks — we'll reach out as soon as early access opens.</p><a class="btn light" href="/p/${esc(e.slug)}">Back</a></div></div>`))
-})
-
-r.post('/p/:slug/tier', express.json({ limit: '2kb' }), async (req, res) => {
-  const e = await find(req.params.slug)
-  if (e?.status === 'running') await track(e, 'survey', { pricing_tier: String(req.body.tier || '').slice(0, 40), text: `Clicked pricing tier: ${String(req.body.tier || '').slice(0, 40)}` })
-  res.json({ ok: true })
+<p class="sub">Thanks — we'll reach out as soon as early access opens.</p><a class="btn light" href="/p/${esc(e.slug)}">Back to the prototype</a></div></div>`))
 })
 
 export default r

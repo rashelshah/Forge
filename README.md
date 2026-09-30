@@ -27,7 +27,7 @@ With no keys, Foundry runs fully offline in **demo mode**: local JSON database, 
 | Reading competitor sites / URLs | none — direct fetch, falling back to Tavily Extract (Firecrawl optional) | Direct fetch only |
 | Vector DB | Supabase pgvector (same Supabase keys) | Local vector file `ai/.vectors.json` |
 
-For Supabase, run `supabase/migrations/001_init.sql` then `002_pgvector.sql` in the SQL editor. They create every table, indexes, the signup trigger, row-level security policies, and the pgvector tables + `match_knowledge` / `match_memory` search functions.
+For Supabase, run `supabase/migrations/001_init.sql`, `002_pgvector.sql` and `003_prototypes.sql` in the SQL editor. They create every table, indexes, the signup trigger, row-level security policies, and the pgvector tables + `match_knowledge` / `match_memory` search functions.
 
 ---
 
@@ -56,15 +56,15 @@ The Node API owns the relational tables; the Python service owns the vector tabl
 2. **Opportunity Discovery Agent** — searches Reddit, Product Hunt, Hacker News, G2 and App Store reviews; outputs problem, frequency, pain level, potential customers and market size with cited sources.
 3. **Validation Engine** — Demand, Competition, Defensibility, Revenue Potential and Founder Fit scores. Each score cites evidence from web sources (`S#`) or the library (`K#`); ids are resolved server-side so URLs can't be hallucinated. Competitors it finds are auto-tracked.
 4. **Startup Intelligence RAG** — a seeded library (YC, Startup School, Lean Startup, The Mom Test, Zero to One, Startup Playbook, Paul Graham essays, failure postmortems, SaaS case studies, business models, open startups, market sizing) plus your own documents (paste text or ingest a URL).
-5. **Multi-Agent Boardroom** (LangGraph) — CEO, Investor, Product, Growth, Technical and the **Failure Agent** debate over 1–3 rounds, streamed live; the Chair issues GO / PIVOT / KILL with confidence, consensus, disagreements, critical assumptions (each with a 2-week test) and next steps. Transcripts are stored permanently.
+5. **Multi-Agent Boardroom** (LangGraph) — ask a question; CEO, Investor, Product, Growth, Technical and the **Failure Agent** discuss it in plain language, and you get one result-first answer: *Build it / Change direction / Don't build this*, why, what to do this week, and what to test before spending money. The full debate is one click away. Debates keep running when you switch tabs and are saved turn-by-turn, so a reload picks them up.
 6. **MVP Architect** — features (MoSCoW), user stories, database schema, APIs, architecture diagram, sprint plan, team requirements.
-7. **Landing Page Generator** — hero, value proposition, features, pricing, FAQs, waitlist form and CTA variants. One click turns it into a **hosted experiment**.
-8. **Experiment Center** — visitors, signups, feedback, conversion vs target, survey answers and pricing-tier clicks; the Experiment Analyst judges validated / invalidated / inconclusive and writes the result to memory.
+7. **Prototype Builder** (Lovable-style) — turns the research and MVP plan into a working, clickable single-file app (Tailwind + JS, multiple screens, sample data, create/edit/search). Refine it by describing changes; edits are applied as small patches, every version is syntax-checked on the server and auto-repaired, runtime errors and blank values are detected in the preview with one-click **Fix it for me**, and there's undo and code download. Previews run in a sandboxed iframe with an opaque origin.
+8. **Experiment Center** — share the prototype at `/p/:slug` (served with a CSP sandbox) with a feedback + waitlist widget; tracks visitors, signups, feedback and conversion vs target; the Experiment Analyst judges validated / invalidated / inconclusive and writes the result to memory.
 9. **Competitor Intelligence + Continuous Monitoring** — snapshots competitor sites and news, diffs pricing and features, and recommends a response per signal. A daily sweep covers competitors, market news, sentiment and new opportunities, and creates notifications.
 
 ## Dashboard pages
 
-Dashboard · Ventures (+ venture workspace with Overview, Boardroom, MVP, Landing page, Competitors, Experiments, Memory tabs) · Research · Boardroom · Competitors · Experiments · Knowledge Base · Activity Feed (+ agent runs) · Settings (founder profile, plan & usage, integrations, monitoring).
+Dashboard · Ventures (+ venture workspace with Overview, Boardroom, MVP, Prototype, Competitors, Experiments, Memory tabs) · Research · Boardroom · Competitors · Experiments · Knowledge Base · Activity Feed (+ agent runs) · Settings (founder profile, plan & usage, integrations, monitoring).
 
 ## Billing-ready
 
@@ -79,7 +79,8 @@ Dashboard · Ventures (+ venture workspace with Overview, Boardroom, MVP, Landin
 | POST | `/discover` | Opportunity discovery |
 | POST | `/ventures/:id/validate` | Validation engine |
 | POST | `/ventures/:id/boardroom` | Boardroom debate (Server-Sent Events) |
-| POST | `/ventures/:id/mvp` · `/ventures/:id/landing` | Generators |
+| POST | `/ventures/:id/mvp` · `/ventures/:id/prototype` | MVP plan · build prototype |
+| POST | `/research/:id/prototype/edit` · `/research/:id/prototype/undo` | Refine or revert a prototype |
 | GET/POST | `/ventures/:id/memory` · `POST …/memory/search` | Venture memory |
 | GET | `/research` · `/research/:id` | Reports |
 | GET | `/boardroom` · `/boardroom/:id` | Sessions |
@@ -89,7 +90,7 @@ Dashboard · Ventures (+ venture workspace with Overview, Boardroom, MVP, Landin
 | GET/POST/DELETE | `/knowledge` · `POST /knowledge/search` · `/knowledge/ask` | Knowledge base (RAG) |
 | GET | `/activity` · `/agent-runs` · `/notifications` · `/dashboard` · `/me` · `/config` | Workspace |
 
-Public: `GET /p/:slug` (hosted landing page), `POST /p/:slug/signup`, `POST /p/:slug/tier`.
+Public: `GET /p/:slug` (hosted prototype, sandboxed), `POST /p/:slug/signup`.
 
 ## Project structure
 

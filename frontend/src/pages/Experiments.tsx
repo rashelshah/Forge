@@ -58,18 +58,18 @@ export function ExperimentList({ ventureId, empty }: { ventureId?: string; empty
 function NewExperiment({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const nav = useNavigate()
   const { data: ventures = [] } = useVentures()
-  const [f, setF] = useState({ venture_id: '', name: '', hypothesis: '', type: 'interviews', target_conversion: 10 })
+  const [f, setF] = useState({ venture_id: '', name: '', hypothesis: '', type: 'prototype', target_conversion: 10 })
   const create = useAction(async () => {
     const venture_id = f.venture_id || ventures[0]?.id
-    let landing_report_id: string | undefined
-    if (f.type === 'landing_page') landing_report_id = (await api<Report[]>(`/research?venture_id=${venture_id}&kind=landing`))[0]?.id
-    return api<Experiment>('/experiments', { ...f, venture_id, landing_report_id })
+    let prototype_report_id: string | undefined
+    if (f.type === 'prototype') prototype_report_id = (await api<Report[]>(`/research?venture_id=${venture_id}&kind=prototype`))[0]?.id
+    return api<Experiment>('/experiments', { ...f, venture_id, prototype_report_id })
   }, [['experiments'], ['dashboard']], 'Experiment created')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>New experiment</DialogTitle>
-        <DialogDescription>Write a falsifiable hypothesis. Landing page experiments use the venture's latest generated page.</DialogDescription>
+        <DialogDescription>Write a hypothesis you could prove wrong. Prototype tests share the venture's latest prototype with a feedback and waitlist widget.</DialogDescription>
         <form className="mt-5 space-y-4" onSubmit={(e) => { e.preventDefault(); create.mutate(undefined, { onSuccess: (x) => { onOpenChange(false); nav(`/app/experiments/${x.id}`) } }) }}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div><Label htmlFor="ev">Venture</Label>
@@ -79,7 +79,7 @@ function NewExperiment({ open, onOpenChange }: { open: boolean; onOpenChange: (o
             </div>
             <div><Label htmlFor="et">Type</Label>
               <Select id="et" value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
-                {['landing_page', 'interviews', 'survey', 'ads', 'other'].map((t) => <option key={t} value={t}>{titleCase(t)}</option>)}
+                {['prototype', 'interviews', 'survey', 'ads', 'other'].map((t) => <option key={t} value={t}>{t === 'prototype' ? 'Prototype test' : titleCase(t)}</option>)}
               </Select>
             </div>
           </div>
@@ -97,9 +97,9 @@ export default function Experiments() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <PageHeader eyebrow="Experiment center" title="Experiments" description="Hosted landing pages, interviews and surveys. Results flow into venture memory and future agent decisions."
+      <PageHeader eyebrow="Experiment center" title="Experiments" description="Share prototypes with real users, log interviews and surveys. Results flow into venture memory and future agent decisions."
         actions={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>} />
-      <ExperimentList empty={<Empty icon={<FlaskConical />} title="No experiments yet" action={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>}>Generate a landing page from a venture and launch it, or log interviews and surveys by hand.</Empty>} />
+      <ExperimentList empty={<Empty icon={<FlaskConical />} title="No experiments yet" action={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>}>Build a prototype from a venture and share it with testers, or log interviews and surveys by hand.</Empty>} />
       <NewExperiment open={open} onOpenChange={setOpen} />
     </>
   )
@@ -152,7 +152,7 @@ export function ExperimentDetail() {
 
   if (isLoading) return <Loading rows={4} />
   if (error || !e) return <ErrorNote error={error ?? new Error('Not found')} />
-  const url = e.type === 'landing_page' ? publicPageUrl(e.slug) : null
+  const url = e.type === 'prototype' ? publicPageUrl(e.slug) : null
   const feedback = (e.events ?? []).filter((x) => x.type === 'feedback' || x.type === 'survey').reverse()
   const latest = analyze.data?.analysis ?? analyses.find((a) => a.title.endsWith(e.name))?.content
 

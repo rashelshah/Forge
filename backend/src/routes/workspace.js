@@ -160,14 +160,18 @@ r.get('/experiments', async (req, res) => {
 
 r.post('/experiments', async (req, res) => {
   const v = await own('ventures', req.body.venture_id, req.user)
-  const type = ['landing_page', 'survey', 'interviews', 'ads', 'other'].includes(req.body.type) ? req.body.type : 'landing_page'
-  let landing = null
-  if (req.body.landing_report_id) landing = (await own('research_reports', req.body.landing_report_id, req.user)).content
-  if (type === 'landing_page' && !landing) throw new HttpError(400, 'Generate a landing page for this venture first')
+  const type = ['prototype', 'survey', 'interviews', 'ads', 'other'].includes(req.body.type) ? req.body.type : 'prototype'
+  let prototype = null
+  if (req.body.prototype_report_id) {
+    const r = await own('research_reports', req.body.prototype_report_id, req.user)
+    if (r.kind !== 'prototype') throw new HttpError(400, 'Not a prototype')
+    prototype = { title: r.content.title, html: r.content.html }
+  }
+  if (type === 'prototype' && !prototype) throw new HttpError(400, 'Build a prototype for this venture first')
   const slug = `${v.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'venture'}-${randomBytes(3).toString('hex')}`
   const e = await db.insert('experiments', {
-    user_id: req.user.id, venture_id: v.id, name: text(req.body.name, 120) || `${v.name} landing test`,
-    hypothesis: text(req.body.hypothesis, 600) || null, type, slug, landing,
+    user_id: req.user.id, venture_id: v.id, name: text(req.body.name, 120) || `${v.name} prototype test`,
+    hypothesis: text(req.body.hypothesis, 600) || null, type, slug, prototype,
     target_conversion: Math.min(100, Math.max(0.1, Number(req.body.target_conversion) || 10)), status: 'running', result: null,
   })
   await log(req.user, v.id, 'you', `Launched experiment “${e.name}”`, e.hypothesis)

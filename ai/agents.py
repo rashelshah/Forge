@@ -1,4 +1,4 @@
-"""Single-shot agents: discovery, validation, MVP architect, landing page, competitor intel, experiments, monitoring."""
+"""Single-shot agents: discovery, validation, MVP architect, prototype builder, competitor intel, experiments, monitoring."""
 import hashlib
 import re
 from typing import Literal
@@ -98,7 +98,8 @@ def discover(seed: str | None, founder: dict):
         "You are Foundry's Opportunity Discovery Agent. Mine real user complaints for startup opportunities. "
         "Each opportunity must be a recurring, specific pain supported by at least one source; merge duplicates. "
         "Return 3-5 distinct opportunities ranked by pain x frequency x reachable customers. Use one consistent set of "
-        "base assumptions (e.g. the same customer count) across opportunities and label estimates as assumptions. " + GROUNDING,
+        "base assumptions (e.g. the same customer count) across opportunities and label estimates as assumptions. " + GROUNDING
+        + " Describe problems and customers in plain words.",
         f"Theme: {topic}\nFounder profile: {founder or 'not provided'}\n\nSources:\n{core.sources_block(web)}",
     )
     opps = []
@@ -181,7 +182,7 @@ def validate(venture: dict, founder: dict):
         res = core.structured(
             ValidationOut,
             "You are Foundry's Validation Engine, a rigorous startup analyst. Score the venture on five dimensions. "
-            + RUBRIC + "\n" + GROUNDING,
+            + RUBRIC + "\n" + GROUNDING + "\nSummaries and risks: " + core.PLAIN,
             f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\nVenture memory:\n"
             f"{core.context_block(mem, 'Memory')}\n\nWeb sources:\n{core.sources_block(web)}\n\nLibrary:\n{lib_block(lib)}",
             temperature=0.2,
@@ -313,67 +314,115 @@ def mvp(venture: dict, founder: dict):
     return {**product.model_dump(), **eng.model_dump(), "architecture": arch, "mode": "live"}
 
 
-# ---------------------------------------------------------------- Landing page generator
+# ---------------------------------------------------------------- Prototype builder (Lovable-style)
 
-class Hero(BaseModel):
-    eyebrow: str
-    headline: str
-    subheadline: str
-    primary_cta: str
-    secondary_cta: str
+PROTO_SYSTEM = """You are Foundry's Prototype Builder, an expert product engineer and designer (like Lovable or v0).
+Build a WORKING first prototype of the product described — the actual app its users would use, not a marketing page.
+
+Output ONLY one complete HTML document, starting with <!doctype html> and ending with </html>. No explanations.
+
+Stack: Tailwind via <script src="https://cdn.tailwindcss.com"></script> and vanilla JavaScript in a single <script>
+at the end of <body>. No other external resources. No images from the internet: use emoji, initials, inline SVG icons
+or CSS gradients for thumbnails and avatars.
+
+Design: polished, modern product UI (Lovable / Linear quality). Follow this structure and style, adapting the accent
+colour and content to the product:
+- Use exactly this shell (fill in the ... parts):
+  <body class="bg-slate-50 text-slate-800 antialiased">
+    <div class="flex min-h-screen">
+      <aside class="hidden md:flex w-64 shrink-0 flex-col gap-1 border-r border-slate-200 bg-white p-4">logo row + nav links</aside>
+      <div class="flex min-w-0 flex-1 flex-col">
+        <header class="md:hidden sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">product name +
+          a horizontally scrollable row of the same nav links</header>
+        <main id="view" class="mx-auto w-full max-w-6xl flex-1 p-4 md:p-8"></main>
+      </div>
+    </div>
+  </body>
+- Logo row: a coloured rounded-lg square with initials + product name in font-semibold. Nav links:
+  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100" (active: accent-50 bg,
+  accent-700 text, font-medium), each with an inline SVG or emoji icon.
+- Each screen starts with a page header (text-2xl font-semibold + text-slate-500 subtitle + primary action button on
+  the right). The home screen shows stats plus a useful list of recent items — never leave a screen mostly empty.
+- Stat cards: "rounded-xl border border-slate-200 bg-white p-5" with a small label and a text-3xl value.
+- Record cards/grids: rounded-xl white cards with hover:shadow-md, badges "rounded-full px-2 py-0.5 text-xs font-medium".
+- Buttons: primary "rounded-lg bg-<accent>-600 px-4 py-2 text-sm font-medium text-white hover:bg-<accent>-700";
+  secondary "rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50".
+- Inputs: "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-<accent>-500".
+- Modal: fixed inset-0 bg-slate-900/40 overlay with a centred rounded-2xl white panel; toast bottom-right.
+
+Functionality:
+- 3-5 screens with hash routing (#/home, #/..) and working navigation that highlights the current screen.
+- Realistic, domain-specific seed data (8-12 records). No lorem ipsum.
+- The main user flow works end to end: create (modal form with validation), view details, edit, delete, search and
+  filter. Show a summary/stats area on the home screen. Toast messages for feedback. Friendly empty states.
+- Persist data in localStorage under one key, with try/catch around every storage call; seed on first load. When
+  loading stored data, merge it over the defaults (e.g. db = { ...defaults, ...stored }) so newer fields and lists exist.
+- Use a signed-in demo user; no login screens, no backend, no network calls.
+- Never use alert/confirm/prompt. Every function and element you reference must exist. No console errors.
+- Every field you display must exist on every seed record — the UI must never show "undefined", "NaN" or "null".
+- Keep it compact: under 400 lines."""
 
 
-class Benefit(BaseModel):
-    title: str
-    description: str
+class Patch(BaseModel):
+    find: str = Field(description="An exact snippet copied character-for-character from the current file; must be unique in it")
+    replace: str = Field(description="The replacement snippet")
 
 
-class Tier(BaseModel):
-    name: str
-    price: str
-    period: str
-    description: str
-    features: list[str]
-    highlighted: bool = False
+class PatchSet(BaseModel):
+    patches: list[Patch] = Field(description="The smallest set of edits that fully implements the request")
+    summary: str = Field(description="One plain sentence describing what changed")
 
 
-class Faq(BaseModel):
-    question: str
-    answer: str
+def _valid_html(html: str) -> bool:
+    low = html.lower()
+    return low.lstrip().startswith("<!doctype html") and "</html>" in low and "<script" in low
 
 
-class Waitlist(BaseModel):
-    headline: str
-    subheadline: str
-    button: str
-    survey_question: str = Field(description="One Mom-Test style question asked after signup about past behaviour")
+def _product_brief(venture: dict) -> str:
+    mem = core.recall(venture["id"], "MVP features user stories core workflow target users", k=5)
+    return f"{venture_text(venture)}\n\nWhat we know (research, boardroom, MVP plan):\n{core.context_block(mem, 'Memory')}"
 
 
-class LandingOut(BaseModel):
-    hero: Hero
-    value_proposition: str
-    features: list[Benefit]
-    pricing: list[Tier]
-    faqs: list[Faq]
-    waitlist: Waitlist
-    cta_variants: list[str]
-    seo_title: str
-    seo_description: str
-
-
-def landing(venture: dict):
-    mem = core.recall(venture["id"], "target customer pain value proposition pricing", k=6)
+def prototype(venture: dict):
     if not core.OPENAI:
-        return {**demo.landing(venture), "mode": "demo"}
-    out = core.structured(
-        LandingOut,
-        "You are Foundry's Landing Page Generator. Write conversion-focused, specific, jargon-free copy for a "
-        "validation landing page with a waitlist. 3-6 features, 2-3 pricing tiers used as willingness-to-pay probes, "
-        "4-6 FAQs, and 3 alternative CTA lines for A/B testing.",
-        f"{venture_text(venture)}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}",
-        temperature=0.7,
+        return {**demo.prototype(venture), "mode": "demo"}
+    brief = _product_brief(venture)
+    # Only gpt-oss models reliably finish a full file inside the free-tier token budget.
+    models = [m for m in core.HEAVY + core.FAST if "gpt-oss" in m or not core.GROQ]
+    html = ""
+    for _ in range(2):
+        html = core.complete(PROTO_SYSTEM, f"Build the first prototype of this product.\n\n{brief}", temperature=0.5, models=models)
+        if _valid_html(html):
+            break
+    if not _valid_html(html):
+        raise core.LLMError("The model returned an incomplete app. Please try again.")
+    title = (re.search(r"<title>(.*?)</title>", html, re.I | re.S) or [None, venture.get("name")])[1].strip()
+    return {"title": title, "html": html, "summary": f"First working prototype of {venture.get('name')}.", "mode": "live"}
+
+
+def prototype_edit(venture: dict, html: str, instruction: str):
+    """Apply a change request (or a runtime error to fix) as small find/replace patches — cheap on tokens."""
+    if not core.OPENAI:
+        return {"html": html, "summary": "Editing prototypes needs a live model (add GROQ_API_KEY).", "applied": 0, "mode": "demo"}
+    res = core.structured(
+        PatchSet,
+        "You edit a single-file HTML prototype (Tailwind + vanilla JS). Return find/replace patches. Each `find` must be "
+        "copied exactly from the current file and be unique. Always replace WHOLE units — an entire function, an entire "
+        "object/array literal, or an entire HTML element — never a fragment of a statement, so the JavaScript stays "
+        "syntactically valid. To add new code, find a whole existing function and replace it with itself plus the new "
+        "code. Keep the app working: every function and element you reference must exist. If you add a new field or list to "
+        "the data, also add it to the seed data and default it when loading stored data. No external resources.",
+        f"Product: {venture.get('name')} — {venture.get('idea')}\n\nRequest: {instruction}\n\nCurrent file:\n{html}",
+        temperature=0.2, max_tokens=4000,
     )
-    return {**out.model_dump(), "mode": "live"}
+    out, applied = html, 0
+    for p in res.patches:
+        if p.find and out.count(p.find) == 1:
+            out = out.replace(p.find, p.replace)
+            applied += 1
+    if not applied or not _valid_html(out):
+        raise core.LLMError("Couldn't apply that change cleanly. Try rephrasing it more specifically.")
+    return {"html": out, "summary": res.summary, "applied": applied, "mode": "live"}
 
 
 # ---------------------------------------------------------------- Competitor intelligence
@@ -440,7 +489,7 @@ def scan_competitor(venture: dict, comp: dict):
         "and recent news. Report only meaningful changes (pricing, feature launches, funding, acquisitions, product "
         "updates). For each, recommend a concrete response for our venture. If this is the first snapshot, return one "
         "'product' signal summarising their positioning (severity info). Return an empty list if nothing changed. "
-        "Threat level reflects how directly they compete with our venture. " + GROUNDING,
+        "Threat level reflects how directly they compete with our venture. " + GROUNDING + " " + core.PLAIN,
         f"Our venture:\n{venture_text(venture)}\n\nCompetitor: {comp['name']} ({comp.get('url')})\n"
         f"Previous snapshot: {prev and {k: prev.get(k) for k in ('prices', 'headings')}}\n"
         f"Current snapshot: {snap and {k: snap[k] for k in ('prices', 'headings', 'excerpt')}}\n"
@@ -462,7 +511,7 @@ def monitor_market(venture: dict):
         "that matter to the venture: market shifts, user sentiment, new opportunities. Cite source_url from the sources. "
         "Only include items that directly affect the venture's target customers, competitors or business model; "
         "rate relevance honestly. Generic industry news, crime or policy stories are not signals. An empty list is a "
-        "valid answer. " + GROUNDING,
+        "valid answer. " + GROUNDING + " " + core.PLAIN,
         f"{venture_text(venture)}\n\nNews:\n{core.sources_block(news)}\n\nCommunity:\n{core.sources_block(chatter, 'C')}",
     )
     signals = [s for s in _grounded(out.model_dump(), news + chatter)["signals"] if s["relevance"] >= 4 and s["actionable"]]
@@ -487,7 +536,7 @@ def analyze_experiment(venture: dict, exp: dict, feedback: list[str]):
         ExperimentOut,
         "You are Foundry's Experiment Analyst. Judge whether the hypothesis is supported. Under 100 visitors is "
         "inconclusive unless the effect is extreme. Pull themes only from the feedback given — never invent quotes. "
-        "Recommend the next 2-3 experiments.",
+        "Recommend the next 2-3 experiments. " + core.PLAIN,
         f"{venture_text(venture)}\nExperiment: {exp['name']} ({exp.get('type')})\nHypothesis: {exp.get('hypothesis')}\n"
         f"Target conversion: {exp.get('target_conversion')}%\nMetrics: {m}, conversion {conv}%\n"
         + (f"IMPORTANT: only {m.get('visitors', 0)} visitors — the outcome MUST be 'inconclusive'; explain what sample is needed.\n"
@@ -519,7 +568,7 @@ def ask_library(question: str, owner: str | None):
         Answer,
         "Answer the founder's question using only the library excerpts. Be concise and practical (under 180 words), "
         "cite K# ids inline after each claim (e.g. [K2]), quote numbers exactly as the excerpts state them, and say "
-        "plainly if the library doesn't cover something.",
+        "plainly if the library doesn't cover something. " + core.PLAIN,
         f"Question: {question}\n\nLibrary:\n{core.sources_block([{'title': h['title'], 'url': h.get('url') or 'library', 'content': h['text']} for h in hits], 'K')}",
     )
     return {"answer": out.answer, "chunks": hits, "cited": out.cited, "mode": "live"}

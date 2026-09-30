@@ -38,26 +38,28 @@ ORDER = list(AGENTS)
 
 
 class Turn(BaseModel):
-    content: str = Field(description="What you say to the board: 2-4 sharp sentences, under 90 words, reference others by role")
-    key_point: str = Field(description="Your point in under 12 words")
+    content: str = Field(description="What you say to the board: 2-4 short, plain-English sentences, under 70 words")
+    key_point: str = Field(description="Your point in under 12 plain words a non-expert understands")
     stance: Literal["support", "concern", "oppose"]
     vote: Literal["GO", "PIVOT", "KILL"]
 
 
 class Assumption(BaseModel):
-    assumption: str
+    assumption: str = Field(description="Something that must be true for this to work, in plain words")
     risk: Literal["low", "medium", "high"]
-    test: str = Field(description="Cheapest experiment that would test it within 2 weeks")
+    test: str = Field(description="The cheapest way to check it within 2 weeks, as a simple instruction anyone could follow")
 
 
 class Verdict(BaseModel):
-    decision: Literal["GO", "PIVOT", "KILL"]
+    decision: Literal["GO", "PIVOT", "KILL"] = Field(description="GO = build it now; PIVOT = keep the goal but change the approach; KILL = stop and move on")
     confidence: int = Field(ge=0, le=100)
-    summary: str
-    consensus: list[str]
-    disagreements: list[str]
-    critical_assumptions: list[Assumption]
-    next_steps: list[str]
+    headline: str = Field(description="One plain-English sentence telling the founder what to do and why (max 25 words)")
+    reasons: list[str] = Field(description="The 3 main reasons for the decision, each one short plain sentence")
+    summary: str = Field(description="2-3 plain sentences explaining the decision")
+    consensus: list[str] = Field(description="2-4 points the board agreed on, as short sentences (NOT names of board members)")
+    disagreements: list[str] = Field(description="1-3 points the board disagreed on, as short sentences (NOT names of board members)")
+    critical_assumptions: list[Assumption] = Field(description="3-4 riskiest things to check before spending money")
+    next_steps: list[str] = Field(description="3 concrete actions for this week, in plain words")
 
 
 class Board(TypedDict):
@@ -108,7 +110,7 @@ def member(key: str):
                 Turn,
                 f"You are the {name} on the Foundry AI boardroom. {persona}\nYour lens: {focus}.\nRules: speak in the "
                 f"first person as the {name} — never refer to yourself in the third person; address other members by "
-                f"role (e.g. 'Investor, ...'). Keep it under 90 words. Be concrete and specific to this venture. Only "
+                f"role (e.g. 'Investor, ...'). Keep it under 70 words. {core.PLAIN} Be concrete and specific to this venture. Only "
                 f"use numbers that appear in the context; if you need another number, frame it as an assumption to test. "
                 f"Never invent statistics, costs or companies. Do not repeat points already made. Your stance and vote "
                 f"must match what you argue.",
@@ -119,7 +121,7 @@ def member(key: str):
             ).model_dump()
             self_names = {"technical": "Technical|CTO", "failure": "Failure"}.get(key, name.replace(" Agent", ""))
             text = re.sub(rf"^(?:{self_names})(?: Agent)?(?: here)?[,:]\s*", "", turn["content"].strip())
-            turn["content"] = _clip(text[:1].upper() + text[1:])
+            turn["content"] = _clip(text[:1].upper() + text[1:], 90)
         return {"transcript": [{"agent": key, "name": name, "round": s["round"], **turn}]}
 
     return speak
@@ -136,14 +138,20 @@ def chair(s: Board):
     else:
         verdict = core.structured(
             Verdict,
-            "You are the Chair of the Foundry AI boardroom. Synthesize the debate into a decision. Weigh the Failure "
-            "Agent's objections seriously: a GO requires that its strongest objection has a credible test. Confidence "
-            "reflects evidence quality, not enthusiasm. The decision should normally follow the final-round majority; "
-            "if you overrule it, say why in the summary. Each critical assumption needs a cheap test runnable in 2 weeks.",
+            "You are the Chair of the Foundry AI boardroom. Turn the debate into a clear decision a non-technical "
+            "founder can act on. Follow the final-round majority unless it ignores a fatal, evidence-backed flaw. If "
+            "the main risks are simply untested, do not KILL — choose GO or PIVOT and make testing them the next "
+            "steps. Weigh the Failure Agent's objections seriously. Confidence reflects evidence quality, not "
+            "enthusiasm. " + core.PLAIN,
             f"Board question: {s['question']}\n\n{s['context']}\n\nFinal-round votes: {votes}\n\nTranscript:\n"
             f"{_transcript_text(s['transcript'])}",
             temperature=0.3,
         ).model_dump()
+    majority = max(votes, key=lambda v: (votes[v], v == "PIVOT"))
+    if verdict["decision"] != majority and verdict["confidence"] < 60:
+        # Overruling the board needs strong conviction; otherwise the majority stands.
+        verdict["summary"] += f" (The Chair's objections were noted, but without strong evidence the board's majority vote — {majority} — stands.)"
+        verdict["decision"] = majority
     return {"verdict": {**verdict, "votes": votes}}
 
 

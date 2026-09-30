@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, MessagesSquare } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { useShell } from '@/components/AppShell'
-import { BoardTable, LiveBoardroom, Transcript, VerdictCard } from '@/components/boardroom'
+import { DECISION_COPY, LiveBoardroom, SessionResult } from '@/components/boardroom'
 import { AGENTS, AgentAvatar, DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -15,7 +15,6 @@ import { ago, date } from '@/lib/utils'
 
 export default function Boardroom() {
   const { newVenture } = useShell()
-  const nav = useNavigate()
   const { data: ventures = [] } = useVentures()
   const { data: sessions = [], isLoading } = useQuery({ queryKey: ['boardroom'], queryFn: () => api<BoardSession[]>('/boardroom') })
   const [ventureId, setVentureId] = useState('')
@@ -23,7 +22,7 @@ export default function Boardroom() {
 
   return (
     <>
-      <PageHeader eyebrow="Multi-agent boardroom" title="Boardroom" description="Six agents debate your venture from every angle — led by a Failure Agent whose only job is to kill bad ideas. The Chair issues a verdict." />
+      <PageHeader eyebrow="Multi-agent boardroom" title="Boardroom" description="Ask a question about your venture. Six AI advisors — including a Failure Agent whose job is to find flaws — discuss it, then you get one clear answer and what to do next." />
 
       <div className="mb-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {(Object.keys(AGENTS) as AgentKey[]).map((k) => (
@@ -40,12 +39,12 @@ export default function Boardroom() {
       ) : (
         <div className="mb-10">
           <div className="mb-3 flex items-center gap-3">
-            <h2 className="text-xl">New session</h2>
+            <h2 className="text-xl">Ask the board</h2>
             <Select value={venture?.id} onChange={(e) => setVentureId(e.target.value)} className="h-9 w-56 text-sm" aria-label="Venture">
               {ventures.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </Select>
           </div>
-          {venture && <LiveBoardroom key={venture.id} venture={venture} onDone={(id) => nav(`/app/boardroom/${id}`)} />}
+          {venture && <LiveBoardroom key={venture.id} venture={venture} />}
         </div>
       )}
 
@@ -60,7 +59,7 @@ export default function Boardroom() {
                   <p className="truncate text-sm font-medium">{s.question}</p>
                   <p className="text-xs text-muted">{ventures.find((v) => v.id === s.venture_id)?.name} · {s.transcript.length} turns · {s.rounds} round{s.rounds > 1 ? 's' : ''}</p>
                 </div>
-                {s.verdict ? <DecisionBadge decision={s.verdict.decision} /> : <span className="text-xs text-muted capitalize">{s.status}</span>}
+                {s.verdict ? <DecisionBadge decision={s.verdict.decision} label={DECISION_COPY[s.verdict.decision].label} /> : <span className="text-xs text-muted capitalize">{s.status}</span>}
                 <span className="text-xs text-faint">{ago(s.created_at)}</span>
               </Card>
             </Link>
@@ -83,12 +82,7 @@ export function BoardroomSession() {
       <Link to="/app/boardroom" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft className="size-4" />Boardroom</Link>
       <PageHeader eyebrow={`Session · ${date(s.created_at)}`} title={s.question}
         description={<span className="flex flex-wrap items-center gap-2">{venture && <Link className="text-azure hover:underline" to={`/app/ventures/${venture.id}?tab=boardroom`}>{venture.name}</Link>}· {s.rounds} round{s.rounds > 1 ? 's' : ''}<ModeBadge mode={s.mode} /></span>} />
-      <div className="space-y-6">
-        <BoardTable done />
-        {s.verdict && <VerdictCard v={s.verdict} />}
-        <h3 className="pt-2 text-xl">Transcript</h3>
-        <Transcript messages={s.transcript} />
-      </div>
+      <SessionResult session={s} />
     </>
   )
 }

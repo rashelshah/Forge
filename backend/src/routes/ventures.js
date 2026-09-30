@@ -1,4 +1,5 @@
-// Ventures and the venture pipeline: discovery -> validation -> boardroom -> MVP -> landing page -> memory.
+// Ventures and the venture pipeline: discovery -> validation -> boardroom -> MVP -> prototype -> memory.
+import vm from 'node:vm'
 import { Router } from 'express'
 import { db } from '../db.js'
 import { HttpError, ai, latestReport, log, notify, own, remember, requireQuota, runAgent, ventureCtx } from '../core.js'
@@ -157,7 +158,11 @@ r.post('/ventures/:id/boardroom', async (req, res) => {
         if (!line) continue
         const e = JSON.parse(line)
         if (e.type === 'start') mode = e.mode
-        if (e.type === 'message') transcript.push(e.message)
+        if (e.type === 'message') {
+          transcript.push(e.message)
+          // Saved as it happens, so a reload or another tab can follow the live session.
+          await db.update('boardroom_sessions', session.id, { transcript, mode })
+        }
         if (e.type === 'verdict') verdict = e.verdict
         if (e.type === 'error') error = e.error
         if (!res.writableEnded) res.write(`data: ${line}\n\n`)
@@ -185,7 +190,7 @@ r.post('/ventures/:id/boardroom', async (req, res) => {
   res.end()
 })
 
-// ---------------------------------------------------------------- MVP architect + landing page generator
+// ---------------------------------------------------------------- MVP architect
 
 r.post('/ventures/:id/mvp', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
@@ -198,13 +203,67 @@ r.post('/ventures/:id/mvp', async (req, res) => {
   res.json(report)
 })
 
-r.post('/ventures/:id/landing', async (req, res) => {
+// ---------------------------------------------------------------- prototype builder
+
+// Compile (never execute) inline scripts to catch syntax errors the model introduced.
+export function scriptError(html) {
+  for (const [, code] of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      new vm.Script(code)
+    } catch (e) {
+      return e.message
+    }
+  }
+  return null
+}
+
+async function repairScripts(v, html) {
+  for (let i = 0; i < 2; i++) {
+    const err = scriptError(html)
+    if (!err) return html
+    html = (await ai('/prototype/edit', { venture: ventureCtx(v), html, instruction: `Fix this JavaScript syntax error so the script parses, without changing behaviour: ${err}` })).html
+  }
+  if (scriptError(html)) throw new HttpError(502, 'The generated code had errors we could not auto-repair. Please try again.')
+  return html
+}
+
+r.post('/ventures/:id/prototype', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
-  const out = await runAgent(req.user, v.id, 'Landing Page Generator', '/landing', { venture: ventureCtx(v) }, (o) => o.hero.headline)
-  const report = await saveReport(req.user, v.id, 'landing', `Landing page · ${v.name}`, out, out.hero.headline)
-  await remember(req.user, v.id, 'research', 'Landing page positioning', `${out.hero.headline}\n${out.value_proposition}\nPricing probe: ${out.pricing.map((p) => `${p.name} ${p.price}`).join(', ')}`)
-  await log(req.user, v.id, 'Landing Page Generator', 'Generated landing page', out.hero.headline)
+  const out = await runAgent(req.user, v.id, 'Prototype Builder', '/prototype', { venture: ventureCtx(v) }, (o) => `${o.title} · ${Math.round(o.html.length / 1024)}KB`)
+  const html = await repairScripts(v, out.html)
+  // One prototype per venture: starting over replaces it (the old version stays available via undo).
+  const existing = await latestReport(v.id, 'prototype')
+  const report = existing
+    ? await db.update('research_reports', existing.id, { content: { ...out, html, history: [], previous_html: existing.content.html }, summary: out.summary })
+    : await saveReport(req.user, v.id, 'prototype', `Prototype · ${v.name}`, { ...out, html, history: [], previous_html: null }, out.summary)
+  await remember(req.user, v.id, 'roadmap', 'Prototype built', `A clickable first prototype of ${v.name} was generated ("${out.title}").`)
+  await log(req.user, v.id, 'Prototype Builder', 'Built a working prototype', out.title)
   res.json(report)
+})
+
+r.post('/research/:id/prototype/edit', async (req, res) => {
+  const report = await own('research_reports', req.params.id, req.user)
+  if (report.kind !== 'prototype') throw new HttpError(400, 'Not a prototype')
+  const instruction = text(req.body.instruction, 1500)
+  if (!instruction) throw new HttpError(400, 'Describe the change you want')
+  const v = await own('ventures', report.venture_id, req.user)
+  const out = await runAgent(req.user, v.id, 'Prototype Builder', '/prototype/edit', { venture: ventureCtx(v), html: report.content.html, instruction }, (o) => o.summary)
+  const html = await repairScripts(v, out.html)
+  const history = [...(report.content.history ?? []), { instruction, summary: out.summary, at: new Date().toISOString() }].slice(-30)
+  const updated = await db.update('research_reports', report.id, {
+    content: { ...report.content, html, history, previous_html: report.content.html }, summary: out.summary,
+  })
+  await log(req.user, v.id, 'Prototype Builder', 'Updated the prototype', out.summary)
+  res.json(updated)
+})
+
+r.post('/research/:id/prototype/undo', async (req, res) => {
+  const report = await own('research_reports', req.params.id, req.user)
+  if (report.kind !== 'prototype' || !report.content.previous_html) throw new HttpError(400, 'Nothing to undo')
+  const history = (report.content.history ?? []).slice(0, -1)
+  res.json(await db.update('research_reports', report.id, {
+    content: { ...report.content, html: report.content.previous_html, previous_html: null, history },
+  }))
 })
 
 // ---------------------------------------------------------------- venture memory

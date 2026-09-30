@@ -232,7 +232,7 @@ function Developers() {
     { title: 'Venture memory', body: 'pgvector-backed recall', icon: Brain },
     { title: 'Knowledge RAG', body: 'Bring your own playbooks', icon: BookOpen },
     { title: 'Monitoring', body: 'Daily competitor sweeps', icon: Radar },
-    { title: 'Experiments', body: 'Hosted pages + analytics', icon: FlaskConical },
+    { title: 'Prototypes', body: 'Clickable apps you can refine', icon: FlaskConical },
   ]
   return (
     <section id="developers" className="px-4 py-24 sm:px-6">
@@ -366,7 +366,7 @@ function FeatureCards() {
     {
       tone: 'leaf', icon: <Radar />, title: 'Continuous monitoring',
       body: 'Competitor pricing, launches, funding and sentiment are tracked daily with a recommended response for each move.',
-      bullets: [[Radar, 'Competitor intelligence'], [FlaskConical, 'Live experiment tracking'], [Boxes, 'MVP & landing generators']],
+      bullets: [[Radar, 'Competitor intelligence'], [FlaskConical, 'Live experiment tracking'], [Boxes, 'MVP plans & working prototypes']],
     },
   ]
   return (

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, ArrowUpRight, Compass, FlaskConical, Gauge, Layers, LayoutTemplate, MessagesSquare, Plus, Radar } from 'lucide-react'
+import { AppWindow, ArrowRight, ArrowUpRight, Compass, FlaskConical, Gauge, Layers, MessagesSquare, Plus, Radar } from 'lucide-react'
 import { Link } from 'react-router'
 import { useShell } from '@/components/AppShell'
 import { DecisionBadge, Empty, Loading, SCORE_KEYS, SCORE_LABELS, SEVERITY_TONE, ScoreRing, StageBadge, Stat, scoreColor } from '@/components/bits'
@@ -16,7 +16,7 @@ interface Dash { ventures: Venture[]; signals: Signal[]; activity: Activity[]; s
 
 export const PIPELINE = [
   { icon: Compass, label: 'Discover' }, { icon: Gauge, label: 'Validate' }, { icon: MessagesSquare, label: 'Boardroom' },
-  { icon: Layers, label: 'MVP' }, { icon: LayoutTemplate, label: 'Landing' }, { icon: FlaskConical, label: 'Experiment' }, { icon: Radar, label: 'Monitor' },
+  { icon: Layers, label: 'MVP' }, { icon: AppWindow, label: 'Prototype' }, { icon: FlaskConical, label: 'Experiment' }, { icon: Radar, label: 'Monitor' },
 ]
 
 const greeting = () => {

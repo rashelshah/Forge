@@ -55,22 +55,18 @@ export interface MvpPlan {
   mode: Mode
 }
 
-export interface LandingContent {
-  hero: { eyebrow: string; headline: string; subheadline: string; primary_cta: string; secondary_cta: string }
-  value_proposition: string
-  features: { title: string; description: string }[]
-  pricing: { name: string; price: string; period: string; description: string; features: string[]; highlighted: boolean }[]
-  faqs: { question: string; answer: string }[]
-  waitlist: { headline: string; subheadline: string; button: string; survey_question: string }
-  cta_variants: string[]
-  seo_title: string
-  seo_description: string
+export interface PrototypeContent {
+  title: string
+  html: string
+  summary: string
+  history: { instruction: string; summary: string; at: string }[]
+  previous_html: string | null
   mode: Mode
 }
 
 export interface ExperimentAnalysis { outcome: 'validated' | 'invalidated' | 'inconclusive'; summary: string; insights: string[]; recommended_next: string[]; conversion: number; mode: Mode }
 
-export type ReportKind = 'discovery' | 'validation' | 'mvp' | 'landing' | 'experiment_analysis'
+export type ReportKind = 'discovery' | 'validation' | 'mvp' | 'prototype' | 'landing' | 'experiment_analysis'
 export interface Report<C = unknown> {
   id: string
   venture_id: string | null
@@ -88,6 +84,8 @@ export type Decision = 'GO' | 'PIVOT' | 'KILL'
 export interface Verdict {
   decision: Decision
   confidence: number
+  headline?: string
+  reasons?: string[]
   summary: string
   consensus: string[]
   disagreements: string[]
@@ -137,9 +135,9 @@ export interface Experiment {
   venture_id: string
   name: string
   hypothesis: string | null
-  type: 'landing_page' | 'survey' | 'interviews' | 'ads' | 'other'
+  type: 'prototype' | 'landing_page' | 'survey' | 'interviews' | 'ads' | 'other'
   slug: string
-  landing: LandingContent | null
+  prototype: { title: string; html: string } | null
   target_conversion: number
   metrics: { visitors: number; signups: number; feedback: number; conversion: number }
   status: 'draft' | 'running' | 'completed'
