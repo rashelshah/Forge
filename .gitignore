@@ -6,3 +6,4 @@ ai/.venv
 ai/.qdrant
 ai/__pycache__
 backend/.data
+YC-all-batches.csv

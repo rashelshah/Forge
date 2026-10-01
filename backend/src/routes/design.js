@@ -68,9 +68,12 @@ function normalize(raw) {
   }
 }
 
-async function add(url) {
+// Same site however it was typed: foo.com, https://www.foo.com/ and http://foo.com#x are one reference.
+const siteKey = (url) => { const u = new URL(url); return u.hostname.replace(/^www\./, '') + (u.pathname === '/' ? '' : u.pathname) }
+
+async function add(url, extra = {}) {
   if ((await db.list(TABLE, { url }, { limit: 1, columns: 'id' })).length) return null
-  const row = await db.insert(TABLE, { name: new URL(url).hostname.replace(/^www\./, ''), url, status: 'queued' })
+  const row = await db.insert(TABLE, { name: extra.name || new URL(url).hostname.replace(/^www\./, ''), url, status: 'queued', ...(extra.industry && { industry: extra.industry }) })
   enqueue(row.id)
   return row
 }
@@ -97,18 +100,33 @@ r.get('/design/references/:id', async (req, res) => {
 r.post('/design/references', async (req, res) => {
   const url = normalize(req.body.url)
   if (!url) throw new HttpError(400, 'Enter a valid website URL, e.g. https://linear.app')
-  const row = await add(url)
+  const key = siteKey(url)
+  const dup = (await db.list(TABLE, {}, { limit: 20000, columns: 'url' })).some((x) => { try { return siteKey(x.url) === key } catch { return false } })
+  const row = dup ? null : await add(url)
   if (!row) throw new HttpError(409, `${url} is already in the knowledge base`)
   res.status(201).json(row)
 })
 
+const BATCH_MAX = 500
+const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '')
+
+// Accepts `urls: string[]` or `items: [{ url, name?, industry? }]` (a CSV import). Names and industry only label a row while it is
+// queued; the analysis replaces them with what the site actually is.
 r.post('/design/references/batch', async (req, res) => {
-  if (!Array.isArray(req.body.urls)) throw new HttpError(400, 'urls must be an array')
-  if (req.body.urls.length > 100) throw new HttpError(400, 'Import at most 100 websites at a time')
-  const parsed = req.body.urls.map((u) => [u, normalize(u)])
-  const invalid = parsed.filter(([, n]) => !n).map(([u]) => String(u).slice(0, 100))
-  const added = [], skipped = []
-  for (const url of new Set(parsed.map(([, n]) => n).filter(Boolean))) (await add(url) ? added : skipped).push(url)
+  const raw = Array.isArray(req.body.items) ? req.body.items : Array.isArray(req.body.urls) ? req.body.urls.map((url) => ({ url })) : null
+  if (!raw) throw new HttpError(400, 'urls or items must be an array')
+  if (raw.length > BATCH_MAX) throw new HttpError(400, `Import at most ${BATCH_MAX} websites per request`)
+  const known = new Set((await db.list(TABLE, {}, { limit: 20000, columns: 'url' })).flatMap((x) => { try { return [siteKey(x.url)] } catch { return [] } }))
+  const added = [], skipped = [], invalid = []
+  for (const it of raw) {
+    const url = normalize(typeof it === 'string' ? it : it?.url)
+    if (!url) { invalid.push(String(typeof it === 'string' ? it : it?.url ?? '').slice(0, 100)); continue }
+    const key = siteKey(url)
+    if (known.has(key)) { skipped.push(url); continue }
+    known.add(key)
+    await add(url, { name: clip(it.name, 120), industry: clip(it.industry, 80) })
+    added.push(url)
+  }
   res.status(201).json({ added, skipped, invalid })
 })
 

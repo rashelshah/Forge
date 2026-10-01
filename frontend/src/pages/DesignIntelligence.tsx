@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { ExternalLink, Layers, Loader2, Palette, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react'
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useRef, useState, type ReactNode } from 'react'
 import { Empty, ErrorNote, Loading, PageHeader } from '@/components/bits'
 import { Meta } from '@/components/doc'
 import { Badge } from '@/components/ui/badge'
@@ -17,14 +18,47 @@ import { ago, titleCase } from '@/lib/utils'
 const STATUS = { queued: ['Queued', 'neutral'], analyzing: ['Analysing', 'amber'], done: ['Analysed', 'leaf'], failed: ['Failed', 'rose'] } as const
 const busy = (d: DesignReference) => d.status === 'queued' || d.status === 'analyzing'
 
-/** Accepts a JSON array or any mix of commas, spaces and newlines. */
-function parseUrls(raw: string): string[] {
-  try {
-    const j = JSON.parse(raw)
-    if (Array.isArray(j)) return j.map(String)
-  } catch { /* not JSON */ }
-  return raw.split(/[\s,]+/).map((u) => u.replace(/^["'“”]+|["'“”,]+$/g, '')).filter(Boolean)
+interface ImportItem { url: string; name?: string; industry?: string }
+
+/** Minimal CSV reader: quoted fields, escaped quotes, commas and newlines inside quotes. */
+function splitCsv(text: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = [], cell = '', quoted = false
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]
+    if (quoted) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++ } else quoted = false } else cell += c
+    } else if (c === '"') quoted = true
+    else if (c === ',') { row.push(cell); cell = '' }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = '' }
+    else cell += c
+  }
+  row.push(cell)
+  if (row.some((x) => x.trim())) rows.push(row)
+  return rows
 }
+
+/** A JSON array (strings or {url,name,industry}), a CSV with a url/website/domain column, or any mix of spaces, commas and newlines. */
+function parseItems(raw: string): ImportItem[] {
+  const t = raw.trim()
+  if (!t) return []
+  try {
+    const j = JSON.parse(t)
+    if (Array.isArray(j)) return j.map((x) => (typeof x === 'string' ? { url: x } : { url: String(x?.url ?? x?.website ?? ''), name: x?.name, industry: x?.industry }))
+  } catch { /* not JSON */ }
+  const rows = splitCsv(t)
+  const head = rows[0].map((c) => c.trim().toLowerCase())
+  const col = (names: string[]) => head.findIndex((h) => names.includes(h))
+  const u = col(['url', 'website', 'site', 'domain', 'homepage', 'company_url', 'link'])
+  if (u >= 0) {
+    const n = col(['name', 'company', 'company_name', 'title']), ind = col(['industry', 'category', 'sector', 'vertical'])
+    return rows.slice(1).map((r) => ({ url: (r[u] ?? '').trim(), name: n >= 0 ? r[n]?.trim() : undefined, industry: ind >= 0 ? r[ind]?.trim() : undefined })).filter((x) => x.url)
+  }
+  return t.split(/[\s,]+/).map((x) => x.replace(/^["'“”]+|["'“”,]+$/g, '')).filter((x) => x.includes('.') && !x.includes('@')).map((url) => ({ url }))
+}
+
+const siteKey = (u: string) => u.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/[#?].*$/, '').replace(/\/$/, '')
+const CHUNK = 500
 
 const inline = (s: string): ReactNode[] => s.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))
 
@@ -45,19 +79,56 @@ function Thumb({ src, className }: { src: string | null; className?: string }) {
 }
 
 function BatchDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const qc = useQueryClient()
   const [raw, setRaw] = useState('')
-  const urls = parseUrls(raw)
-  const run = useAction(() => api<{ added: string[]; skipped: string[]; invalid: string[] }>('/design/references/batch', { urls }), [['design']],
-    (o) => `${o.added.length} queued${o.skipped.length ? `, ${o.skipped.length} already added` : ''}${o.invalid.length ? `, ${o.invalid.length} invalid` : ''}`)
+  const [sent, setSent] = useState<number | null>(null)
+  const file = useRef<HTMLInputElement>(null)
+  const found = parseItems(raw)
+  const seen = new Set<string>()
+  const items = found.filter((x) => { const k = siteKey(x.url); return !seen.has(k) && !!seen.add(k) })
+  const hours = (items.length * 1.5) / 60
+
+  async function submit() {
+    const total = { added: 0, skipped: 0, invalid: 0 }
+    setSent(0)
+    try {
+      for (let i = 0; i < items.length; i += CHUNK) {
+        const o = await api<{ added: string[]; skipped: string[]; invalid: string[] }>('/design/references/batch', { items: items.slice(i, i + CHUNK) })
+        total.added += o.added.length; total.skipped += o.skipped.length; total.invalid += o.invalid.length
+        setSent(Math.min(items.length, i + CHUNK))
+      }
+      toast.success(`${total.added} queued${total.skipped ? `, ${total.skipped} already added` : ''}${total.invalid ? `, ${total.invalid} invalid` : ''}`)
+      setRaw(''); onOpenChange(false)
+    } catch (e) {
+      toast.error(`${(e as Error).message}${total.added ? ` (${total.added} were queued before this)` : ''}`)
+    } finally {
+      setSent(null)
+      qc.invalidateQueries({ queryKey: ['design'] })
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => sent === null && onOpenChange(o)}>
       <DialogContent>
         <DialogTitle>Import multiple websites</DialogTitle>
-        <DialogDescription>Paste a JSON array or one URL per line. Sites are analysed one after another in the background.</DialogDescription>
-        <Textarea rows={9} className="mt-4 font-mono text-xs" value={raw} onChange={(e) => setRaw(e.target.value)} placeholder={'[\n  "https://linear.app",\n  "https://stripe.com",\n  "https://vercel.com"\n]'} />
-        <Button className="mt-4 w-full" loading={run.isPending} disabled={!urls.length}
-          onClick={() => run.mutate(undefined, { onSuccess: () => { setRaw(''); onOpenChange(false) } })}>
-          Analyse {urls.length || ''} website{urls.length === 1 ? '' : 's'}
+        <DialogDescription>Upload a CSV (a url / website / domain column; name and industry columns are optional), or paste a JSON array or one URL per line. Duplicates are skipped and sites are analysed one after another in the background.</DialogDescription>
+        <input ref={file} type="file" accept=".csv,.txt,.json,text/csv,text/plain,application/json" className="sr-only" aria-label="Choose a file"
+          onChange={async (e) => { const f = e.target.files?.[0]; if (f) setRaw(await f.text()); e.target.value = '' }} />
+        <div className="mt-4 flex items-center gap-3">
+          <Button type="button" variant="outline" size="sm" onClick={() => file.current?.click()} disabled={sent !== null}><Upload />Choose CSV file</Button>
+          <span className="text-xs text-muted">or paste below</span>
+        </div>
+        <Textarea rows={8} className="mt-3 font-mono text-xs" value={raw.length > 20000 ? `${raw.slice(0, 2000)}\n… (${found.length} rows loaded from file)` : raw} readOnly={raw.length > 20000}
+          onChange={(e) => setRaw(e.target.value)} placeholder={'https://linear.app\nhttps://stripe.com\nhttps://vercel.com'} />
+        {raw.length > 20000 && <button type="button" className="mt-1 text-xs text-azure hover:underline cursor-pointer" onClick={() => setRaw('')}>Clear loaded file</button>}
+        {items.length > 0 && (
+          <p className="mt-3 text-xs text-muted">
+            {items.length} website{items.length === 1 ? '' : 's'} found{found.length > items.length ? ` (${found.length - items.length} duplicates in the file)` : ''}. Each takes about 1–2 minutes, so this will run for roughly {hours < 1 ? `${Math.max(1, Math.round(hours * 60))} minutes` : `${hours.toFixed(hours < 10 ? 1 : 0)} hours`} and uses your AI quota.
+            {items.length > 150 && ' Consider importing a curated 100–200 first.'}
+          </p>
+        )}
+        <Button className="mt-4 w-full" loading={sent !== null} disabled={!items.length} onClick={submit}>
+          {sent !== null ? `Queuing… ${sent} / ${items.length}` : `Analyse ${items.length || ''} website${items.length === 1 ? '' : 's'}`}
         </Button>
       </DialogContent>
     </Dialog>

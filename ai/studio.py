@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 import core
 import design_intel
 import studio_kit as kit
+import studio_recipes as recipes
 
 SHOT_BUCKET = "studio-screenshots"
 MEMORY = "studio_memory"
@@ -467,7 +468,9 @@ UX_ARCHITECT = (STUDIO + "\n\nROLE: UX Architect. From the product spec design t
                 "Screen 1 is what a user sees first and MUST be the core experience or a focused first-run/landing screen with one clear CTA into it — "
                 "never a dashboard of generic stat cards (Users/Revenue/Growth) unless the product is analytics. Every screen defines its sections, key "
                 "components, primary CTA and its empty, loading and error states in the product's own language. Routes are lowercase kebab-case like '/pipeline'. "
-                "Navigation items must point at real screen routes and use valid lucide icon names.")
+                "Navigation items must point at real screen routes and use valid lucide icon names. Name key_components with the prototype kit's components where they fit "
+                "(PageHeader, StatCard, DataTable, Sheet, Tabs, Timeline, DropdownMenu, charts, Hero, FeatureCard, Alert...) so the screens are built from real parts, and give "
+                "dashboards and record screens the data presentation they need (stats, a chart, a table).")
 RESEARCHER = (STUDIO + "\n\nROLE: Design Researcher. You are given the product spec and real analyses of best-in-class SaaS products from the Forge Design "
               "Intelligence knowledge base. Synthesize what to borrow — landing, dashboard, onboarding and component patterns — cite the reference products "
               "by name, say exactly what to take from each, and what to avoid. Only reference products that appear in the provided data.")
@@ -475,13 +478,14 @@ DESIGNER = (STUDIO + "\n\nROLE: Product Designer. Create a distinctive visual id
             "default 'indigo on white SaaS' look: choose light or dark mode for the audience, a palette with one purposeful accent, and type that has character. "
             "Fonts must be real Google Fonts families. Palette values are 6-digit hex; foreground must have strong contrast on background, muted_foreground "
             "at least 4.5:1, primary_foreground at least 4.5:1 on primary. Define the component, motion (subtle, purposeful), layout and density strategy and "
-            "2-4 signature details that make it un-template-like.")
+            "2-4 signature details that make it un-template-like.\n\n" + recipes.DIRECTIONS)
 MVP = (STUDIO + "\n\nROLE: MVP Architect. Define the technical spec for the smallest shippable version: prioritized features, a relational database schema, the API, "
        "role permissions, authentication, and realistic domain-specific sample data for the prototype (real-sounding names, companies, amounts, dates, statuses).")
 FE_ARCH = (STUDIO + "\n\nROLE: Frontend Architect. Define the React architecture that will implement the UX blueprint and design spec: hash routes (one per screen, same "
            "routes as the blueprint), the layout hierarchy, component tree, state management strategy, data flow, responsive and accessibility plan, and file structure. "
            "The prototype runtime is React 18 with hooks and context only, hash routing, Tailwind and a shadcn-style kit, with state persisted to localStorage: "
-           "design the state strategy so it can be built exactly that way (no Redux/Zustand/React Query), and mention the production-grade equivalent only as a note.")
+           "design the state strategy so it can be built exactly that way (no Redux/Zustand/React Query), and mention the production-grade equivalent only as a note. "
+           "The layout hierarchy ALWAYS starts at the kit's AppShell (sidebar on desktop, drawer on mobile) for product screens.")
 
 UI_SYSTEM = """You are a Senior Frontend Engineer at a top product studio (think Linear, Stripe, Vercel, Ramp, Mercury). You write the React application for ONE specific product from its UX blueprint and design spec. You are NOT filling in a dashboard template.
 
@@ -489,7 +493,15 @@ RUNTIME (already set up — do not write any of it): React 18 + Babel standalone
 
 Tailwind tokens (use these, never raw hex): bg-background text-foreground bg-card border-border bg-primary text-primary-foreground bg-secondary bg-muted text-muted-foreground bg-accent text-accent-foreground bg-destructive text-destructive bg-success text-success bg-warning text-warning. All accept opacity (bg-primary/10). Fonts: font-heading, font-sans, font-mono. Radius: rounded-md / rounded-lg.
 
-KIT GLOBALS: React hooks (useState useEffect useRef useMemo useCallback useContext createContext Fragment), cn(...classes), Icon({name:'Plus', className}) (lucide icon by PascalCase name), Spinner, Button({variant: default|secondary|outline|ghost|destructive|link, size: default|sm|lg|icon, loading}), Card CardHeader CardTitle CardDescription CardContent, Badge({tone: default|muted|success|warning|destructive|outline}), Label, Input, Textarea, Select, Separator, Skeleton, Progress({value}), Avatar({name}), Switch({checked,onChange,label}), Tabs({value,onValueChange}) TabsList TabsTrigger({value}) TabsContent({value}), Dialog({open,onClose,title,description}), useToast() -> {toast('msg' | {title,description})}, EmptyState({icon,title,description,action}), ErrorState({title,description,onRetry}), useRoute() -> [route, navigate], Link({to}), useLocalState(key, initial) (persisted state), useLoading(ms) (true, then false — use it to show Skeletons on the first load of a screen).
+KIT GLOBALS: React hooks (useState useEffect useRef useMemo useCallback useContext createContext Fragment), cn(...classes), Icon({name:'Plus', className}) (lucide icon by PascalCase name), Spinner, Button({variant: default|secondary|outline|ghost|destructive|link, size: default|sm|lg|icon, loading}), Card CardHeader CardTitle CardDescription CardContent, Badge({tone: default|muted|success|warning|destructive|outline}), Label, Input, Textarea, Select, Separator, Skeleton, Progress({value}), Avatar({name}), Switch({checked,onChange,label}), Tabs({value,onValueChange}) TabsList TabsTrigger({value}) TabsContent({value}), Dialog({open,onClose,title,description}), useToast() -> {toast('msg' | {title,description})}, EmptyState({icon,title,description,action}), ErrorState({title,description,onRetry}), useRoute() -> [route, navigate], Link({to}), useLocalState(key, initial) (persisted state), useLoading(ms) (true, then false — use it to show Skeletons on the first load of a screen). EXTENDED KIT (use these instead of hand-rolling; every one is responsive and accessible): AppShell({brand, nav:[{label,to,icon,group,badge}], user:{name,email}, actions}) = sticky sidebar on desktop + drawer on mobile with active-route highlight (wrap each screen's content in it; use it for dashboard-style products), PageHeader({title,description,actions,breadcrumb:[{label,to}]}), Breadcrumb({items}), StatCard({label,value,delta,goodWhen:'up'|'down',icon,hint}) (set goodWhen:'down' when a falling number is good news, e.g. days silent, churn, response time), DataTable({columns:[{key,label,sortable,align,render}], rows, rowKey, onRowClick, pageSize, searchable, toolbar, empty}) (sort and paging built in; add `searchable` for its search box and then do NOT write a second search input — one search per screen — use it for lists of records), Table TableHeader TableBody TableRow TableHead TableCell (low-level), Pagination, DropdownMenu({trigger:<Button/>, items:[{label,icon,onClick,destructive}|{separator:true}], align}), Tooltip({content}), Sheet({open,onClose,title,description,side}) (slide-over for create/edit forms and details), Accordion({items:[{title,content,defaultOpen}], multiple}), CommandPalette({open,onClose,items:[{label,hint,icon,group,onSelect}]}) with useHotkey('k', cb) for Ctrl/Cmd+K, Alert({tone: info|success|warning|destructive, title}), Checkbox({checked,onChange,label}), RadioGroup({value,onChange,options:[{value,label,description}]}), Timeline({items:[{title,description,time,icon}]}), and dependency-free charts fed [{label,value}]: BarChart({data,height,format}), LineChart({data,height,area,format}), DonutChart({data,centerValue,centerLabel}), Sparkline({values}). CONSUMER KIT for browse/discover/shop/book products: ConsumerShell({brand, nav:[{label,to,icon}], actions}) (top bar + mobile bottom tabs), Photo({seed, icon, ratio}) (designed image stand-in — use it wherever a photo goes, never emoji), ListingCard({seed, icon, title, subtitle, badge, meta, price, action, onClick}), Hero, FeatureCard, Eyebrow. Dates: <Input type="date"/>.
+
+{RECIPES}
+
+{PREMIUM}
+
+{HOOKS}
+
+{EXAMPLE}
 
 WRITE plain JSX/JS (no imports, no exports, no TypeScript, no markdown fences) that defines `function App()` and everything it uses. Do NOT mount it — the page renders <App/> for you.
 
@@ -501,10 +513,11 @@ NON-NEGOTIABLE
 5. Apply the design spec precisely: personality, density, layout strategy, signature details, motion strategy (subtle — the `anim-in` class for entrances, transitions on hover/focus).
 6. Accessibility: semantic landmarks (header/nav/main), one h1 per screen, labels for every input, aria-label on icon-only buttons, visible focus, touch targets of at least 40px on mobile.
 7. Conversion and trust: every screen has one obvious primary action; new users get a clear next step; include trust cues that fit the product (privacy/security notes, credible social proof, transparent pricing, sync status).
-8. Charts: hand-built inline SVG or div bars. No external libraries or images (use initials avatars, gradients, icons, SVG).
+8. Charts: use the kit's BarChart / LineChart / DonutChart / Sparkline with realistic data. No external libraries or images (use initials avatars, gradients, icons, SVG). Lists of records use DataTable (or Cards on mobile-first products); create/edit forms open in Sheet or Dialog.
 9. Compact but complete: small reusable components, roughly 600-1000 lines. Output ONLY the code."""
+UI_SYSTEM = UI_SYSTEM.replace("{RECIPES}", recipes.RECIPES).replace("{PREMIUM}", recipes.PREMIUM).replace("{HOOKS}", recipes.HOOKS).replace("{EXAMPLE}", recipes.EXAMPLE)
 
-REFINE_SYSTEM = """You are a Senior Frontend Engineer refining an existing React prototype after design review. The code runs in a page that already provides Tailwind (with design tokens), a component kit (Button, Card, Dialog, Tabs, Skeleton, EmptyState, ErrorState, useRoute, useLocalState, Icon, ...) and mounts <App/>.
+REFINE_SYSTEM = """You are a Senior Frontend Engineer refining an existing React prototype after design review. The code runs in a page that already provides Tailwind (with design tokens), a component kit (Button, Card, Dialog, Tabs, Skeleton, EmptyState, ErrorState, useRoute, useLocalState, Icon, plus AppShell, ConsumerShell, Photo, ListingCard, PageHeader, StatCard, DataTable, DropdownMenu, Tooltip, Sheet, Accordion, CommandPalette, Alert, Checkbox, RadioGroup, Timeline, BarChart, LineChart, DonutChart, Sparkline, ...) and mounts <App/>.
 Fix the reported problems with the SMALLEST set of edits — never rewrite the app. Return find/replace patches: each `find` is copied character-for-character from the current code and occurs exactly once; replace WHOLE JSX elements or functions, never fragments of a statement, so the code stays syntactically valid. To add something, find a whole existing function or element and replace it with itself plus the addition. Everything you reference must exist. Use Tailwind token classes (bg-background, text-foreground, bg-primary, border-border, text-muted-foreground ...), never raw hex.
 Priorities: (1) runtime errors first, (2) high-severity issues, (3) the lowest-scoring dimensions, (4) mobile UX, navigation, typography, CTA placement and trust. You may adjust the design tokens via token_changes (palette names, heading_font, body_font, radius) when colour or type is the problem."""
 
@@ -512,10 +525,16 @@ VISION_REVIEWER = ("You are an expert design reviewer evaluating screenshots of 
                    "Score each dimension 0-10 as a tough, honest evaluator: 9-10 means indistinguishable from Linear, Stripe or Ramp; typical good "
                    "AI-generated prototypes deserve 6-8; any score of 9+ must be justified by specific visible evidence. Evaluate visual hierarchy, information "
                    "density, readability, mobile experience, CTA visibility, trustworthiness and professional appearance. Issues must be specific (screen + "
-                   "element) and each fix concrete enough to implement as a code change.")
+                   "element) and each fix concrete enough to implement as a code change. Hunt for these defects and report each as an issue: duplicated controls (two search "
+                   "bars, two primary buttons doing the same thing), large empty or blank areas (especially stacked on mobile), low-contrast grey-on-dark or grey-on-light text, "
+                   "cramped or uneven spacing, mixed corner radii, and a generic look (default indigo/zinc palette, no typographic character) which caps modernity and "
+                   "professionalism at 6.")
 CRITIC = ("You are a Staff Product Designer at a top-tier SaaS company giving a design critique of screenshots of a generated prototype. Review layout quality, "
           "component quality, typography, colour usage, SaaS quality and modernity. Be demanding and specific: 9-10 means you would ship it beside Linear "
-          "or Stripe; generic template-looking output is 5-7. Score all seven dimensions 0-10. List what works, then concrete critiques with fixes.")
+          "or Stripe; generic template-looking output is 5-7. Score all seven dimensions 0-10. List what works, then concrete critiques with fixes. "
+          "Be harsh on anything that feels templated: untinted neutrals, a default indigo accent, system-like typography, flat cards with no depth, tables and cards "
+          "that look hand-rolled instead of designed, duplicated controls, and empty areas. Premium means a distinct palette, characterful type pairing, consistent "
+          "hairline borders and soft depth, and confident spacing.")
 FAILURE = ("You are a skeptical founder reviewing a generated SaaS prototype and its product spec, hunting for why it will fail. Answer exactly five questions: "
            "Why would users not use this? Why would onboarding fail? Why would retention fail? Why would conversions fail? Why would trust be low? "
            "Ground each answer in what is visible or missing in the screenshots and spec, rate the likelihood, and give a fix that can be implemented in the UI.")
@@ -619,11 +638,14 @@ def _apply_patches(code: str, patches) -> tuple[str, int, list[str]]:
 
 
 def build(run: Run):
-    def agent(name, key, schema, system, user, summary, max_tokens=7000):
+    def agent(name, key, schema, system, user, summary, max_tokens=7000, check=None):
         def fn(s: State):
             with run.step(name) as box:
                 out = ask(schema, system, user(s), max_tokens=max_tokens)
                 d = out.model_dump()
+                if check and (why := check(d)):  # one forced revision when the output has a known weakness
+                    out = ask(schema, system, user(s) + f"\n\nREVISION REQUIRED — your previous answer was rejected because {why}.", max_tokens=max_tokens)
+                    d = out.model_dump()
                 if key == "ux_blueprint" and d["screens"]:
                     d["screens"][0]["route"] = "/"  # the default route is always the first screen
                     for sc in d["screens"][1:]:
@@ -653,13 +675,21 @@ def build(run: Run):
                                 "SAMPLE DATA:\n" + _compact(s["technical_spec"]["sample_data"]),
                                 f"SCREEN ROUTES (build all, '/' is first): {', '.join(sc['route'] + ' ' + sc['name'] for sc in ux['screens'])}"])
             models = list(dict.fromkeys([m for m in core.CODE if m.startswith("gemini")] + core.VISION + core.HEAVY))
-            code = ""
+            code, best, best_gaps, feedback = "", "", None, ""
             for attempt in range(2):
-                code = _strip_code(_retry(lambda: core.complete(UI_SYSTEM, user, temperature=0.5 - 0.2 * attempt, max_tokens=16000, models=models)))
-                if re.search(r"(function|const)\s+App\b", code) and len(code) > 2500:
+                code = _strip_code(_retry(lambda: core.complete(UI_SYSTEM, user + feedback, temperature=0.5 - 0.2 * attempt, max_tokens=16000, models=models)))
+                if not (re.search(r"(function|const)\s+App\b", code) and len(code) > 2500):
+                    continue
+                gaps = recipes.kit_gaps(code, len(ux["navigation"]["items"]), consumer=not re.search(r"side ?bar|left (nav|rail)|drawer", ux["navigation"]["pattern"], re.I))
+                if best_gaps is None or len(gaps) < len(best_gaps):
+                    best, best_gaps = code, gaps
+                if not gaps:
                     break
-            else:
+                # The first draft ignored the kit: say exactly what to fix and write it again.
+                feedback = "\n\nREVISION REQUIRED — your previous draft was rejected for not using the component kit properly. Rewrite the whole app and: " + "; ".join(gaps) + "."
+            if best_gaps is None:
                 raise StudioError("The UI Engineer returned an incomplete app. Please retry.")
+            code = best
             run.iteration = 1
             html = kit.assemble(ds, code, s["product_spec"]["product_name"])
             run.save("code", {"app_code": code, "html": html, "bytes": len(html), "summary": "First build from the UX blueprint and design spec"}, 1)
@@ -794,7 +824,8 @@ def build(run: Run):
         "researcher": agent("Design Researcher", "design_research_report", DesignResearch, RESEARCHER, researcher_user,
                             lambda o, d: "Referenced " + (", ".join(r["name"] for r in d["references"]) or "no references (knowledge base is empty)")),
         "designer": agent("Product Designer", "design_spec", DesignSpec, DESIGNER, lambda s: ctx(s, "product_spec", "ux_blueprint", "design_research_report"),
-                          lambda o, d: f"{', '.join(d['personality'])} · {d['mode']} mode · {d['heading_font']} / {d['body_font']}"),
+                          lambda o, d: f"{', '.join(d['personality'])} · {d['mode']} mode · {d['heading_font']} / {d['body_font']}",
+                          check=lambda d: recipes.generic_palette(d["palette"])),
         "mvp": agent("MVP Architect", "technical_spec", TechnicalSpec, MVP, lambda s: ctx(s, "product_spec", "ux_blueprint"),
                      lambda o, d: f"{len(d['features'])} features, {len(d['database_tables'])} tables, {len(d['api_endpoints'])} endpoints", 9000),
         "frontend": agent("Frontend Architect", "frontend_architecture", FrontendArchitecture, FE_ARCH, lambda s: ctx(s, "ux_blueprint", "design_spec", "technical_spec"),
@@ -844,7 +875,7 @@ def run_project(project_id: str) -> dict:
     return {"best_iteration": best["iteration"], "average": best["average"]}
 
 
-EDIT_SYSTEM = """You edit a single-file React prototype (Babel standalone + Tailwind with design tokens + a shadcn-style component kit, then the app code after the '/* ---------- generated app ---------- */' marker). Apply the requested change with the SMALLEST set of edits. Return find/replace patches: each `find` is copied character-for-character from the current file and occurs exactly once; replace WHOLE JSX elements or functions, never fragments of a statement, so the code stays valid. To add something, find a whole existing function or element and replace it with itself plus the addition. Everything you reference must exist (kit components: Button, Card, Badge, Input, Textarea, Select, Tabs, Dialog, Skeleton, EmptyState, ErrorState, useToast, useRoute, useLocalState, Icon ...). New data fields must also be added to the seed data. Use Tailwind token classes (bg-background, text-foreground, bg-primary, border-border ...), never raw hex. Colour tokens live in the :root block as space-separated RGB channels (e.g. --primary:236 138 68); change them there to re-theme. If the request is a runtime error, fix exactly that error. Leave token_changes empty."""
+EDIT_SYSTEM = """You edit a single-file React prototype (Babel standalone + Tailwind with design tokens + a shadcn-style component kit, then the app code after the '/* ---------- generated app ---------- */' marker). Apply the requested change with the SMALLEST set of edits. Return find/replace patches: each `find` is copied character-for-character from the current file and occurs exactly once; replace WHOLE JSX elements or functions, never fragments of a statement, so the code stays valid. To add something, find a whole existing function or element and replace it with itself plus the addition. Everything you reference must exist (kit components: Button, Card, Badge, Input, Textarea, Select, Tabs, Dialog, Skeleton, EmptyState, ErrorState, useToast, useRoute, useLocalState, Icon, AppShell, PageHeader, StatCard, DataTable, DropdownMenu, Tooltip, Sheet, Accordion, CommandPalette, Alert, Checkbox, RadioGroup, Timeline, BarChart, LineChart, DonutChart, Sparkline ...). New data fields must also be added to the seed data. Use Tailwind token classes (bg-background, text-foreground, bg-primary, border-border ...), never raw hex. Colour tokens live in the :root block as space-separated RGB channels (e.g. --primary:236 138 68); change them there to re-theme. If the request is a runtime error, fix exactly that error. Leave token_changes empty."""
 
 
 def edit_html(html: str, instruction: str, name: str) -> dict:

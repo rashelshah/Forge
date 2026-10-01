@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
-import { Logo, Spark } from '@/components/brand'
+import { Logo } from '@/components/brand'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
