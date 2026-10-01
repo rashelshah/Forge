@@ -113,7 +113,7 @@ function App() {
       {route === '/settings' && <Settings />}
     </AppShell>
   );
-}}"""
+}"""
 
 # ---------------------------------------------------------------- deterministic kit-usage check
 
@@ -146,6 +146,15 @@ def hook_order_issues(code: str) -> list[str]:
     return out
 
 
+HTML_TAGS = set("""a abbr address article aside audio b blockquote body br button canvas caption cite code col colgroup dd del details dfn dialog div dl dt em fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hr i iframe img input ins kbd label legend li main mark menu nav ol optgroup option output p picture pre progress q s samp section select small source span strong sub summary sup table tbody td template textarea tfoot th thead time tr u ul var video
+svg g path circle ellipse line polygon polyline rect text tspan defs use symbol marker mask pattern clipPath linearGradient radialGradient stop filter feGaussianBlur feOffset feBlend feColorMatrix foreignObject animate animateTransform title desc""".split())
+
+
+def unknown_tags(code: str) -> list[str]:
+    """Lowercase JSX tags that are not HTML/SVG (model typos such as <py> for <td>): they render as unstyled inline junk and break layouts."""
+    return sorted({t for t in re.findall(r"(?<![\w)\]])<([a-z][A-Za-z0-9]*)(?=[\s/>])", code) if t not in HTML_TAGS})
+
+
 def kit_gaps(code: str, nav_items: int, consumer: bool = False) -> list[str]:
     """What a generated app got wrong against the kit and React rules. Empty list = acceptable."""
     used = {n for n in LAYOUT | CONSUMER | set(CORE) if re.search(rf"<{n}[\s/>]", code)}
@@ -167,9 +176,11 @@ def kit_gaps(code: str, nav_items: int, consumer: bool = False) -> list[str]:
         gaps.append(f"use more kit components: only {distinct} distinct ones are used and at least {need} are required")
     if not re.search(r"\bdefault\s*:", code) and not re.search(r"""(?:route|pathname|path|r)\s*===?\s*['"]/['"]|case\s+['"]/['"]|['"]/['"]\s*:|['"]/['"]\s*\?""", code):
         gaps.append("no screen is rendered for the default route '/': the home screen MUST render at route '/' (useRoute returns '/' on first load), otherwise the app opens blank")
+    for t in unknown_tags(code):
+        gaps.append(f"<{t}> is not a real HTML tag (a typo?): fix every <{t}> to the element you meant")
     for name in hook_order_issues(code):
         gaps.append(f"{name} returns early before later hooks run, which crashes React when the condition changes: move every hook above any `return`, and put onboarding/loading gates after the hooks")
-    if re.search(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", code):
+    if re.search(r"[\U0001F300-\U0001FAFF]", code):
         gaps.append("remove emoji used as icons or imagery: use <Icon>, <Avatar> or <Photo>")
     return gaps
 
@@ -195,3 +206,34 @@ def generic_palette(palette: dict) -> str | None:
         if raw in {"ffffff", "fafafa", "f8fafc", "f9fafb", "000000", "09090b", "0a0a0a", "111111", "18181b"} or (bg[2] < 0.04 and (bg[1] > 0.97 or bg[1] < 0.03)):
             problems.append("the background is an untinted default (pure white/black or flat zinc/slate): use a deliberately tinted neutral from one of the design directions")
     return "; ".join(problems) or None
+
+
+# ---------------------------------------------------------------- guards against the designer's habits (dark mode, repeated palettes)
+
+DARK_OK = re.compile(r"developer|engineer|\bcode\b|coding|terminal|devops|trading|trader|crypto|music|audio|video|stream|gaming|\bgame|photograph|creative|film|podcast|security|cyber|night|data scien", re.I)
+
+
+def dark_unjustified(mode: str, brief: str) -> str | None:
+    """Dark is the model's reflex. It is only right for developer, trading, media, gaming and creative-pro audiences."""
+    if mode == "dark" and not DARK_OK.search(brief):
+        return ("dark mode was chosen but this is not a developer, trading, music/media, gaming or creative-pro product: choose a LIGHT direction (ivory, sand, porcelain, blush, pale sky or slate & citrus) "
+                "with a tinted off-white page")
+    return None
+
+
+def palette_clash(palette: dict, prior: list[dict]) -> str | None:
+    """Rejects a palette that is (nearly) the same as one an earlier product by this founder already uses."""
+    def rgb(h):
+        h = str(h or "").lstrip("#")
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) if re.fullmatch(r"[0-9a-fA-F]{6}", h) else (0, 0, 0)
+
+    def dist(a, b):
+        return sum((x - y) ** 2 for x, y in zip(rgb(a), rgb(b))) ** 0.5
+
+    for pr in prior:
+        p = pr["palette"]
+        same_page = dist(palette.get("background"), p.get("background")) < 18
+        if (same_page and (dist(palette.get("card"), p.get("card")) < 18 or dist(palette.get("primary"), p.get("primary")) < 70)) or (
+                dist(palette.get("primary"), p.get("primary")) < 35 and dist(palette.get("background"), p.get("background")) < 60):
+            return f"its colour scheme is nearly the same as the earlier product '{pr['name']}': invent a visibly different page colour, card colour and accent for this product"
+    return None

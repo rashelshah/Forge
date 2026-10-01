@@ -317,3 +317,15 @@ export interface MemoryData {
   synthesized_at: string | null
 }
 export type MemoryHit = Memory & { score: number }
+
+// ---------------------------------------------------------------- Y Combinator directory
+
+export interface YcItem {
+  id: string; name: string; one_liner: string; description: string; website: string | null; yc_url: string | null; location: string | null
+  founded: number | null; batch: string | null; team: number | null; status: string | null; score: number
+  relevance: 'direct' | 'adjacent' | 'unverified'; reason: string
+}
+export interface YcData {
+  available: boolean; reason?: string; items: YcItem[]
+  stats: { total?: number; reviewed?: number; direct?: number; adjacent?: number; recent?: number; verified?: boolean }
+}

@@ -102,4 +102,10 @@ r.post('/intel/run', async (req, res) => {
   res.status(202).json(rep)
 })
 
+// Y Combinator companies that really overlap with the venture (hybrid retrieval + a relevance check, cached per idea in the AI service).
+r.get('/yc/similar', async (req, res) => {
+  const v = await own('ventures', String(req.query.venture_id), req.user)
+  res.json(await ai('/yc/similar', { query: v.idea, k: 12 }, { timeout: 180_000 }))
+})
+
 export default r

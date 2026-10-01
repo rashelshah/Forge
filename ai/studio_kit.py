@@ -242,8 +242,12 @@ const FeatureCard = ({ icon = 'Sparkles', title, description, className }) => (
 const PHOTO_TINTS = ['rgb(var(--primary) / .38)', 'rgb(var(--accent))', 'rgb(var(--success) / .38)', 'rgb(var(--warning) / .38)', 'rgb(var(--secondary))', 'rgb(var(--destructive) / .22)'];
 const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
 // Photo({ seed, icon, ratio }): a designed image stand-in (palette gradient + soft shapes + icon). Same seed, same picture. Use it wherever a photo would go.
-const Photo = ({ seed = 'x', icon = 'Image', ratio = 'aspect-[4/3]', className, children }) => {
+const ICON_HINTS = [[/\b(?:plant|cutting|seed|sprout|garden|herb|basil|mint|fern)(?:s|es)?\b/i, 'Sprout'], [/\b(?:flower|bloom|orchid|rose)(?:s|es)?\b/i, 'Flower2'], [/\b(?:leaf|heartleaf|monstera|pothos|vine|philodendron|succulent|cactus|foliage|houseplant)(?:s|es)?\b/i, 'Leaf'], [/\b(?:coffee|espresso|cafe|café)(?:s|es)?\b/i, 'Coffee'], [/\b(?:book|textbook|novel|study|course)(?:s|es)?\b/i, 'BookOpen'], [/\b(?:bike|cycle|scooter)(?:s|es)?\b/i, 'Bike'], [/\b(?:shirt|jacket|dress|cloth|shoe|sneaker|fashion)(?:s|es)?\b/i, 'Shirt'], [/\b(?:chair|sofa|table|desk|furniture|lamp)(?:s|es)?\b/i, 'Armchair'], [/\b(?:laptop|phone|computer|monitor|tablet|gadget)(?:s|es)?\b/i, 'Laptop'], [/\b(?:art|paint|print|poster|craft)(?:s|es)?\b/i, 'Palette'], [/\b(?:music|guitar|piano|vinyl|record|speaker)(?:s|es)?\b/i, 'Music'], [/\b(?:food|meal|cake|bread|bake|pizza|recipe|tomato|fruit)(?:s|es)?\b/i, 'UtensilsCrossed'], [/\b(?:home|house|room|apartment|flat)(?:s|es)?\b/i, 'Home'], [/\b(?:car|truck|van)(?:s|es)?\b/i, 'Car'], [/\b(?:camera|photo)(?:s|es)?\b/i, 'Camera'], [/\b(?:toy|game|puzzle|lego)(?:s|es)?\b/i, 'Puzzle'], [/\b(?:dog|cat|pet|puppy)(?:s|es)?\b/i, 'Heart'], [/\b(?:baby|kid|child)(?:s|es)?\b/i, 'Baby'], [/\b(?:tool|drill|hammer|wrench)(?:s|es)?\b/i, 'Wrench'], [/\b(?:ring|jewel|watch|gem)(?:s|es)?\b/i, 'Gem'], [/\b(?:travel|trip|flight|hotel|stay)(?:s|es)?\b/i, 'Plane'], [/\b(?:gym|fitness|yoga|run)(?:s|es)?\b/i, 'Dumbbell']];
+const FALLBACK_ICONS = ['Sparkles', 'Star', 'Heart', 'Gem', 'Leaf', 'Sun'];
+const guessIcon = (text, h) => { const hit = ICON_HINTS.find(([re]) => re.test(text)); return hit ? hit[1] : FALLBACK_ICONS[h % FALLBACK_ICONS.length]; };
+const Photo = ({ seed = 'x', icon, ratio = 'aspect-[4/3]', className, children }) => {
   const h = hashStr(String(seed));
+  icon = icon || guessIcon(String(seed), h);
   const [a, b] = [PHOTO_TINTS[h % PHOTO_TINTS.length], PHOTO_TINTS[(h >> 3) % PHOTO_TINTS.length]];
   return (
     <div className={cn('relative w-full overflow-hidden bg-muted', ratio, className)} style={{ background: 'linear-gradient(' + (h % 160 + 20) + 'deg, ' + a + ', ' + b + ')' }}>
@@ -758,6 +762,9 @@ def screenshot(html: str, shots: list[tuple[str, str]]) -> dict:
                 page.wait_for_timeout(1800)  # loading skeletons, entrance animations, web fonts
                 # Grow the viewport to the page height instead of a full-page capture, so fixed bars (mobile tab bar, sticky
                 # headers) sit at the edges where users see them, not floating mid-page.
+                bad = page.evaluate(r"(document.body.innerText.match(/\b(undefined|NaN|null|\[object Object\])\b/) || [])[0] || null")
+                if bad:
+                    errors.append(f"PlaceholderValue: the {route} screen shows \"{bad}\" as text where a real value should be (a field read from the sample data does not exist, or a calculation is wrong): find it and fix the data or the code")
                 if device == "mobile":
                     over = page.evaluate("""(() => { const w = innerWidth; const bad = [...document.querySelectorAll('body *')].filter((e) => {
                         const r = e.getBoundingClientRect(); if (!(r.width > 0) || r.right <= w + 1) return false;

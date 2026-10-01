@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 import core
 import demo
+import yc
 
 PLATFORMS = {
     "Reddit": ["reddit.com"],
@@ -22,16 +23,16 @@ def _platform(url: str) -> str:
     return next((p for p, ds in PLATFORMS.items() if any(d in url for d in ds)), "Web")
 
 
-def _resolve(ids: list[str], web: list[dict], lib: list[dict]):
+def _resolve(ids: list[str], web: list[dict], lib: list[dict], ycs: list[dict] | None = None):
     out = []
     for sid in ids:
-        m = re.fullmatch(r"\[?([SK])(\d+)\]?", sid.strip())
+        m = re.fullmatch(r"\[?([SKY])(\d+)\]?", sid.strip())
         if not m:
             continue
-        pool, i = (web if m[1] == "S" else lib), int(m[2]) - 1
+        pool, i = {"S": web, "K": lib, "Y": [{"title": f"YC: {c['name']}", "url": c["website"] or c["yc_url"]} for c in ycs or []]}[m[1]], int(m[2]) - 1
         if 0 <= i < len(pool):
             src = pool[i]
-            out.append({"title": src["title"], "url": src.get("url"), "type": "web" if m[1] == "S" else "library"})
+            out.append({"title": src["title"], "url": src.get("url"), "type": "library" if m[1] == "K" else "web"})
     return out
 
 
@@ -52,6 +53,9 @@ def _verbatim(quote: str, pool: list[dict]) -> bool:
     return len(q) >= 12 and any(q in _norm(r["content"]) for r in pool)
 
 
+YC_RULES = (" The Y Combinator directory block lists real YC companies as Y1, Y2...: cite them as evidence with source_id 'Y#' when you say who competes or has tried this, "
+            "count 'direct' ones as competitors in the competition score and in the competitors list, and never call a space empty or uncontested on the basis of a thin directory. "
+            "Use only names from that block.")
 GROUNDING = (
     "Rules: use only facts present in the provided sources or library; cite them by id. Never invent statistics, "
     "company names, quotes or URLs. If the evidence is thin, say so explicitly and lower your confidence."
@@ -119,7 +123,7 @@ def discover(seed: str | None, founder: dict):
 
 class Evidence(BaseModel):
     claim: str = Field(description="A specific fact stated in the cited source (paraphrased), never text from these instructions")
-    source_id: str = Field(description="S# for a web source or K# for a library document")
+    source_id: str = Field(description="S# for a web source, K# for a library document or Y# for a Y Combinator company")
 
 
 class Score(BaseModel):
@@ -149,7 +153,7 @@ class ValidationOut(BaseModel):
 WEIGHTS = {"demand": 0.3, "revenue_potential": 0.2, "defensibility": 0.2, "competition": 0.15, "founder_fit": 0.15}
 RUBRIC = """Scoring rubric (higher is always better for the founder):
 - demand: 80+ = sources show many people actively paying for or hacking around this; 60-79 = clear recurring complaints; 40-59 = plausible but thin evidence; <40 = little sign anyone cares.
-- competition: 80+ = no credible incumbent; 60-79 = incumbents with clear gaps; 40-59 = crowded but differentiable; <40 = dominated by strong players.
+- competition: (count direct Y Combinator matches as incumbents) 80+ = no credible incumbent; 60-79 = incumbents with clear gaps; 40-59 = crowded but differentiable; <40 = dominated by strong players.
 - defensibility: moats available (network effects, proprietary data, switching costs, brand). AI-wrapper-only ideas score <45.
 - revenue_potential: willingness to pay x market size x pricing evidence.
 - founder_fit: overlap of founder skills/industries/experience with what this venture needs. If no founder profile is given, score 50 and say the profile is missing."""
@@ -177,15 +181,16 @@ def validate(venture: dict, founder: dict):
     )
     lib = core.search_knowledge(f"how to evaluate demand, competition, moats and business model for: {idea}", k=4)
     mem = core.recall(venture["id"], idea, k=4)
+    ycx = yc.context(idea)
     if not core.OPENAI:
         out = demo.validate(venture, founder, lib)
     else:
         res = core.structured(
             ValidationOut,
             "You are Forge's Validation Engine, a rigorous startup analyst. Score the venture on five dimensions. "
-            + RUBRIC + "\n" + GROUNDING + "\nSummaries and risks: " + core.PLAIN,
+            + RUBRIC + "\n" + GROUNDING + YC_RULES + "\nSummaries and risks: " + core.PLAIN,
             f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\nVenture memory:\n"
-            f"{core.context_block(mem, 'Memory')}\n\nWeb sources:\n{core.sources_block(web)}\n\nLibrary:\n{lib_block(lib)}",
+            f"{core.context_block(mem, 'Memory')}\n\nWeb sources:\n{core.sources_block(web)}\n\nLibrary:\n{lib_block(lib)}\n\n{ycx['text']}",
             temperature=0.2,
         )
         out = res.model_dump()
@@ -193,7 +198,7 @@ def validate(venture: dict, founder: dict):
             out[key]["evidence"] = [
                 {"claim": e["claim"], **src}
                 for e in out[key]["evidence"]
-                for src in _resolve([e["source_id"]], web, lib)
+                for src in _resolve([e["source_id"]], web, lib, ycx["items"])
             ]
             # A score the model couldn't back with any real source is capped: it's a hypothesis, not a finding.
             if not out[key]["evidence"] and key != "founder_fit" and out[key]["score"] > 55:
@@ -209,6 +214,7 @@ def validate(venture: dict, founder: dict):
     out["overall"] = round(sum(out[k]["score"] * w for k, w in WEIGHTS.items()))
     out["mode"] = core.MODE
     out["web_sources"] = len(web)
+    out["yc"] = {"stats": ycx["stats"], "matches": [{k: c[k] for k in ("name", "one_liner", "website", "yc_url", "batch", "status", "relevance", "reason")} for c in ycx["items"]]} if ycx["available"] else None
     return out
 
 

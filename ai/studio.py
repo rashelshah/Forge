@@ -23,6 +23,7 @@ import core
 import design_intel
 import studio_kit as kit
 import studio_recipes as recipes
+import yc
 
 SHOT_BUCKET = "studio-screenshots"
 MEMORY = "studio_memory"
@@ -525,7 +526,7 @@ VISION_REVIEWER = ("You are an expert design reviewer evaluating screenshots of 
                    "Score each dimension 0-10 as a tough, honest evaluator: 9-10 means indistinguishable from Linear, Stripe or Ramp; typical good "
                    "AI-generated prototypes deserve 6-8; any score of 9+ must be justified by specific visible evidence. Evaluate visual hierarchy, information "
                    "density, readability, mobile experience, CTA visibility, trustworthiness and professional appearance. Issues must be specific (screen + "
-                   "element) and each fix concrete enough to implement as a code change. Hunt for these defects and report each as an issue: duplicated controls (two search "
+                   "element) and each fix concrete enough to implement as a code change. Hunt for these defects and report each as an issue: placeholder values ('?', 'undefined', empty labels, a lone dash where data should be), duplicated controls (two search "
                    "bars, two primary buttons doing the same thing), large empty or blank areas (especially stacked on mobile), low-contrast grey-on-dark or grey-on-light text, "
                    "cramped or uneven spacing, mixed corner radii, and a generic look (default indigo/zinc palette, no typographic character) which caps modernity and "
                    "professionalism at 6.")
@@ -655,12 +656,32 @@ def build(run: Run):
             return {key: d}
         return fn
 
+    def brief_text():
+        p = run.project
+        return " ".join(str(p.get(k) or "") for k in ("name", "idea", "audience", "industry", "requirements"))
+
+    _prior: list = []
+
+    def prior_palettes():
+        """Colour schemes of this founder's other Studio projects, so a new product doesn't look like the last one."""
+        if not _prior:
+            try:
+                ids = [r["id"] for r in _db("GET", f"studio_projects?user_id=eq.{run.project['user_id']}&id=neq.{run.id}&select=id&limit=200") or []]
+                arts = _db("GET", f"studio_artifacts?kind=eq.design_spec&project_id=in.({','.join(ids)})&select=content&limit=200") if ids else []
+                _prior.append(None)
+                _prior.extend({"name": a["content"].get("personality", ["earlier"])[0], "palette": a["content"]["palette"]} for a in arts or [] if a.get("content", {}).get("palette"))
+            except Exception as e:  # the check is a nicety: never block a build on it
+                print("prior palettes unavailable:", str(e)[:120])
+                _prior.append(None)
+        return [x for x in _prior if x]
+
     def ctx(s, *keys):
         return "\n\n".join(f"{k.upper()}:\n{_compact(s[k])}" for k in keys)
 
     def strategist_user(s):
         lib = core.search_knowledge(f"{s['idea']} customers problem positioning", s["user_id"], 4)
         return "\n\n".join(filter(None, [intake(run.project), "STARTUP KNOWLEDGE (Forge library):\n" + core.context_block(lib, "Library"),
+                                         yc.context(f"{run.project['name']}: {s['idea']}", k=6)["text"] + "\nUse these real companies for the product's alternatives and differentiators; name them only if listed.",
                                          _past_block(s, run.project["idea"])]))
 
     def researcher_user(s):
@@ -825,7 +846,8 @@ def build(run: Run):
                             lambda o, d: "Referenced " + (", ".join(r["name"] for r in d["references"]) or "no references (knowledge base is empty)")),
         "designer": agent("Product Designer", "design_spec", DesignSpec, DESIGNER, lambda s: ctx(s, "product_spec", "ux_blueprint", "design_research_report"),
                           lambda o, d: f"{', '.join(d['personality'])} · {d['mode']} mode · {d['heading_font']} / {d['body_font']}",
-                          check=lambda d: recipes.generic_palette(d["palette"])),
+                          check=lambda d: recipes.generic_palette(d["palette"]) or recipes.dark_unjustified(d["mode"], brief_text())
+                                          or recipes.palette_clash(d["palette"], prior_palettes())),
         "mvp": agent("MVP Architect", "technical_spec", TechnicalSpec, MVP, lambda s: ctx(s, "product_spec", "ux_blueprint"),
                      lambda o, d: f"{len(d['features'])} features, {len(d['database_tables'])} tables, {len(d['api_endpoints'])} endpoints", 9000),
         "frontend": agent("Frontend Architect", "frontend_architecture", FrontendArchitecture, FE_ARCH, lambda s: ctx(s, "ux_blueprint", "design_spec", "technical_spec"),

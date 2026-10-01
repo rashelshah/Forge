@@ -8,6 +8,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 import core
+import yc
 import demo
 from agents import venture_text
 
@@ -189,7 +190,7 @@ def run(venture: dict, question: str, rounds: int, validation: dict | None, owne
             scores += "\nKnown competitors: " + "; ".join(f"{c['name']} — {c['description']}" for c in validation["competitors"][:6])
     context = (
         f"{venture_text(venture)}\n{scores}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}\n\n"
-        f"Startup library:\n{core.context_block(lib, 'Library')}"
+        f"Startup library:\n{core.context_block(lib, 'Library')}\n\n{yc.context(venture['idea'], k=6)['text']}"
     )
     state = {"venture": venture, "question": question, "context": context,
              "failure_context": core.context_block(fails, "Library"),
