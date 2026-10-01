@@ -47,7 +47,7 @@ export async function own(table, id, user) {
 // ---------------------------------------------------------------- plans (billing-ready: swap plan via Stripe webhook)
 
 export const PLANS = {
-  free: { name: 'Free', price: 0, ventures: 3, agentRuns: 150 },
+  free: { name: 'Free', price: 0, ventures: 5, agentRuns: 150 },
   pro: { name: 'Pro', price: 49, ventures: 25, agentRuns: 3000 },
   studio: { name: 'Studio', price: 199, ventures: Infinity, agentRuns: 20000 },
 }

@@ -77,7 +77,7 @@ function Hero() {
 
 function Pricing() {
   const plans = [
-    { name: 'Free', price: '$0', note: 'For exploring ideas', features: ['3 ventures', '150 agent runs / month', 'Boardroom & validation', 'Forge library'] },
+    { name: 'Free', price: '$0', note: 'For exploring ideas', features: ['5 ventures', '150 agent runs / month', 'Boardroom & validation', 'Forge library'] },
     { name: 'Pro', price: '$49', note: 'For active founders', features: ['25 ventures', '3,000 agent runs / month', 'Daily competitor monitoring', 'Hosted experiments', 'Private knowledge base'], hl: true },
     { name: 'Studio', price: '$199', note: 'For studios & accelerators', features: ['Unlimited ventures', '20,000 agent runs / month', 'Team workspaces', 'Priority models'] },
   ]
