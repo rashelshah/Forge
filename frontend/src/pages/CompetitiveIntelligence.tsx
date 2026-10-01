@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Radar } from 'lucide-react'
 import { useState } from 'react'
-import { useSearchParams } from 'react-router'
 import { Empty, Loading, PageHeader } from '@/components/bits'
 import { INTEL_KEYS, IntelPanel } from '@/components/intel'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input, Select } from '@/components/ui/input'
+import { VentureSelect } from '@/components/VentureSelect'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
 import { useAction, useVentures } from '@/lib/queries'
+import { useVentureFilter } from '@/lib/venture'
 import type { Competitor, IntelData } from '@/lib/types'
 
 const INVALIDATE = INTEL_KEYS
@@ -63,17 +64,12 @@ export function CompetitiveIntelligencePanel({ ventureId }: { ventureId: string 
 }
 
 export default function CompetitiveIntelligence() {
-  const [params, setParams] = useSearchParams()
-  const { data: ventures = [], isLoading } = useVentures()
-  const venture = params.get('venture') ?? ventures[0]?.id
+  const { ventures, isLoading, venture: chosen } = useVentureFilter()
+  const venture = (chosen ?? ventures[0])?.id
   return (
     <>
       <PageHeader eyebrow="Intelligence" title="Competitive Intelligence" description="An AI strategy consultant that watches your competitors, finds the gaps and tells you what to do next."
-        actions={ventures.length > 1 ? (
-          <Select value={venture ?? ''} onChange={(e) => setParams({ venture: e.target.value })} className="h-10 w-56" aria-label="Venture">
-            {ventures.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-          </Select>
-        ) : undefined} />
+        actions={<VentureSelect />} />
       {isLoading ? <Loading /> : venture ? <CompetitiveIntelligencePanel key={venture} ventureId={venture} /> : <Empty icon={<Radar />} title="Create a venture first">Competitive intelligence is always relative to your own product.</Empty>}
     </>
   )

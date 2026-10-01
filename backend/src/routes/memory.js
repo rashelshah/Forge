@@ -27,6 +27,9 @@ r.post('/memory/synthesize', async (req, res) => {
     venture: ventureCtx(v), memories: memories.map((m) => ({ id: m.id, kind: m.kind, title: m.title, content: m.content, at: m.created_at })),
   }, (o) => `${o.validated.length} validated · ${o.failed.length} failed · ${o.decisions.length} decisions`, 900_000)
 
+  if (![out.known, out.top, out.validated, out.failed, out.decisions].some((l) => l.length)) {
+    throw new HttpError(422, 'Memory has no clear learnings yet — run validation, experiments or the boardroom, then try again') // keep what was synthesized before
+  }
   const row = (x) => ({ user_id: req.user.id, venture_id: v.id, ...x })
   for (const t of DERIVED) await db.remove(t, { venture_id: v.id })
   for (const [kind, list] of [['known', out.known], ['top', out.top]]) {

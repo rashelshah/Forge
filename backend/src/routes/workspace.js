@@ -34,14 +34,15 @@ r.get('/config', async (req, res) => {
 
 r.get('/dashboard', async (req, res) => {
   const u = { user_id: req.user.id }
+  const scope = req.query.venture_id ? { venture_id: String(req.query.venture_id) } : {} // one project, or the whole portfolio
   const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString()
   const [ventures, signals, runs, activity, sessions, experiments] = await Promise.all([
-    db.list('ventures', u),
-    db.list('market_signals', u, { limit: 8 }),
-    db.count('agent_runs', { ...u, created_at: { gte: weekAgo } }),
-    db.list('activity_logs', u, { limit: 10 }),
-    db.count('boardroom_sessions', u),
-    db.list('experiments', u, { limit: 50 }),
+    db.list('ventures', { ...u, ...(scope.venture_id && { id: scope.venture_id }) }),
+    db.list('market_signals', { ...u, ...scope }, { limit: 8 }),
+    db.count('agent_runs', { ...u, ...scope, created_at: { gte: weekAgo } }),
+    db.list('activity_logs', { ...u, ...scope }, { limit: 10 }),
+    db.count('boardroom_sessions', { ...u, ...scope }),
+    db.list('experiments', { ...u, ...scope }, { limit: 50 }),
   ])
   const scored = ventures.filter((v) => v.overall_score != null)
   res.json({
@@ -287,8 +288,9 @@ r.post('/knowledge/ask', async (req, res) => {
 
 // ---------------------------------------------------------------- activity + notifications
 
-r.get('/activity', async (req, res) => res.json(await db.list('activity_logs', { user_id: req.user.id }, { limit: 200 })))
-r.get('/agent-runs', async (req, res) => res.json(await db.list('agent_runs', { user_id: req.user.id }, { limit: 200 })))
+const scoped = (req) => ({ user_id: req.user.id, ...(req.query.venture_id && { venture_id: String(req.query.venture_id) }) })
+r.get('/activity', async (req, res) => res.json(await db.list('activity_logs', scoped(req), { limit: 200 })))
+r.get('/agent-runs', async (req, res) => res.json(await db.list('agent_runs', scoped(req), { limit: 200 })))
 r.get('/notifications', async (req, res) => res.json(await db.list('notifications', { user_id: req.user.id }, { limit: 50 })))
 
 r.post('/notifications/read', async (req, res) => {

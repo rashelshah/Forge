@@ -4,11 +4,13 @@ import { Link } from 'react-router'
 import { useShell } from '@/components/AppShell'
 import { DecisionBadge, Empty, Loading, SCORE_KEYS, SCORE_LABELS, SEVERITY_TONE, ScoreRing, StageBadge, Stat, scoreColor } from '@/components/bits'
 import { Spark } from '@/components/brand'
+import { VentureSelect } from '@/components/VentureSelect'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
 import { useMe } from '@/lib/queries'
+import { useVentureFilter } from '@/lib/venture'
 import type { Activity, Signal, Venture } from '@/lib/types'
 import { ago } from '@/lib/utils'
 
@@ -27,7 +29,8 @@ const greeting = () => {
 export default function Dashboard() {
   const { newVenture } = useShell()
   const { data: me } = useMe()
-  const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: () => api<Dash>('/dashboard') })
+  const { venture } = useVentureFilter() // undefined = whole portfolio
+  const { data, isLoading } = useQuery({ queryKey: ['dashboard', venture?.id], queryFn: () => api<Dash>(`/dashboard${venture ? `?venture_id=${venture.id}` : ''}`) })
 
   return (
     <>
@@ -37,14 +40,14 @@ export default function Dashboard() {
           <h1 className="text-[34px] leading-[1.1] sm:text-[40px]">{greeting()}, {me?.full_name?.split(' ')[0] || 'founder'}</h1>
           <p className="mt-2 text-[15px] text-ink-2">Your agents have been busy. Here's the state of your studio.</p>
         </div>
-        <Button onClick={newVenture}><Plus />New venture</Button>
+        <div className="flex flex-wrap gap-2"><VentureSelect allowAll /><Button onClick={newVenture}><Plus />New venture</Button></div>
       </div>
 
       {isLoading || !data ? <Loading rows={4} /> : (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <Stat label="Active ventures" value={data.stats.active} />
-            <Stat label="Avg. validation" value={data.stats.avgScore ?? '—'} hint="out of 100" />
+            {venture ? <Stat label="Stage" value={<span className="capitalize">{venture.stage}</span>} /> : <Stat label="Active ventures" value={data.stats.active} />}
+            <Stat label={venture ? 'Validation score' : 'Avg. validation'} value={data.stats.avgScore ?? '—'} hint="out of 100" />
             <Stat label="Boardroom sessions" value={data.stats.boardroomSessions} />
             <Stat label="Agent runs · 7d" value={data.stats.agentRunsWeek} />
             <Stat label="Live experiments" value={data.stats.runningExperiments} />
@@ -70,7 +73,7 @@ export default function Dashboard() {
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xl">Portfolio</h2>
+                <h2 className="text-xl">{venture ? 'Project' : 'Portfolio'}</h2>
                 <Link to="/app/ventures" className="flex items-center gap-1 text-sm text-muted hover:text-ink">All ventures <ArrowRight className="size-3.5" /></Link>
               </div>
               {data.ventures.length === 0 ? (

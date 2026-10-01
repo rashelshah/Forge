@@ -7,9 +7,11 @@ import { OpportunityCard, ReportBody } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { VentureSelect } from '@/components/VentureSelect'
 import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAction, useVentures } from '@/lib/queries'
+import { useVentureFilter } from '@/lib/venture'
 import type { Opportunity, Report, ReportKind, Venture } from '@/lib/types'
 import { cn, date } from '@/lib/utils'
 
@@ -26,13 +28,17 @@ export default function Research() {
   const [kind, setKind] = useState<ReportKind | null>(null)
   const [seed, setSeed] = useState('')
   const nav = useNavigate()
-  const { data = [], isLoading } = useQuery({ queryKey: ['research', { kind }], queryFn: () => api<Report[]>(`/research${kind ? `?kind=${kind}` : ''}`) })
+  const { venture } = useVentureFilter()
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['research', { kind, venture_id: venture?.id }],
+    queryFn: () => api<Report[]>(`/research?${new URLSearchParams({ ...(kind && { kind }), ...(venture && { venture_id: venture.id }) })}`),
+  })
   const { data: ventures = [] } = useVentures()
   const discover = useAction(() => api<Report>('/discover', { seed }), [['research'], ['me'], ['activity']], 'Discovery complete')
 
   return (
     <>
-      <PageHeader eyebrow="Research" title="Research reports" description="Every opportunity scan, validation, MVP blueprint, landing page and experiment analysis your agents have produced." />
+      <PageHeader eyebrow="Research" title="Research reports" description="Every opportunity scan, validation, MVP blueprint, landing page and experiment analysis your agents have produced." actions={<VentureSelect allowAll />} />
       <Card className="mb-6 overflow-hidden">
         <div className="relative isolate flex flex-col gap-4 p-5 md:flex-row md:items-center">
           <div className="aurora-soft -z-10" />
@@ -56,7 +62,7 @@ export default function Research() {
       </div>
 
       {isLoading ? <Loading /> : data.length === 0 ? (
-        <Empty icon={<FileSearch />} title="No reports yet">Run discovery above, or validate a venture to generate your first report.</Empty>
+        <Empty icon={<FileSearch />} title={venture ? `No reports for ${venture.name} yet` : 'No reports yet'}>Run discovery above, or validate a venture to generate your first report.</Empty>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {data.map((r) => {

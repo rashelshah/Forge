@@ -35,7 +35,10 @@ export async function auth(req, res, next) {
   next()
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function own(table, id, user) {
+  if (typeof id !== 'string' || !UUID.test(id)) throw new HttpError(404, 'Not found') // Postgres would 500 on a malformed uuid
   const row = await db.get(table, id)
   if (!row || row.user_id !== user.id) throw new HttpError(404, 'Not found')
   return row

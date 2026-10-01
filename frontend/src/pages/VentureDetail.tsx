@@ -15,7 +15,8 @@ import { Card } from '@/components/ui/card'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
-import { useAction, useVenture } from '@/lib/queries'
+import { useAction, useVenture, useVentures } from '@/lib/queries'
+import { rememberVenture } from '@/lib/venture'
 import type { BoardSession, Chunk, Memory, MvpPlan, PrototypeContent, Report, Stage, Validation, Venture } from '@/lib/types'
 import { ago, cn, date, titleCase } from '@/lib/utils'
 import { CompetitiveIntelligencePanel } from './CompetitiveIntelligence'
@@ -157,6 +158,8 @@ export default function VentureDetail() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') || 'overview'
   const { data: v, isLoading, error } = useVenture(id)
+  const { data: all = [] } = useVentures()
+  useEffect(() => { if (v) rememberVenture(v.id) }, [v]) // opening a venture makes it the current project in every section
   const reports = useReports(id)
   const { data: sessions = [] } = useQuery({ queryKey: ['boardroom', { venture_id: id }], queryFn: () => api<BoardSession[]>(`/boardroom?venture_id=${id}`) })
   const validate = useValidate(id)
@@ -194,7 +197,12 @@ export default function VentureDetail() {
           <h1 className="mt-2 text-[34px] leading-[1.1] sm:text-[40px]">{v.name}</h1>
           <p className="mt-2 max-w-3xl text-[15px] text-ink-2">{v.idea}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {all.length > 1 && (
+            <Select value={v.id} onChange={(e) => nav(`/app/ventures/${e.target.value}${tab !== 'overview' ? `?tab=${tab}` : ''}`)} className="h-9 w-48 text-sm" aria-label="Project" title={v.name}>
+              {all.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </Select>
+          )}
           <Select value={v.stage} onChange={(e) => update.mutate({ stage: e.target.value as Stage })} className="h-9 w-36 text-sm capitalize" aria-label="Stage">
             {STAGES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
           </Select>

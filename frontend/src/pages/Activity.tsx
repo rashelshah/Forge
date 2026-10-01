@@ -4,9 +4,11 @@ import { Link } from 'react-router'
 import { Empty, Loading, PageHeader } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { VentureSelect } from '@/components/VentureSelect'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api } from '@/lib/api'
 import { useVentures } from '@/lib/queries'
+import { useVentureFilter } from '@/lib/venture'
 import type { Activity as Act, AgentRun } from '@/lib/types'
 import { ago, cn } from '@/lib/utils'
 
@@ -18,15 +20,17 @@ const dayLabel = (iso: string) => {
 }
 
 export default function Activity() {
-  const { data: acts = [], isLoading } = useQuery({ queryKey: ['activity'], queryFn: () => api<Act[]>('/activity'), refetchInterval: 20_000 })
-  const { data: runs = [] } = useQuery({ queryKey: ['agent-runs'], queryFn: () => api<AgentRun[]>('/agent-runs'), refetchInterval: 20_000 })
+  const { venture } = useVentureFilter()
+  const q = venture ? `?venture_id=${venture.id}` : ''
+  const { data: acts = [], isLoading } = useQuery({ queryKey: ['activity', venture?.id], queryFn: () => api<Act[]>(`/activity${q}`), refetchInterval: 20_000 })
+  const { data: runs = [] } = useQuery({ queryKey: ['agent-runs', venture?.id], queryFn: () => api<AgentRun[]>(`/agent-runs${q}`), refetchInterval: 20_000 })
   const { data: ventures = [] } = useVentures()
   const name = (id: string | null) => ventures.find((v) => v.id === id)?.name
   const groups = acts.reduce<Record<string, Act[]>>((g, a) => ((g[dayLabel(a.created_at)] ??= []).push(a), g), {})
 
   return (
     <>
-      <PageHeader eyebrow="Agent activity" title="What your agents did" description="An audit trail of every agent action and founder decision across your studio." />
+      <PageHeader eyebrow="Agent activity" title="What your agents did" description="An audit trail of every agent action and founder decision across your studio." actions={<VentureSelect allowAll />} />
       <Tabs defaultValue="feed">
         <TabsList className="mb-6"><TabsTrigger value="feed">Feed</TabsTrigger><TabsTrigger value="runs">Agent runs</TabsTrigger></TabsList>
         <TabsContent value="feed">

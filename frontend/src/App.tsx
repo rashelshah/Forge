@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { useAuth } from './lib/auth'
 import { useVentures } from './lib/queries'
+import { storedVenture } from './lib/venture'
 import Activity from './pages/Activity'
 import Boardroom, { BoardroomSession } from './pages/Boardroom'
 import CompetitiveIntelligence from './pages/CompetitiveIntelligence'
@@ -32,11 +33,12 @@ function Moved({ to }: { to: string }) {
   return <Navigate to={{ pathname: to, search: useLocation().search }} replace />
 }
 
-/** Sidebar shortcut to a venture workspace tab: opens the newest venture on that tab. */
+/** Sidebar shortcut to a venture workspace tab: opens the current project (else the newest) on that tab. */
 function VentureTab({ tab }: { tab: string }) {
   const { data, isLoading } = useVentures()
   if (isLoading) return null
-  return <Navigate to={data?.[0] ? `/app/ventures/${data[0].id}?tab=${tab}` : '/app/ventures'} replace />
+  const v = data?.find((x) => x.id === storedVenture()) ?? data?.[0]
+  return <Navigate to={v ? `/app/ventures/${v.id}?tab=${tab}` : '/app/ventures'} replace />
 }
 
 export default function App() {

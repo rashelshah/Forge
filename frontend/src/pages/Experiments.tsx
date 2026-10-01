@@ -11,8 +11,10 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { VentureSelect } from '@/components/VentureSelect'
 import { api, publicPageUrl } from '@/lib/api'
 import { useAction, useVentures } from '@/lib/queries'
+import { useVentureFilter } from '@/lib/venture'
 import type { Experiment, ExperimentAnalysis, Report } from '@/lib/types'
 import { ago, cn, date, titleCase } from '@/lib/utils'
 
@@ -95,11 +97,12 @@ function NewExperiment({ open, onOpenChange }: { open: boolean; onOpenChange: (o
 
 export default function Experiments() {
   const [open, setOpen] = useState(false)
+  const { venture } = useVentureFilter()
   return (
     <>
       <PageHeader eyebrow="Validation lab" title="Validation Lab" description="Share prototypes with real users, log interviews and surveys. Results flow into venture memory and future agent decisions."
-        actions={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>} />
-      <ExperimentList empty={<Empty icon={<FlaskConical />} title="No experiments yet" action={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>}>Build a prototype from a venture and share it with testers, or log interviews and surveys by hand.</Empty>} />
+        actions={<><VentureSelect allowAll /><Button onClick={() => setOpen(true)}><Plus />New experiment</Button></>} />
+      <ExperimentList ventureId={venture?.id} empty={<Empty icon={<FlaskConical />} title="No experiments yet" action={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>}>Build a prototype from a venture and share it with testers, or log interviews and surveys by hand.</Empty>} />
       <NewExperiment open={open} onOpenChange={setOpen} />
     </>
   )
