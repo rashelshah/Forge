@@ -3,7 +3,7 @@ import { Plus, Radar } from 'lucide-react'
 import { useState } from 'react'
 import { Empty, Loading, PageHeader } from '@/components/bits'
 import { INTEL_KEYS, IntelPanel } from '@/components/intel'
-import { YcPanel } from '@/components/yc'
+import { PeersPanel } from '@/components/peers'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input, Select } from '@/components/ui/input'
@@ -59,7 +59,7 @@ export function CompetitiveIntelligencePanel({ ventureId }: { ventureId: string 
   return (
     <>
       <IntelPanel ventureId={ventureId} ventureName={ventures.find((v) => v.id === ventureId)?.name ?? 'You'} data={intel.data} isLoading={intel.isLoading} onAdd={() => setOpen(true)} />
-      <div className="mt-12"><YcPanel ventureId={ventureId} competitors={intel.data?.competitors ?? []} /></div>
+      <div className="mt-12"><PeersPanel ventureId={ventureId} competitors={intel.data?.competitors ?? []} /></div>
       <AddCompetitor ventureId={ventureId} open={open} onOpenChange={setOpen} />
     </>
   )

@@ -110,7 +110,7 @@ function Actions({ actions }: { actions: IntelAction[] }) {
 function Watch({ c, memory, scan, del, scanning }: { c: Competitor; memory: IntelData['memory'][string]; scan: () => void; del: () => void; scanning: boolean }) {
   const p = c.profile
   return (
-    <Card className="flex flex-col p-5">
+    <Card className="flex min-w-0 flex-col p-5">
       <div className="flex items-start gap-3">
         {p ? <ThreatRing score={p.strategic_threat} /> : <span className="grid size-[52px] shrink-0 place-items-center rounded-full bg-soft font-display text-lg font-semibold">{c.name.slice(0, 1)}</span>}
         <div className="min-w-0 flex-1">

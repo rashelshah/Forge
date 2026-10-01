@@ -111,3 +111,18 @@ supabase/   migrations/001_init.sql
 ## Design
 
 The UI follows Sarvam AI's visual language: an off-white canvas, a saffron → periwinkle aurora behind heroes, hairline-framed eyebrows, pill buttons with a lit top edge, 16px hairline cards, dot-grid panels and gradient feature tiles. Fonts are free substitutes for Sarvam's licensed faces: Instrument Sans (display) and Geist (text).
+
+## Startup datasets (`shared/*.csv`)
+
+Agents and the Competitive Intelligence page use real data, never guesses. `ai/startupdata.py` cleans the CSVs, finds the companies that overlap with an idea (keyword + embedding search, then a model judges direct / adjacent / unrelated from the company's own text) and **computes** statistics in code (outcomes, funding, unicorns, deals), each with its sample size, period and caveat. Agents may only quote those peers (`P#`) and facts (`F#`); any number in a validation summary that is not in the sources the model was shown is removed.
+
+| Used | For |
+| --- | --- |
+| `YC-all-batches.csv` (998, mostly 2025-26) | who is building this now |
+| `Startupsss.csv` (688 early YC, 2005-14) | dead / exited / operating outcomes (as of ~2015) |
+| `startup data.csv` (923 Crunchbase US, to 2013) | acquired vs closed rates (only those two outcomes are in the file) |
+| `startup_funding.csv` (India deals 2015-20) | deal counts, amounts, investors (coverage collapses after 2017) |
+| `unicorns till sep 2022.csv`, `Indian Unicorn startups 2023 updated.csv` | unicorn counts and valuations |
+| `Startups1.csv`, `top_100_saas_companies_2025.csv` | names and descriptions only (their money fields are unreliable) |
+
+Not used: `global_tech_startups_2026.csv` (synthetic), `Founders.csv`, `Startups.csv`. The CSVs are git-ignored; copy them to `shared/` on any deployment.

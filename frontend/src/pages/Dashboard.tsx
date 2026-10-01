@@ -71,7 +71,7 @@ export default function Dashboard() {
           </Card>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div>
+            <div className="min-w-0">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-xl">{venture ? 'Project' : 'Portfolio'}</h2>
                 <Link to="/app/ventures" className="flex items-center gap-1 text-sm text-muted hover:text-ink">All ventures <ArrowRight className="size-3.5" /></Link>
@@ -109,7 +109,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               <Card>
                 <CardHeader><CardTitle>Market signals</CardTitle><Link to="/app/competitive-intelligence" className="text-xs text-muted hover:text-ink">View all</Link></CardHeader>
                 <div className="p-2">

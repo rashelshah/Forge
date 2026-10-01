@@ -16,7 +16,7 @@ import intel
 import learn
 import market
 import studio
-import yc
+import startupdata as sd
 
 app = FastAPI(title="Forge AI agents")
 VECTOR_ERROR = None
@@ -26,7 +26,7 @@ except Exception as e:  # e.g. supabase/migrations/002_pgvector.sql not applied 
     VECTOR_ERROR = str(e)[:300]
     print("vector store unavailable:", VECTOR_ERROR)
 KEY = os.getenv("AI_INTERNAL_KEY")
-yc.start()  # index the Y Combinator directory in the background
+sd.start()  # load and index the startup datasets in the background
 
 
 @app.middleware("http")
@@ -240,9 +240,9 @@ def memory_synthesize(venture: dict = Body(...), memories: list[dict] = Body(...
     return long_job(learn.run, venture, memories)
 
 
-@app.post("/yc/similar")
-def yc_similar(query: str = Body(..., embed=True), k: int = Body(12, embed=True)):
-    return yc.context(query, k=min(max(k, 1), 20))
+@app.post("/peers")
+def peers(query: str = Body(..., embed=True), k: int = Body(12, embed=True)):
+    return sd.context(query, k=min(max(k, 1), 20))
 
 
 @app.post("/studio/edit")

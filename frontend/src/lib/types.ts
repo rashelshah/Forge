@@ -318,14 +318,15 @@ export interface MemoryData {
 }
 export type MemoryHit = Memory & { score: number }
 
-// ---------------------------------------------------------------- Y Combinator directory
+// ---------------------------------------------------------------- startup datasets (peers + computed facts)
 
-export interface YcItem {
-  id: string; name: string; one_liner: string; description: string; website: string | null; yc_url: string | null; location: string | null
-  founded: number | null; batch: string | null; team: number | null; status: string | null; score: number
-  relevance: 'direct' | 'adjacent' | 'unverified'; reason: string
+export interface Peer {
+  name: string; one_liner: string; relevance: 'direct' | 'adjacent' | 'unverified'; reason: string; sources: string[]
+  outcome: 'operating' | 'exited' | 'dead' | null; outcome_note: string | null; year: number | null; batch: string | null; location: string | null
+  website: string | null; yc_url: string | null; valuation_b: number | null; valuation_date: string | null; funding_usd: number | null; funding_note: string | null; investors: string[]
 }
-export interface YcData {
-  available: boolean; reason?: string; items: YcItem[]
-  stats: { total?: number; reviewed?: number; direct?: number; adjacent?: number; recent?: number; verified?: boolean }
+export interface DataFact { id: string; source: string; title: string; text: string; n: number; caveat: string }
+export interface PeersData {
+  available: boolean; reason?: string; peers: Peer[]; facts: DataFact[]; coverage: { id: string; label: string; n: number; years: string | null }[]
+  stats: { reviewed?: number; direct?: number; adjacent?: number; verified?: boolean }
 }

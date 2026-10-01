@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 import agents
 import core
 import intel
-import yc
+import startupdata as sd
 
 Level = Literal["low", "medium", "high"]
 
@@ -85,7 +85,7 @@ def run(venture: dict, context: dict) -> dict:
         raise core.LLMError("Market Signals needs an LLM: set GEMINI_API_KEY, GROQ_API_KEY or OPENAI_API_KEY")
     sources = _sources(venture["idea"])
     live = bool(sources)
-    ycx = yc.context(venture["idea"], k=6)
+    ycx = sd.context(venture["idea"], k=6)
     mem = "\n".join(f"- ({m['kind']}) {m['title']}: {m['content'][:240]}" for m in context.get("memories", [])[:20]) or "(none yet)"
     out: Radar = intel._retry(lambda: core.structured(
         Radar,
@@ -97,8 +97,22 @@ def run(venture: dict, context: dict) -> dict:
         f"{agents.venture_text(venture)}\nTracked competitors: {', '.join(context.get('competitors', [])) or 'none'}\n"
         f"Latest competitive brief: {(context.get('intel') or {}).get('market_trend') or 'none'}\n"
         f"What the venture has learned so far:\n{mem}\nSignals already known (skip them): {'; '.join(context.get('known_signals', [])[:30]) or 'none'}\n"
-        f"Today: {date.today().isoformat()}\n\n{ycx['text']}\n(Use the Y Combinator block for competition, funding and trend claims; it is not a news source, so do not make it a signal.)\n\nSources:\n{core.sources_block(sources)}",
+        f"Today: {date.today().isoformat()}\n\n{ycx['text']}\n(Use the startup data block for competition, funding and outcome claims and quote only its F# facts; it is a dataset, not news, so do not make it a signal.)\n\nSources:\n{core.sources_block(sources)}",
         tier="heavy", max_tokens=6500, temperature=0.4)).model_dump()
+
+    # Same rule as validation: a sentence stating a number that is in none of the material the model was given is removed, and citation tags are stripped.
+    corpus = " ".join([f"{x['title']} {x['content']}" for x in sources] + [ycx["text"], agents.venture_text(venture), mem, str(context.get("intel") or "")])
+    g = lambda t: agents.ground_text(t, corpus)[0]
+    for s in out["signals"]:
+        s["summary"], s["impact"], s["opportunity"] = g(s["summary"]), g(s["impact"]), g(s["opportunity"])
+    for o in out["opportunities"]:
+        o["description"] = g(o["description"])
+    for t in out["threats"]:
+        t["description"], t["suggested_action"] = g(t["description"]), g(t["suggested_action"])
+    for t in out["trends"]:
+        t["summary"] = g(t["summary"])
+    out["outlook"]["summary"], out["outlook"]["best_area"] = g(out["outlook"]["summary"]), g(out["outlook"]["best_area"])
+    out["overview"]["drivers"], out["overview"]["risks"] = [g(x) for x in out["overview"]["drivers"]], [g(x) for x in out["overview"]["risks"]]
 
     signals = []
     for s in out["signals"]:

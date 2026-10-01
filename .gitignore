@@ -7,5 +7,7 @@ ai/.qdrant
 ai/__pycache__
 backend/.data
 YC-all-batches.csv
-ai/.yc_cache.json
+ai/.startupdata_cache.json
+ai/.startupdata_cache.npy
 shared/*.csv
+ai/.startupdata_judged.json

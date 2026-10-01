@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 import core
 import demo
-import yc
+import startupdata as sd
 
 PLATFORMS = {
     "Reddit": ["reddit.com"],
@@ -23,13 +23,17 @@ def _platform(url: str) -> str:
     return next((p for p, ds in PLATFORMS.items() if any(d in url for d in ds)), "Web")
 
 
-def _resolve(ids: list[str], web: list[dict], lib: list[dict], ycs: list[dict] | None = None):
+def _resolve(ids: list[str], web: list[dict], lib: list[dict], data: dict | None = None):
+    """S# web source, K# library document, P# real peer company, F# computed dataset fact: ids are resolved here so the model cannot invent a source."""
     out = []
+    data = data or {}
     for sid in ids:
-        m = re.fullmatch(r"\[?([SKY])(\d+)\]?", sid.strip())
+        m = re.fullmatch(r"\[?([SKPF])(\d+)\]?", sid.strip())
         if not m:
             continue
-        pool, i = {"S": web, "K": lib, "Y": [{"title": f"YC: {c['name']}", "url": c["website"] or c["yc_url"]} for c in ycs or []]}[m[1]], int(m[2]) - 1
+        pool, i = {"S": web, "K": lib,
+                   "P": [{"title": f"{c['name']} ({c['sources'][0]})", "url": c.get("website") or c.get("yc_url")} for c in data.get("peers", [])],
+                   "F": [{"title": f"{c['source']}: {c['title']} (n={c['n']})", "url": None} for c in data.get("facts", [])]}[m[1]], int(m[2]) - 1
         if 0 <= i < len(pool):
             src = pool[i]
             out.append({"title": src["title"], "url": src.get("url"), "type": "library" if m[1] == "K" else "web"})
@@ -53,9 +57,11 @@ def _verbatim(quote: str, pool: list[dict]) -> bool:
     return len(q) >= 12 and any(q in _norm(r["content"]) for r in pool)
 
 
-YC_RULES = (" The Y Combinator directory block lists real YC companies as Y1, Y2...: cite them as evidence with source_id 'Y#' when you say who competes or has tried this, "
-            "count 'direct' ones as competitors in the competition score and in the competitors list, and never call a space empty or uncontested on the basis of a thin directory. "
-            "Use only names from that block.")
+PEER_RULES = (" The STARTUP DATA block lists real companies as P1, P2... and statistics computed in code as F1, F2...: cite them as evidence with source_id 'P#' or 'F#' when you say who competes, "
+              "who failed or exited, how much was raised or how the segment behaves. Count 'direct' peers as competitors in the competition score and the competitors list. Quote a number ONLY if it appears in an F# fact or "
+              "a cited source, give it with its sample size, respect each fact's caveat (segment-wide, snapshot dates, small samples) and say 'not in our data' instead of estimating. When F# facts exist you MUST cite at least one in the competition evidence (outcomes, deals or unicorns of the segment) and at least one in revenue_potential if any fact covers funding, deals "
+              "or valuations, stating the number and its sample size. Never call a market empty on the basis of these "
+              "datasets, which are snapshots and samples. Use only names that appear in the block.")
 GROUNDING = (
     "Rules: use only facts present in the provided sources or library; cite them by id. Never invent statistics, "
     "company names, quotes or URLs. If the evidence is thin, say so explicitly and lower your confidence."
@@ -123,7 +129,7 @@ def discover(seed: str | None, founder: dict):
 
 class Evidence(BaseModel):
     claim: str = Field(description="A specific fact stated in the cited source (paraphrased), never text from these instructions")
-    source_id: str = Field(description="S# for a web source, K# for a library document or Y# for a Y Combinator company")
+    source_id: str = Field(description="S# web source, K# library document, P# real peer company or F# computed dataset fact")
 
 
 class Score(BaseModel):
@@ -153,10 +159,41 @@ class ValidationOut(BaseModel):
 WEIGHTS = {"demand": 0.3, "revenue_potential": 0.2, "defensibility": 0.2, "competition": 0.15, "founder_fit": 0.15}
 RUBRIC = """Scoring rubric (higher is always better for the founder):
 - demand: 80+ = sources show many people actively paying for or hacking around this; 60-79 = clear recurring complaints; 40-59 = plausible but thin evidence; <40 = little sign anyone cares.
-- competition: (count direct Y Combinator matches as incumbents) 80+ = no credible incumbent; 60-79 = incumbents with clear gaps; 40-59 = crowded but differentiable; <40 = dominated by strong players.
+- competition: (count direct peer companies as incumbents) 80+ = no credible incumbent; 60-79 = incumbents with clear gaps; 40-59 = crowded but differentiable; <40 = dominated by strong players.
 - defensibility: moats available (network effects, proprietary data, switching costs, brand). AI-wrapper-only ideas score <45.
 - revenue_potential: willingness to pay x market size x pricing evidence.
 - founder_fit: overlap of founder skills/industries/experience with what this venture needs. If no founder profile is given, score 50 and say the profile is missing."""
+
+
+NUM = re.compile(r"\$?\s?\d[\d,]*(?:\.\d+)?\s?(?:%|percent|billion|million|thousand|[BMKbmk]\b)?")
+
+
+def ungrounded(text: str, corpus: str) -> list[str]:
+    """Numbers in `text` that appear nowhere in `corpus` (everything the model was shown): a statistic like that was invented or half-remembered."""
+    flat = re.sub(r"(?<=\d),(?=\d)", "", corpus)
+    bad = []
+    for m in NUM.finditer(text):
+        tok = m.group().strip()
+        digits = re.sub(r"[^\d.]", "", tok).rstrip(".")
+        if not digits or re.fullmatch(r"(19|20)\d\d", digits):
+            continue  # years
+        if len(digits.replace(".", "")) < 2 and not re.search(r"[%$]|percent|billion|million|thousand|[BMKbmk]\b", tok):
+            continue  # "3 risks", "one of"
+        if not re.search(r"(?<![\d.])" + re.escape(digits) + r"(?!\d|\.\d)", flat):  # whole numbers only: '30' must not match inside '2030'
+            bad.append(tok)
+    return bad
+
+
+def ground_text(text: str, corpus: str) -> tuple[str, int]:
+    """Drops every sentence that states a number the sources do not contain. Returns the cleaned text and how many sentences were removed."""
+    text = re.sub(r"\s*[\[(](?:[SKPF]\d+(?:\s*[,;]\s*[SKPF]\d+)*)[\])]", "", text or "")  # citation tags belong in the evidence list, not in the sentence
+    sents = re.split(r"(?<=[.!?])\s+", text.strip())
+    kept = [x for x in sents if x and not ungrounded(x, corpus)]
+    return (" ".join(kept) if kept else "The sources do not give enough evidence to quantify this."), len(sents) - len(kept)
+
+
+# Computed dataset facts are attached as evidence by code, not left to the model's discretion.
+FACT_EVIDENCE = {"competition": {"yc_historic", "crunchbase_us", "peers", "unicorns"}, "revenue_potential": {"india_deals", "unicorns"}, "defensibility": set(), "demand": {"india_deals", "unicorns"}}
 
 
 def _url_ok(url: str | None) -> str | None:
@@ -181,14 +218,14 @@ def validate(venture: dict, founder: dict):
     )
     lib = core.search_knowledge(f"how to evaluate demand, competition, moats and business model for: {idea}", k=4)
     mem = core.recall(venture["id"], idea, k=4)
-    ycx = yc.context(idea)
+    ycx = sd.context(idea)
     if not core.OPENAI:
         out = demo.validate(venture, founder, lib)
     else:
         res = core.structured(
             ValidationOut,
             "You are Forge's Validation Engine, a rigorous startup analyst. Score the venture on five dimensions. "
-            + RUBRIC + "\n" + GROUNDING + YC_RULES + "\nSummaries and risks: " + core.PLAIN,
+            + RUBRIC + "\n" + GROUNDING + PEER_RULES + "\nSummaries and risks: " + core.PLAIN,
             f"{venture_text(venture)}\nFounder profile: {founder or 'not provided'}\n\nVenture memory:\n"
             f"{core.context_block(mem, 'Memory')}\n\nWeb sources:\n{core.sources_block(web)}\n\nLibrary:\n{lib_block(lib)}\n\n{ycx['text']}",
             temperature=0.2,
@@ -198,12 +235,27 @@ def validate(venture: dict, founder: dict):
             out[key]["evidence"] = [
                 {"claim": e["claim"], **src}
                 for e in out[key]["evidence"]
-                for src in _resolve([e["source_id"]], web, lib, ycx["items"])
+                for src in _resolve([e["source_id"]], web, lib, ycx)
             ]
             # A score the model couldn't back with any real source is capped: it's a hypothesis, not a finding.
             if not out[key]["evidence"] and key != "founder_fit" and out[key]["score"] > 55:
                 out[key]["score"] = 55
                 out[key]["summary"] += " (Capped at 55: no citable evidence.)"
+        corpus = " ".join([f"{w['title']} {w['content']}" for w in web] + [d["text"] for d in lib] + [m["text"] for m in mem] + [ycx["text"], venture_text(venture), str(founder or "")])
+        removed = 0
+        for key in (*WEIGHTS, ):
+            out[key]["summary"], n = ground_text(out[key]["summary"], corpus)
+            removed += n
+            for e in out[key]["evidence"]:
+                e["claim"], n = ground_text(e["claim"], corpus)
+                removed += n
+            for f in ycx["facts"]:  # real, computed evidence, attached regardless of what the model chose to cite
+                if f["sid"] in FACT_EVIDENCE.get(key, ()):
+                    out[key]["evidence"].append({"claim": f["text"][:340], "title": f"{f['source']} (n={f['n']})", "url": None, "type": "library"})
+        out["summary"], n = ground_text(out["summary"], corpus)
+        removed += n
+        out["key_risks"] = [r for r in (ground_text(x, corpus)[0] for x in out["key_risks"]) if not r.startswith("The sources do not give")] or out["key_risks"]
+        out["grounding_removed"] = removed
         web_domains = {re.sub(r"^www\.", "", core.httpx.URL(w["url"]).host) for w in web}
         for c in out["competitors"]:
             host = re.sub(r"^www\.", "", core.httpx.URL(c["url"]).host) if c.get("url") and re.match(r"https?://", c["url"]) else None
@@ -214,7 +266,7 @@ def validate(venture: dict, founder: dict):
     out["overall"] = round(sum(out[k]["score"] * w for k, w in WEIGHTS.items()))
     out["mode"] = core.MODE
     out["web_sources"] = len(web)
-    out["yc"] = {"stats": ycx["stats"], "matches": [{k: c[k] for k in ("name", "one_liner", "website", "yc_url", "batch", "status", "relevance", "reason")} for c in ycx["items"]]} if ycx["available"] else None
+    out["peers"] = {"stats": ycx["stats"], "facts": ycx["facts"], "matches": [{k: c.get(k) for k in ("name", "one_liner", "website", "relevance", "reason", "outcome", "sources")} for c in ycx["peers"]]} if ycx["available"] else None
     return out
 
 

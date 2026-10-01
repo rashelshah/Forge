@@ -23,7 +23,7 @@ import core
 import design_intel
 import studio_kit as kit
 import studio_recipes as recipes
-import yc
+import startupdata as sd
 
 SHOT_BUCKET = "studio-screenshots"
 MEMORY = "studio_memory"
@@ -681,7 +681,7 @@ def build(run: Run):
     def strategist_user(s):
         lib = core.search_knowledge(f"{s['idea']} customers problem positioning", s["user_id"], 4)
         return "\n\n".join(filter(None, [intake(run.project), "STARTUP KNOWLEDGE (Forge library):\n" + core.context_block(lib, "Library"),
-                                         yc.context(f"{run.project['name']}: {s['idea']}", k=6)["text"] + "\nUse these real companies for the product's alternatives and differentiators; name them only if listed.",
+                                         sd.context(s["idea"], k=6)["text"] + "\nUse these real companies and facts for the product's alternatives, differentiators and risks; name or quote only what is listed.",
                                          _past_block(s, run.project["idea"])]))
 
     def researcher_user(s):

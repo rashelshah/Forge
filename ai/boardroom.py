@@ -8,7 +8,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 import core
-import yc
+import startupdata as sd
 import demo
 from agents import venture_text
 
@@ -190,7 +190,7 @@ def run(venture: dict, question: str, rounds: int, validation: dict | None, owne
             scores += "\nKnown competitors: " + "; ".join(f"{c['name']} — {c['description']}" for c in validation["competitors"][:6])
     context = (
         f"{venture_text(venture)}\n{scores}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}\n\n"
-        f"Startup library:\n{core.context_block(lib, 'Library')}\n\n{yc.context(venture['idea'], k=6)['text']}"
+        f"Startup library:\n{core.context_block(lib, 'Library')}\n\n{sd.context(venture['idea'], k=6)['text']}\n(Use these real companies and computed facts for the board's arguments; quote no statistic that is not in them; any other number you suggest must be framed as a target or an assumption to test, never as a fact.)"
     )
     state = {"venture": venture, "question": question, "context": context,
              "failure_context": core.context_block(fails, "Library"),
