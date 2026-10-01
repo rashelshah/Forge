@@ -69,60 +69,287 @@ GROUNDING = (
 
 
 # ---------------------------------------------------------------- Opportunity discovery
+# Problem-first pipeline: gather -> extract pains -> cluster + score -> analyse incumbents/failures/white space -> startup -> validate.
+# Anything countable (mentions, evidence strength, ranking, overall score, confidence) is computed in code, never asserted by the model.
 
-class Opportunity(BaseModel):
-    title: str = Field(description="Short, specific opportunity name (max 8 words)")
-    problem: str = Field(description="The underlying user problem in one or two sentences, grounded in the sources")
-    frequency: str = Field(description="How often the problem occurs for the user, e.g. 'Weekly, every payroll run'")
-    pain_level: int = Field(ge=1, le=10, description="1-10. 8+ only if sources show people paying, hacking workarounds or expressing strong frustration")
+Lvl = Literal["low", "medium", "high"]
+
+class PainPoint(BaseModel):
+    pain_point: str = Field(description="The problem only. Never a solution or product idea")
+    target_user: str
+    evidence: str = Field(description="A snippet copied character-for-character from the cited source, else a close paraphrase")
+    source_id: str = Field(description="One provided id like S4")
+    severity: Lvl
+    frequency: str = Field(description="How often it hits the user, e.g. 'every payroll run'")
+
+
+class ClusterScores(BaseModel):
+    pain_severity: int = Field(ge=0, le=100)
+    frequency: int = Field(ge=0, le=100)
+    growth_rate: int = Field(ge=0, le=100, description="Only above 50 if sources show rising or recent discussion")
+    urgency: int = Field(ge=0, le=100)
+    market_size: int = Field(ge=0, le=100)
+    ai_leverage: int = Field(ge=0, le=100)
+    automation_potential: int = Field(ge=0, le=100)
+    revenue_potential: int = Field(ge=0, le=100)
+    competition_intensity: int = Field(ge=0, le=100, description="100 = crowded with strong incumbents")
+    defensibility: int = Field(ge=0, le=100)
+
+
+class Cluster(BaseModel):
+    title: str = Field(description="Specific name of the problem cluster (max 8 words)")
+    problem: str = Field(description="The shared problem in 1-2 plain sentences")
+    industry: str
+    user_type: str
+    business_function: str
+    workflow: str
+    frequency: str
+    growth: Literal["Increasing", "Stable", "Declining", "Unknown"]
+    pain_points: list[PainPoint] = Field(description="2-6 pain points from at least 2 DIFFERENT sources")
     potential_customers: str = Field(description="A specific segment, e.g. 'independent dental clinics in the US'")
-    market_size: str = Field(description="Bottom-up estimate, e.g. '~$240M SAM'")
-    market_size_reasoning: str = Field(description="Customers x price arithmetic with stated assumptions")
-    source_ids: list[str] = Field(description="Ids like S1, S4 of sources that show this problem. Only provided ids.")
-    quotes: list[str] = Field(description="Up to 3 short snippets copied character-for-character from the sources")
+    reachable_customers: int = Field(ge=1, description="Number of potential paying customers in the segment (a count, not dollars)")
+    annual_price_usd: int = Field(ge=1, description="Realistic yearly price per customer in USD")
+    market_size_reasoning: str = Field(description="The assumptions behind the customer count and price, in words. No arithmetic")
+    scores: ClusterScores
 
 
-class DiscoveryOut(BaseModel):
-    opportunities: list[Opportunity]
+class ClustersOut(BaseModel):
+    clusters: list[Cluster]
 
 
-# Tavily is semantic search: natural-language queries beat boolean operators (which return off-topic threads).
-PLATFORM_QUERIES = {
-    "Reddit": "{t} biggest frustrations and problems",
-    "Hacker News": "{t} software problems",
-    "Product Hunt": "{t} tools",
-    "G2": "{t} software reviews what users dislike",
-    "App Store": "{t} app reviews problems",
-}
+class Solution(BaseModel):
+    solution_name: str = Field(description="A product, incumbent or workflow that appears in the provided sources")
+    kind: Literal["product", "workflow", "manual"]
+    pros: list[str]
+    cons: list[str]
+    pricing: str = Field(description="As stated in sources, else 'Not stated in sources'")
+    market_position: str
+
+
+class FailureAnalysis(BaseModel):
+    why_users_dislike: list[str]
+    why_users_abandon: list[str]
+    why_users_switch: list[str]
+    repeated_complaints: list[str]
+
+
+class WhiteSpace(BaseModel):
+    gap: str
+    reason: str
+    opportunity_score: int = Field(ge=0, le=100)
+
+
+class StartupIdea(BaseModel):
+    startup_name: str
+    problem: str
+    target_customer: str
+    solution: str
+    why_now: str
+    business_model: str
+    distribution_strategy: str
+    competitive_advantage: str
+
+
+class WhyBlock(BaseModel):
+    why_exists: str
+    why_current_solutions_fail: str
+    why_demand_is_increasing: str = Field(description="Say 'not evidenced in sources' if the sources show no trend")
+    why_now: str
+
+
+class ValidationScores(BaseModel):
+    demand: int = Field(ge=0, le=100)
+    competition: int = Field(ge=0, le=100, description="Higher = more room (weaker competition)")
+    defensibility: int = Field(ge=0, le=100)
+    distribution: int = Field(ge=0, le=100)
+    revenue_potential: int = Field(ge=0, le=100)
+    ai_advantage: int = Field(ge=0, le=100)
+    speed_to_mvp: int = Field(ge=0, le=100)
+    founder_accessibility: int = Field(ge=0, le=100)
+
+
+class Analysis(BaseModel):
+    existing_solutions: list[Solution] = Field(description="2-5 current products/workflows; empty if the sources name none")
+    failure_analysis: FailureAnalysis
+    white_space: WhiteSpace
+    startup: StartupIdea
+    startup_evidence_ids: list[str] = Field(description="Source ids (S#) backing the startup's problem, why_now and advantage")
+    why: WhyBlock
+    validation: ValidationScores
+    market_readiness: Literal["Early", "Emerging", "Ready", "Saturated"]
+    validation_summary: str
+    failure_source_ids: list[str] = Field(description="Source ids (S#) that show the failures/complaints about current solutions")
+
+
+# One search per source family. Tavily is semantic, so natural-language queries beat boolean operators.
+# Private spaces (Discord, Slack, Facebook groups) are not web-indexed and cannot be searched.
+SOURCE_GROUPS = [
+    ("Community", "{t} biggest frustrations and problems people complain about", ["reddit.com"], 5),
+    ("Community", "{t} software problems and frustrations", ["news.ycombinator.com"], 4),
+    ("Community", "{t} struggles and pain points", ["indiehackers.com", "quora.com", "producthunt.com"], 5),
+    ("Community", "{t} complaints and workflow struggles", ["linkedin.com", "x.com", "twitter.com"], 4),
+    ("Reviews", "{t} software reviews cons what users dislike", ["g2.com", "capterra.com"], 5),
+    ("Reviews", "{t} bad experience complaints", ["trustpilot.com"], 4),
+    ("Reviews", "{t} app reviews problems missing features", ["apps.apple.com", "play.google.com", "chromewebstore.google.com"], 5),
+    ("Forums", "{t} problem help workaround", ["community.shopify.com", "trailhead.salesforce.com", "community.hubspot.com", "repost.aws",
+                                               "wordpress.org", "forum.figma.com", "notion.so"], 5),
+    ("Jobs", "{t} hiring manual repetitive workflow coordinator", ["indeed.com", "linkedin.com", "wellfound.com", "ycombinator.com"], 4),
+    ("GitHub", "{t} issue feature request pain point", ["github.com"], 4),
+]
+PLATFORMS |= {"Indie Hackers": ["indiehackers.com"], "Quora": ["quora.com"], "LinkedIn": ["linkedin.com"], "X": ["x.com", "twitter.com"],
+              "Capterra": ["capterra.com"], "Trustpilot": ["trustpilot.com"], "Play Store": ["play.google.com"],
+              "Chrome Web Store": ["chromewebstore.google.com"], "Shopify Community": ["community.shopify.com"],
+              "Salesforce": ["trailhead.salesforce.com"], "HubSpot Community": ["community.hubspot.com"], "AWS re:Post": ["repost.aws"],
+              "WordPress": ["wordpress.org"], "Figma": ["forum.figma.com"], "Notion": ["notion.so"], "Indeed": ["indeed.com"],
+              "Wellfound": ["wellfound.com"], "YC": ["ycombinator.com"], "GitHub": ["github.com"]}
+
+
+def _gather(topic: str) -> list[dict]:
+    def one(g):
+        cat, q, domains, k = g
+        return [{**r, "category": cat} for r in core.web_search(q.format(t=topic), domains, k=k)]
+    with ThreadPoolExecutor(max_workers=5) as ex:
+        web = core.dedupe([r for rs in ex.map(one, SOURCE_GROUPS) for r in rs])
+    for r in web:
+        r["platform"] = _platform(r["url"])
+    return web
+
+
+def _src_block(web: list[dict], ids: list[int]) -> str:
+    return "\n\n".join(f"[S{i + 1}] ({web[i]['platform']}, {web[i]['category']}) {web[i]['title']}\n{web[i]['content'][:520]}" for i in ids) or "(no sources)"
+
+
+def _src(web: list[dict], sid: str):
+    m = re.fullmatch(r"\[?S(\d+)\]?", sid.strip())
+    return int(m[1]) - 1 if m and 0 < int(m[1]) <= len(web) else None
+
+
+def _public(web: list[dict], idx) -> list[dict]:
+    return [{"title": web[i]["title"], "url": web[i]["url"], "type": "web", "platform": web[i]["platform"], "category": web[i]["category"]} for i in sorted(set(idx))]
+
+
+def _named_in_sources(name: str, web: list[dict]) -> bool:
+    hay = _norm(" ".join(w["title"] + " " + w["content"] for w in web))
+    n = _norm(name)
+    first = n.split(" ")[0] if n else ""
+    return bool(n) and (n in hay or (len(first) >= 4 and f" {first} " in f" {hay} "))
+
+
+W_OPP = {"pain_severity": .2, "frequency": .15, "growth_rate": .1, "urgency": .1, "market_size": .1, "ai_leverage": .08,
+         "automation_potential": .05, "revenue_potential": .12, "inv_competition": .05, "defensibility": .05}
+W_VAL = {"demand": .22, "competition": .12, "defensibility": .12, "distribution": .12, "revenue_potential": .16, "ai_advantage": .08,
+         "speed_to_mvp": .09, "founder_accessibility": .09}
+
+
+def _sam(customers: int, price: int) -> str:
+    total = customers * price
+    return "~$" + (f"{total / 1e9:.1f}B" if total >= 1e9 else f"{total / 1e6:.0f}M" if total >= 1e6 else f"{total / 1e3:.0f}K") + " SAM"
+
+
+def _evidence_strength(n_sources: int, n_categories: int, n_quotes: int) -> int:
+    """0-100 from what was actually found: distinct sources, distinct source families, verbatim quotes."""
+    return round(50 * min(n_sources, 6) / 6 + 25 * min(n_categories, 3) / 3 + 25 * min(n_quotes, 3) / 3)
+
+
+def _analyse(c: dict, web: list[dict], cited: list[int], topic: str, founder: dict) -> Analysis:
+    extra = [i for i, w in enumerate(web) if w["category"] in ("Reviews", "Forums") and i not in cited][:6]
+    pains = "\n".join(f"- {p['pain_point']} (users: {p['target_user']}; {p['severity']}; {p['source_id']}; \"{p['evidence']}\")" for p in c["pain_points"])
+    return core.structured(
+        Analysis,
+        "You are Forge's Opportunity Analyst. For ONE evidenced problem cluster, analyse the current solutions, why they fail, the white space, "
+        "and only then propose a startup. Rules: name existing solutions ONLY if they appear in the provided sources, otherwise return an empty list and say so in the gap; "
+        "take pricing only from sources ('Not stated in sources' otherwise); every complaint in the failure analysis must come from reviews, forums or discussions in the sources; "
+        "the startup must solve exactly this cluster's problem for its target customer and every field must follow from the evidence. why_now and why_demand_is_increasing must come from trends, price changes, regulation or tooling shifts mentioned in the sources, never from the builder's skills or tech stack; if the sources show none, write 'Not evidenced in sources'. Never invent statistics, quotes, products or URLs. "
+        "Score honestly: thin evidence means lower scores. Plain words, no buzzwords.",
+        f"Theme: {topic}\n\nCluster: {c['title']}\nProblem: {c['problem']}\nCustomers: {c['potential_customers']}\n"
+        f"Pain points:\n{pains}\n\nSources:\n{_src_block(web, cited + extra)}",
+        models=list(dict.fromkeys(core.GEMINI_FALLBACK + core.HEAVY + core.FAST)), max_tokens=4500,
+    )
 
 
 def discover(seed: str | None, founder: dict):
     topic = seed or " ".join(founder.get("industries", [])) or "software for small businesses"
-    web = []
-    for platform, q in PLATFORM_QUERIES.items():
-        web += core.web_search(q.format(t=topic), PLATFORMS[platform], k=4)
-    web = core.dedupe(web)
-    if not core.OPENAI:
-        return {"opportunities": demo.discover(topic, web), "sources_scanned": len(web), "mode": "demo"}
+    web = _gather(topic)
+    breakdown = {cat: sum(w["category"] == cat for w in web) for cat in dict.fromkeys(g[0] for g in SOURCE_GROUPS)}
+    if not (core.OPENAI and web):  # no LLM, or nothing to ground on: never speculate
+        return {"opportunities": demo.discover(topic, web), "sources_scanned": len(web), "source_breakdown": breakdown, "mode": "demo"}
+
+    models = list(dict.fromkeys(core.GEMINI_FALLBACK + core.HEAVY + core.FAST))
     out = core.structured(
-        DiscoveryOut,
-        "You are Forge's Opportunity Discovery Agent. Mine real user complaints for startup opportunities. "
-        "Each opportunity must be a recurring, specific pain supported by at least one source; merge duplicates. "
-        "Return 3-5 distinct opportunities ranked by pain x frequency x reachable customers. Use one consistent set of "
-        "base assumptions (e.g. the same customer count) across opportunities and label estimates as assumptions. " + GROUNDING
-        + " Describe problems and customers in plain words.",
-        f"Theme: {topic}\nFounder profile: {founder or 'not provided'}\n\nSources:\n{core.sources_block(web)}",
+        ClustersOut,
+        "You are Forge's Opportunity Discovery Engine. You are NOT an idea generator. Work problem-first: extract pain points from the sources "
+        "(problems only, never solutions), then cluster similar complaints by industry, workflow, user type and business function. "
+        "Go through EVERY source, including job postings, forums and GitHub, and extract every distinct problem. Return at least 6 clusters (up to 10) unless fewer than 6 distinct problems have 2+ sources. Split broad themes into distinct clusters by workflow, user type or business function. Each cluster is backed by pain points from at least 2 DIFFERENT sources; drop anything with single-source or speculative support. "
+        "Weigh negative reviews, forum threads and job-posting patterns (repetitive manual work) heavily. Cite only provided ids. Never invent facts, quotes or URLs. "
+        "Score each cluster 0-100 on the ten dimensions with the evidence in mind; use one consistent set of base assumptions for market sizing. give reachable_customers and annual_price_usd as plain numbers and explain the assumptions in words; the system multiplies them. "
+        "Plain words.",
+        f"Theme: {topic}\nFounder profile: {founder or 'not provided'}\n\nSources:\n{_src_block(web, list(range(len(web))))}",
+        models=models, max_tokens=7000,
     )
-    opps = []
-    for o in out.opportunities:
-        d = o.model_dump()
-        d["sources"] = [{**s, "platform": _platform(s["url"] or "")} for s in _resolve(d.pop("source_ids"), web, [])]
-        d["quotes"] = [q for q in d["quotes"] if _verbatim(q, web)][:3]
-        d["mentions"] = len(d["sources"])
-        if web and not d["sources"]:
-            continue  # ungrounded
-        opps.append(d)
-    return {"opportunities": opps, "sources_scanned": len(web), "mode": "live"}
+
+    clusters = []
+    for cl in out.clusters:
+        c = cl.model_dump()
+        pts = []
+        for p in c["pain_points"]:
+            i = _src(web, p["source_id"])
+            if i is not None:
+                pts.append({**p, "source_idx": i, "verbatim": _verbatim(p["evidence"], [web[i]])})
+        idx = {p["source_idx"] for p in pts}
+        if len(idx) < 2:
+            continue  # critical rule: evidence across multiple sources
+        c["pain_points"], c["cited"] = pts, sorted(idx)
+        clusters.append(c)
+    print(f"discovery: {len(out.clusters)} clusters from model, {len(clusters)} with 2+ sources")
+    clusters.sort(key=lambda c: -sum(c["scores"][k] * w for k, w in {"pain_severity": .5, "frequency": .3, "urgency": .2}.items()))
+    clusters = clusters[:10]
+    if not clusters:
+        return {"opportunities": [], "sources_scanned": len(web), "source_breakdown": breakdown, "mode": "live",
+                "note": "No problem was backed by at least two independent sources. Try a broader or different market."}
+
+    def build(c):
+        try:
+            a = _analyse(c, web, c["cited"], topic, founder).model_dump()
+        except core.LLMError as e:
+            print("analysis failed:", c["title"], str(e)[:200])
+            return None
+        quotes = [p["evidence"] for p in c["pain_points"] if p["verbatim"]][:3]
+        fail_idx = [i for i in map(lambda x: _src(web, x), a.pop("failure_source_ids")) if i is not None]
+        start_idx = [i for i in map(lambda x: _src(web, x), a.pop("startup_evidence_ids")) if i is not None]
+        all_idx = set(c["cited"]) | set(fail_idx) | set(start_idx)
+        cats = {web[i]["category"] for i in all_idx}
+        ev = _evidence_strength(len(all_idx), len(cats), len(quotes))
+        sc = dict(c["scores"], inv_competition=100 - c["scores"]["competition_intensity"])
+        ws = a["white_space"]["opportunity_score"]
+        opp = round(.7 * sum(sc[k] * w for k, w in W_OPP.items()) + .3 * ws)
+        mp = round((c["scores"]["market_size"] + c["scores"]["revenue_potential"]) / 2)
+        v = a.pop("validation")
+        a["existing_solutions"] = [x for x in a["existing_solutions"] if x["kind"] != "product" or _named_in_sources(x["solution_name"], web)]
+        return {
+            "title": c["title"], "problem": c["problem"], "frequency": c["frequency"], "mentions": len(all_idx),
+            "pain_level": max(1, min(10, round(c["scores"]["pain_severity"] / 10))),
+            "potential_customers": c["potential_customers"], "market_size": _sam(c["reachable_customers"], c["annual_price_usd"]),
+            "market_size_reasoning": f"{c['reachable_customers']:,} customers x ${c['annual_price_usd']:,}/yr. {c['market_size_reasoning']}",
+            "sources": _public(web, all_idx), "quotes": quotes,
+            "cluster": {k: c[k] for k in ("industry", "user_type", "business_function", "workflow", "growth")},
+            "pain_points": [{**{k: p[k] for k in ("pain_point", "target_user", "evidence", "severity", "frequency", "verbatim")},
+                             "source": _public(web, [p["source_idx"]])[0]} for p in c["pain_points"]],
+            "scores": c["scores"], "existing_solutions": a["existing_solutions"], "failure_analysis": a["failure_analysis"],
+            "white_space": a["white_space"], "startup": a["startup"], "why": {k: (t[:1].upper() + t[1:]) for k, t in a["why"].items()},
+            "startup_sources": _public(web, start_idx), "failure_sources": _public(web, fail_idx),
+            "validation": {"scores": v, "overall_score": round(sum(v[k] * w for k, w in W_VAL.items())), "confidence": min(ev, 95),
+                           "confidence_level": "high" if ev >= 70 else "medium" if ev >= 45 else "low",
+                           "market_readiness": a["market_readiness"], "validation_summary": a["validation_summary"]},
+            "evidence_strength": ev, "market_potential": mp, "opportunity_score": opp,
+            "rank_score": round(opp * ev * mp / 10000),
+        }
+
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        opps = [o for o in ex.map(build, clusters) if o]
+    opps.sort(key=lambda o: -o["rank_score"])
+    for i, o in enumerate(opps, 1):
+        o["rank"] = i
+    return {"opportunities": opps, "sources_scanned": len(web), "source_breakdown": breakdown, "clusters_found": len(clusters), "mode": "live"}
 
 
 # ---------------------------------------------------------------- Validation engine

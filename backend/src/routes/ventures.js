@@ -73,10 +73,10 @@ r.delete('/ventures/:id', async (req, res) => {
 r.post('/discover', async (req, res) => {
   const seed = text(req.body.seed, 300) || null
   const out = await runAgent(req.user, null, 'Opportunity Discovery Agent', '/discover',
-    { seed, founder: req.user.founder_profile }, (o) => `${o.opportunities.length} opportunities from ${o.sources_scanned} sources`)
+    { seed, founder: req.user.founder_profile }, (o) => `${o.opportunities.length} opportunities from ${o.sources_scanned} sources`, 900_000)
   const report = await saveReport(req.user, null, 'discovery', `Opportunities · ${seed || 'Founder profile'}`, out,
     out.opportunities.map((o) => o.title).join(' · '))
-  await log(req.user, null, 'Opportunity Discovery Agent', 'Scanned Reddit, Product Hunt, Hacker News, G2 and App Store', seed)
+  await log(req.user, null, 'Opportunity Discovery Agent', 'Scanned communities, review sites, vendor forums, job boards and GitHub', seed)
   res.json(report)
 })
 

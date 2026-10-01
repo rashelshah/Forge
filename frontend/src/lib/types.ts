@@ -2,7 +2,7 @@ export type Mode = 'live' | 'demo'
 export type Stage = 'idea' | 'validating' | 'building' | 'launched' | 'paused' | 'killed'
 export type ScoreKey = 'demand' | 'competition' | 'defensibility' | 'revenue_potential' | 'founder_fit'
 
-export interface Source { title: string; url?: string | null; type?: 'web' | 'library'; platform?: string }
+export interface Source { title: string; url?: string | null; type?: 'web' | 'library'; platform?: string; category?: string }
 
 export interface Opportunity {
   title: string
@@ -15,6 +15,23 @@ export interface Opportunity {
   market_size_reasoning: string
   sources: Source[]
   quotes: string[]
+  // Present on reports from the problem-first discovery pipeline; older reports only have the fields above.
+  rank?: number
+  rank_score?: number
+  opportunity_score?: number
+  evidence_strength?: number
+  market_potential?: number
+  cluster?: { industry: string; user_type: string; business_function: string; workflow: string; growth: string }
+  pain_points?: { pain_point: string; target_user: string; evidence: string; severity: 'low' | 'medium' | 'high'; frequency: string; verbatim: boolean; source: Source }[]
+  scores?: Record<string, number>
+  existing_solutions?: { solution_name: string; kind: string; pros: string[]; cons: string[]; pricing: string; market_position: string }[]
+  failure_analysis?: { why_users_dislike: string[]; why_users_abandon: string[]; why_users_switch: string[]; repeated_complaints: string[] }
+  white_space?: { gap: string; reason: string; opportunity_score: number }
+  startup?: { startup_name: string; problem: string; target_customer: string; solution: string; why_now: string; business_model: string; distribution_strategy: string; competitive_advantage: string }
+  why?: { why_exists: string; why_current_solutions_fail: string; why_demand_is_increasing: string; why_now: string }
+  failure_sources?: Source[]
+  startup_sources?: Source[]
+  validation?: { scores: Record<string, number>; overall_score: number; confidence: number; confidence_level: 'low' | 'medium' | 'high'; market_readiness: string; validation_summary: string }
 }
 
 export interface Venture {

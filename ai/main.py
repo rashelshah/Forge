@@ -84,7 +84,7 @@ def health():
 
 @app.post("/discover")
 def discover(seed: str | None = Body(None), founder: dict = Body({})):
-    return agents.discover(seed, founder)
+    return long_job(agents.discover, seed, founder)
 
 
 @app.post("/validate")

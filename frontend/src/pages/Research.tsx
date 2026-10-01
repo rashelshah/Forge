@@ -3,7 +3,7 @@ import { AppWindow, ArrowLeft, Compass, FileSearch, FlaskConical, Gauge, Layers,
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
-import { OpportunityCard, ReportBody } from '@/components/research'
+import { OpportunityCard, ReportBody, ventureFromOpportunity } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -44,7 +44,7 @@ export default function Research() {
           <div className="aurora-soft -z-10" />
           <div className="md:w-72">
             <p className="font-medium">Opportunity Discovery Agent</p>
-            <p className="text-sm text-muted">Scans Reddit, Product Hunt, Hacker News, G2 and App Store reviews.</p>
+            <p className="text-sm text-muted">Finds recurring, evidenced problems across communities, reviews, forums, job boards and GitHub, then builds the startup case.</p>
           </div>
           <form className="flex flex-1 gap-2" onSubmit={(e) => { e.preventDefault(); discover.mutate(undefined, { onSuccess: (r) => nav(`/app/research/${r.id}`) }) }}>
             <Input value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="A market to explore (blank = use your founder profile)" />
@@ -92,7 +92,7 @@ export function ReportPage() {
   const nav = useNavigate()
   const { data: r, isLoading, error } = useQuery({ queryKey: ['research', id], queryFn: () => api<Report>(`/research/${id}`) })
   const { data: ventures = [] } = useVentures()
-  const create = useAction((o: Opportunity) => api<Venture>('/ventures', { name: o.title.slice(0, 60), idea: `${o.title} for ${o.potential_customers}: ${o.problem}`, opportunity: o }), [['ventures'], ['me']])
+  const create = useAction((o: Opportunity) => api<Venture>('/ventures', ventureFromOpportunity(o)), [['ventures'], ['me']])
   const del = useAction(() => api(`/research/${id}`, undefined, 'DELETE'), [['research']], 'Report deleted')
 
   if (isLoading) return <Loading rows={4} />

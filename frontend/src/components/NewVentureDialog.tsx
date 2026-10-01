@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { Compass, Lightbulb, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { OpportunityCard } from '@/components/research'
+import { OpportunityCard, ventureFromOpportunity } from '@/components/research'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input, Textarea } from '@/components/ui/input'
@@ -13,20 +13,20 @@ import { useAction } from '@/lib/queries'
 import type { Opportunity, Report, Venture } from '@/lib/types'
 
 const EXAMPLES = ['AI-powered marketplace for college students', 'Automated bookkeeping for freelance designers', 'Voice-first CRM for field sales teams']
-const PLATFORMS = ['Reddit', 'Product Hunt', 'Hacker News', 'G2 Reviews', 'App Store Reviews']
+const PLATFORMS = ['communities (Reddit, Hacker News, Indie Hackers)', 'review sites (G2, Capterra, Trustpilot)', 'app stores', 'vendor forums', 'job boards', 'GitHub issues']
 
 export function NewVentureDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const nav = useNavigate()
   const [name, setName] = useState('')
   const [idea, setIdea] = useState('')
   const [seed, setSeed] = useState('')
-  const [found, setFound] = useState<Report<{ opportunities: Opportunity[]; sources_scanned: number }> | null>(null)
+  const [found, setFound] = useState<Report<{ opportunities: Opportunity[]; sources_scanned: number; note?: string }> | null>(null)
 
   const create = useAction(
     (body: { name?: string; idea: string; opportunity?: Opportunity }) => api<Venture>('/ventures', body),
     [['ventures'], ['dashboard'], ['me']],
   )
-  const discover = useAction(() => api<Report<{ opportunities: Opportunity[]; sources_scanned: number }>>('/discover', { seed }), [['research']])
+  const discover = useAction(() => api<Report<{ opportunities: Opportunity[]; sources_scanned: number; note?: string }>>('/discover', { seed }), [['research']])
 
   const go = (body: { name?: string; idea: string; opportunity?: Opportunity }) =>
     create.mutate(body, {
@@ -85,10 +85,11 @@ export function NewVentureDialog({ open, onOpenChange }: { open: boolean; onOpen
             {!discover.isPending && found && (
               <div className="mt-5 space-y-3">
                 <p className="text-xs text-muted">{found.content.opportunities.length} opportunities · {found.content.sources_scanned} sources scanned</p>
+                {found.content.note && <p className="text-sm text-ink-2">{found.content.note}</p>}
                 {found.content.opportunities.map((o) => (
                   <OpportunityCard key={o.title} o={o} action={
                     <Button size="sm" loading={create.isPending && create.variables?.opportunity === o}
-                      onClick={() => go({ name: o.title.slice(0, 60), idea: `${o.title} for ${o.potential_customers}: ${o.problem}`, opportunity: o })}>
+                      onClick={() => go(ventureFromOpportunity(o))}>
                       Create venture
                     </Button>
                   } />
@@ -96,7 +97,7 @@ export function NewVentureDialog({ open, onOpenChange }: { open: boolean; onOpen
               </div>
             )}
             {!discover.isPending && !found && (
-              <p className="mt-6 text-sm text-muted">Scans {PLATFORMS.join(', ')} for recurring pain, then sizes each problem by frequency, pain level, customers and market.</p>
+              <p className="mt-6 text-sm text-muted">Scans {PLATFORMS.join(', ')} for recurring pain, clusters the complaints, studies why current tools fail, then proposes a startup only where the evidence supports it.</p>
             )}
           </TabsContent>
         </Tabs>
