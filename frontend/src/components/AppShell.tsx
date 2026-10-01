@@ -106,10 +106,8 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
     : pathname === to || pathname.startsWith(`${to}/`)
   return (
     <div className="flex h-full flex-col">
-      <div className={cn('flex items-center', collapsed ? 'h-[88px] flex-col justify-center gap-2' : 'h-16 justify-between pr-3 pl-5')}>
-        {collapsed
-          ? <NavLink to="/app" aria-label="Forge AI home" className="grid size-9 place-items-center rounded-[11px] bg-ink"><Spark className="size-[18px]" /></NavLink>
-          : <Logo to="/app" />}
+      <div className={cn('flex items-center', collapsed ? 'h-16 justify-center' : 'h-16 justify-between pr-3 pl-5')}>
+        {!collapsed && <Logo to="/app" />}
         {onToggle && (
           <button onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className="grid size-8 place-items-center rounded-lg text-ink-2 transition hover:bg-soft hover:text-ink cursor-pointer">
