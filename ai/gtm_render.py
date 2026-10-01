@@ -143,6 +143,7 @@ class Renderer:
     def __enter__(self):
         from playwright.sync_api import sync_playwright
 
+        core.free_embedder()  # Playwright's driver process needs the memory the embedding model holds
         self._pw = sync_playwright().start()
         self.browser = core.launch_browser(self._pw)
         self._opened = time.time()

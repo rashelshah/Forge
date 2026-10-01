@@ -282,6 +282,23 @@ def _get_embedder():
     return _embedder
 
 
+def free_embedder() -> None:
+    """Unload the embedding model (~220MB) before memory-heavy browser work; it reloads on the next embed call.
+    A caller mid-embed keeps its own reference, so this is safe to call from any thread."""
+    global _embedder
+    with _embed_lock:
+        _embedder = None
+    import gc
+
+    gc.collect()
+    try:  # glibc keeps freed pages in the heap: hand them back to the OS (Linux only)
+        import ctypes
+
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def embed(texts: list[str]) -> list[list[float]]:
     m = _get_embedder()
     if not m:

@@ -742,6 +742,7 @@ def screenshot(html: str, shots: list[tuple[str, str]]) -> dict:
     The page is served from a fake https origin so the app gets a real origin, localStorage and hash routing."""
     from playwright.sync_api import sync_playwright
 
+    core.free_embedder()  # Playwright's driver process needs the memory the embedding model holds
     errors: list[str] = []
     out, rendered = [], True
     with sync_playwright() as pw:

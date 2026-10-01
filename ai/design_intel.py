@@ -103,6 +103,7 @@ def capture(url: str) -> dict:
     if core.LOW_MEMORY:
         raise DesignError("Capturing a site needs a browser, which this low-memory host cannot run. Run Design Intelligence on a host with 1 GB+ RAM.")
     assert_public(url)
+    core.free_embedder()  # Playwright's driver process needs the memory the embedding model holds
     with sync_playwright() as pw:
         try:
             browser = core.launch_browser(pw)
