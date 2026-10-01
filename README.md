@@ -48,7 +48,9 @@ Python FastAPI agent service (ai/, :8000)          Supabase Postgres
 
 The Node API owns the relational tables; the Python service owns the vector tables (`knowledge_chunks`, `memory_embeddings`) in the same Supabase database. Every agent output is written to `venture_memory` **and** embedded into pgvector, so future agents recall past research, debates, experiments and feedback.
 
-**Free-tier notes.** Groq's free tier allows ~8K tokens/minute per model, so work is spread across models and fails over on rate limits; a 2-round boardroom takes ~40–60s. Tavily's free tier is 1,000 credits/month (a validation uses ~4, discovery ~5).
+**Render free plan (512 MB RAM).** The AI service idles at about 120 MB: the embedding model (~280 MB) loads on first use, embeds in batches of 8, and the library seeding runs in the background so the port opens at once. If you still hit memory limits, set `EMBED_BACKEND=hash` on the AI service to skip the model entirely (lower-quality retrieval, near-zero memory). The startup-dataset vector index takes minutes of CPU to build, which the free plan lacks, so it is precomputed and committed (`ai/.startupdata_cache.npy` + `.json`, keyed by the record text). After changing any dataset CSV, run `python -c "import startupdata as sd; sd.start(); sd._ready.wait()"` in `ai/` and commit the two regenerated files; otherwise the service rebuilds the index on every start.
+
+**Free-tier notes.** Groq's free tier allows ~8K tokens/minute per model, so work is spread across models and fails over on rate limits; a 2-round boardroom takes ~40–60s. Tavily's free tier is 1,000 credits/month (a validation uses ~4, a discovery scan ~10).
 
 ## The workflow
 

@@ -6,6 +6,4 @@ ai/.venv
 ai/.qdrant
 ai/__pycache__
 backend/.data
-ai/.startupdata_cache.json
-ai/.startupdata_cache.npy
 ai/.startupdata_judged.json

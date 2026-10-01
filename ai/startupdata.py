@@ -254,7 +254,6 @@ def _lexical(query: str) -> np.ndarray:
 
 def _build():
     try:
-        files = sorted(p for p in SHARED.glob("*.csv") if p.name != "global_tech_startups_2026.csv")
         loaders = {"yc_recent": _load_yc_recent, "yc_historic": _load_yc_historic, "india_startups": _load_india_startups, "saas_leaders": _load_saas, "crunchbase_us": _load_crunchbase,
                    "unicorns": _load_unicorns, "india_unicorns": _load_india_unicorns}
         data = {}
@@ -272,13 +271,18 @@ def _build():
         if not recs:  # the CSVs are git-ignored, so a fresh deployment has none: agents then run without peer data
             raise RuntimeError("no startup datasets found in shared/ (copy the CSVs there to enable peer and market statistics)")
         texts = [f"{r['name']}: {r['text']}" for r in recs]
-        digest = hashlib.sha1(("".join(p.name + str(p.stat().st_size) for p in files) + core.EMBED_MODEL + str(len(texts))).encode()).hexdigest()
+        # The cache key is the record text itself (not file sizes), so the committed vector cache stays valid on any host
+        # that has the same data, whichever unused CSVs sit next to it. The embedding model loads only on a cache miss.
+        key = lambda model: hashlib.sha1(("\n".join(texts) + model).encode()).hexdigest()
+        digest = key(core.EMBED_MODEL)
         meta, npy = Path(str(CACHE) + ".json"), Path(str(CACHE) + ".npy")
         vecs = None
         if meta.exists() and npy.exists() and json.loads(meta.read_text()).get("hash") == digest:
             vecs = np.load(npy).astype(np.float32)
         if vecs is None or len(vecs) != len(recs):
-            vecs = np.array([v for i in range(0, len(texts), 128) for v in core.embed(texts[i:i + 128])], dtype=np.float32)
+            core._get_embedder()  # settles EMBED_MODEL (it falls back to hashing if the model cannot load)
+            digest = key(core.EMBED_MODEL)
+            vecs = np.array([v for i in range(0, len(texts), 64) for v in core.embed(texts[i:i + 64])], dtype=np.float32)
             np.save(npy, vecs.astype(np.float16))
             meta.write_text(json.dumps({"hash": digest}))
         _state["digest"] = digest

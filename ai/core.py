@@ -228,27 +228,40 @@ def _hash_embed(text: str) -> list[float]:
 
 
 # Groq has no embedding models, so embeddings run locally on CPU (model downloads once, ~70MB).
-try:
-    from fastembed import TextEmbedding
+# The model costs ~280MB of RAM, which a 512MB free instance cannot afford while idle, so it loads on first use
+# and embeds in small batches (ONNX memory grows steeply with batch size). EMBED_BACKEND=hash skips it entirely.
+EMBED_MODEL = "hashing" if os.getenv("EMBED_BACKEND") == "hash" else "bge-small-en-v1.5"
+_embedder = None
+_embed_lock = threading.Lock()
 
-    _embedder = TextEmbedding("BAAI/bge-small-en-v1.5")
-    EMBED_MODEL = "bge-small-en-v1.5"
-except Exception as e:  # offline first run / unsupported platform
-    print("fastembed unavailable, using hashing embeddings:", e)
-    _embedder, EMBED_MODEL = None, "hashing"
+
+def _get_embedder():
+    global _embedder, EMBED_MODEL
+    if EMBED_MODEL == "hashing":
+        return None
+    with _embed_lock:
+        if _embedder is None:
+            try:
+                from fastembed import TextEmbedding
+
+                _embedder = TextEmbedding("BAAI/bge-small-en-v1.5", threads=1)
+            except Exception as e:  # offline first run / unsupported platform
+                print("fastembed unavailable, using hashing embeddings:", e, flush=True)
+                EMBED_MODEL = "hashing"
+    return _embedder
 
 
 def embed(texts: list[str]) -> list[list[float]]:
-    if _embedder:
-        return [v.tolist() for v in _embedder.passage_embed(texts)]
-    return [_hash_embed(t) for t in texts]
+    m = _get_embedder()
+    if not m:
+        return [_hash_embed(t) for t in texts]
+    return [v.tolist() for i in range(0, len(texts), 8) for v in m.passage_embed(texts[i:i + 8])]
 
 
 def embed_query(text: str) -> list[float]:
     # bge models retrieve better when queries carry their instruction prefix (query_embed adds it).
-    if _embedder:
-        return next(iter(_embedder.query_embed(text))).tolist()
-    return _hash_embed(text)
+    m = _get_embedder()
+    return next(iter(m.query_embed(text))).tolist() if m else _hash_embed(text)
 
 
 # ---------------------------------------------------------------- Vector store: Supabase pgvector (local JSON fallback)

@@ -20,11 +20,18 @@ import startupdata as sd
 
 app = FastAPI(title="Forge AI agents")
 VECTOR_ERROR = None
-try:
-    core.seed_library()
-except Exception as e:  # e.g. supabase/migrations/002_pgvector.sql not applied yet
-    VECTOR_ERROR = str(e)[:300]
-    print("vector store unavailable:", VECTOR_ERROR)
+
+
+def _seed():  # in the background so the port opens at once (first run loads the embedding model and indexes the library)
+    global VECTOR_ERROR
+    try:
+        core.seed_library()
+    except Exception as e:  # e.g. supabase/migrations/002_pgvector.sql not applied yet
+        VECTOR_ERROR = str(e)[:300]
+        print("vector store unavailable:", VECTOR_ERROR, flush=True)
+
+
+threading.Thread(target=_seed, daemon=True).start()
 KEY = os.getenv("AI_INTERNAL_KEY")
 sd.start()  # load and index the startup datasets in the background
 
