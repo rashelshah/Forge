@@ -105,10 +105,7 @@ def capture(url: str) -> dict:
     assert_public(url)
     with sync_playwright() as pw:
         try:
-            try:
-                browser = pw.chromium.launch()
-            except Exception:
-                browser = pw.chromium.launch(channel="chrome")  # no bundled Chromium: use an installed Google Chrome
+            browser = core.launch_browser(pw)
         except Exception as e:
             raise DesignError(f"No browser for Playwright — run `ai/.venv/bin/playwright install chromium` ({str(e)[:80]})")
         try:

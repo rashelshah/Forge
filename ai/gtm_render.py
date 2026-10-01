@@ -6,6 +6,8 @@ import io
 import re
 import zipfile
 
+import core
+
 import studio_kit as kit
 
 esc = _html.escape
@@ -141,10 +143,7 @@ class Renderer:
         from playwright.sync_api import sync_playwright
 
         self._pw = sync_playwright().start()
-        try:
-            self.browser = self._pw.chromium.launch()
-        except Exception:
-            self.browser = self._pw.chromium.launch(channel="chrome")
+        self.browser = core.launch_browser(self._pw)
         return self
 
     def __exit__(self, *a):

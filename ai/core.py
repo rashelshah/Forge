@@ -52,7 +52,20 @@ def _memory_limit() -> int | None:
 # Hosts under 1.5GB (Render's free 512MB instance) cannot run Chromium next to the service, so browser-backed steps
 # (prototype screenshots/review, design capture, GTM graphics) are skipped there. Override with LOW_MEMORY=0/1.
 _LIMIT = _memory_limit()
-LOW_MEMORY = {"1": True, "0": False}.get(os.getenv("LOW_MEMORY", ""), bool(_LIMIT and _LIMIT < 1.5e9))
+# BROWSER_WS_URL points Playwright at a hosted browser (e.g. Browserless' wss://...?token=...), which keeps Chromium out of this
+# process's memory, so the browser-backed features work on a small host too.
+BROWSER_WS_URL = os.getenv("BROWSER_WS_URL")
+LOW_MEMORY = {"1": True, "0": False}.get(os.getenv("LOW_MEMORY", ""), bool(_LIMIT and _LIMIT < 1.5e9 and not BROWSER_WS_URL))
+
+
+def launch_browser(pw):
+    """A Playwright browser: the hosted one when BROWSER_WS_URL is set, else local Chromium (or installed Chrome)."""
+    if BROWSER_WS_URL:
+        return pw.chromium.connect_over_cdp(BROWSER_WS_URL)
+    try:
+        return pw.chromium.launch()
+    except Exception:
+        return pw.chromium.launch(channel="chrome")
 MODE = "live" if OPENAI else "demo"
 # Vision-capable models for screenshot analysis (Design Intelligence). Groq has no vision models, so Gemini (each model
 # has its own free quota) leads, then OpenAI if that's the only key.

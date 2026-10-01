@@ -3,6 +3,8 @@ shadcn-style component kit, design tokens), then runs it in a browser and screen
 import json
 import re
 
+import core
+
 # ---------------------------------------------------------------- design tokens
 
 # Every semantic colour the kit uses. The Product Designer agent supplies the first group; the rest are derived.
@@ -742,10 +744,7 @@ def screenshot(html: str, shots: list[tuple[str, str]]) -> dict:
     errors: list[str] = []
     out, rendered = [], True
     with sync_playwright() as pw:
-        try:
-            browser = pw.chromium.launch()
-        except Exception:
-            browser = pw.chromium.launch(channel="chrome")  # no bundled Chromium: use an installed Chrome
+        browser = core.launch_browser(pw)
         try:
             for device, route in shots:
                 w, h, cap = DEVICES[device]
