@@ -269,6 +269,8 @@ def _build():
         except Exception as e:
             print(f"startup data: india_deals unavailable ({str(e)[:100]})")
         recs = [r for sid in PEER_SOURCES for r in data.get(sid, []) if r["text"] or r["industry"]]
+        if not recs:  # the CSVs are git-ignored, so a fresh deployment has none: agents then run without peer data
+            raise RuntimeError("no startup datasets found in shared/ (copy the CSVs there to enable peer and market statistics)")
         texts = [f"{r['name']}: {r['text']}" for r in recs]
         digest = hashlib.sha1(("".join(p.name + str(p.stat().st_size) for p in files) + core.EMBED_MODEL + str(len(texts))).encode()).hexdigest()
         meta, npy = Path(str(CACHE) + ".json"), Path(str(CACHE) + ".npy")
@@ -536,7 +538,7 @@ def _label(p: dict) -> str:
 def context(query: str, k: int = 8) -> dict:
     """{available, peers, facts, coverage, stats, text}: real companies that overlap with the idea and statistics computed from the datasets; `text` drops straight into a prompt."""
     start()
-    if not _ready.wait(timeout=600) or _state["vecs"] is None:
+    if not _ready.wait(timeout=600) or _state["vecs"] is None or not len(_state["recs"]):
         return {"available": False, "peers": [], "facts": [], "coverage": [], "stats": {}, "text": "", "reason": _state["error"] or "still indexing"}
     key = hashlib.sha1(f"v3|{_state['digest']}|{query.strip()}".encode()).hexdigest()
     if key not in _cache:

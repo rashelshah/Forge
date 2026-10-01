@@ -347,4 +347,4 @@ Agents and the Competitive Intelligence page use real data, never guesses. `ai/s
 | `unicorns till sep 2022.csv`, `Indian Unicorn startups 2023 updated.csv` | unicorn counts and valuations |
 | `Startups1.csv`, `top_100_saas_companies_2025.csv` | names and descriptions only (their money fields are unreliable) |
 
-Not used: `global_tech_startups_2026.csv` (synthetic), `Founders.csv`, `Startups.csv`. The CSVs are git-ignored; copy them to `shared/` on any deployment.
+Not used: `global_tech_startups_2026.csv` (synthetic), `Founders.csv`, `Startups.csv`. The CSVs are git-ignored and optional: without them (a fresh deployment) agents still run, just without the named peers and computed statistics. Copy them to `shared/` on the deployed AI service to enable them.

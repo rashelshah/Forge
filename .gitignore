@@ -6,8 +6,6 @@ ai/.venv
 ai/.qdrant
 ai/__pycache__
 backend/.data
-YC-all-batches.csv
 ai/.startupdata_cache.json
 ai/.startupdata_cache.npy
-shared/*.csv
 ai/.startupdata_judged.json
