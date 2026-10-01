@@ -682,6 +682,8 @@ def build(run, ctx: dict):
 
 
 def run_gtm(run_id: str, ctx: dict, fresh: bool = False) -> dict:
+    if core.LOW_MEMORY:
+        raise studio.StudioError("The Go-To-Market Studio renders logos, ads and the deck in a browser, which needs a host with 1 GB+ RAM. It is unavailable on this low-memory host.")
     if not core.OPENAI:
         raise studio.StudioError("Go-To-Market Studio needs an LLM: set GEMINI_API_KEY (recommended) or GROQ_API_KEY")
     if not core.PGVECTOR:

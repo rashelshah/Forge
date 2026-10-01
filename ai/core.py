@@ -35,6 +35,24 @@ MODEL = HEAVY[0]
 CODE = HEAVY + FAST + ([m.strip() for m in (os.getenv("CODE_MODELS") or "gemini-flash-lite-latest,gemini-3.5-flash").split(",")] if GEMINI else [])
 # Groq's per-minute budget is easily exhausted by multi-call agents, so the default chains end on Gemini when a key exists.
 GEMINI_FALLBACK = [m.strip() for m in (os.getenv("GEMINI_MODELS") or "gemini-flash-lite-latest,gemini-3.5-flash").split(",")] if GEMINI else []
+
+
+def _memory_limit() -> int | None:
+    """Container memory limit in bytes (cgroup v2, then v1), None when unlimited or unknown (e.g. a laptop)."""
+    for f in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            v = Path(f).read_text().strip()
+        except OSError:
+            continue
+        if v.isdigit():
+            return int(v)
+    return None
+
+
+# Hosts under 1.5GB (Render's free 512MB instance) cannot run Chromium next to the service, so browser-backed steps
+# (prototype screenshots/review, design capture, GTM graphics) are skipped there. Override with LOW_MEMORY=0/1.
+_LIMIT = _memory_limit()
+LOW_MEMORY = {"1": True, "0": False}.get(os.getenv("LOW_MEMORY", ""), bool(_LIMIT and _LIMIT < 1.5e9))
 MODE = "live" if OPENAI else "demo"
 # Vision-capable models for screenshot analysis (Design Intelligence). Groq has no vision models, so Gemini (each model
 # has its own free quota) leads, then OpenAI if that's the only key.

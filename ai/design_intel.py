@@ -100,6 +100,8 @@ def capture(url: str) -> dict:
     """Homepage + mobile screenshots (JPEG bytes), plus title, meta description and visible content."""
     from playwright.sync_api import sync_playwright
 
+    if core.LOW_MEMORY:
+        raise DesignError("Capturing a site needs a browser, which this low-memory host cannot run. Run Design Intelligence on a host with 1 GB+ RAM.")
     assert_public(url)
     with sync_playwright() as pw:
         try:
@@ -306,6 +308,16 @@ def store(state: dict) -> dict:
 _qc, _qc_lock = None, threading.Lock()
 
 
+def ensure_indexes(client, collection: str, fields: dict) -> None:
+    """Qdrant Cloud rejects filters on unindexed payload fields. Creating an index is idempotent, and doing it on every
+    start also repairs collections that were created before an index was added."""
+    for field, schema in fields.items():
+        try:
+            client.create_payload_index(collection, field, schema)
+        except Exception as e:
+            print(f"qdrant index {collection}.{field} failed:", str(e)[:120], flush=True)
+
+
 def qdrant():
     global _qc
     with _qc_lock:
@@ -318,8 +330,8 @@ def qdrant():
             client = QdrantClient(url=url, api_key=os.getenv("QDRANT_API_KEY")) if url else QdrantClient(path=str(Path(__file__).parent / ".qdrant"))
             if not client.collection_exists(COLLECTION):
                 client.create_collection(COLLECTION, vectors_config=models.VectorParams(size=len(core.embed(["x"])[0]), distance=models.Distance.COSINE))
-                if url:
-                    client.create_payload_index(COLLECTION, "reference_id", models.PayloadSchemaType.KEYWORD)
+            if url:
+                ensure_indexes(client, COLLECTION, {"reference_id": models.PayloadSchemaType.KEYWORD})
             _qc = client
         return _qc
 

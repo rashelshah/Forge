@@ -36,9 +36,10 @@ async function mirrorProgress(p) {
 async function finishPrototype(p, out) {
   const [html, spec] = await Promise.all([versionHtml(p.id, out.best_iteration), supabase.from('studio_artifacts').select('tagline:content->>tagline').eq('project_id', p.id).eq('kind', 'product_spec').limit(1).then(check)])
   const summary = `${p.name} — ${spec[0]?.tagline ?? 'built by the Product Studio team'}`
+  const reviewed = out.average == null ? 'built by the Product Studio team' : `visually reviewed by the Product Studio team (quality ${out.average}/10)`
   const rep = await setPrototype(p, (c) => ({ title: p.name, html, summary, history: [], previous_html: c.html ?? null, build: null, mode: 'live', studio_project_id: p.id, studio_score: out.average }), { summary, created_at: now() })
   const user = await db.get('users', p.user_id)
-  await remember(user, p.venture_id, 'roadmap', 'Prototype built', `A clickable prototype of ${p.name} was built and visually reviewed by the Product Studio team (quality ${out.average}/10): ${summary}.`)
+  await remember(user, p.venture_id, 'roadmap', 'Prototype built', `A clickable prototype of ${p.name} was ${reviewed}: ${summary}.`)
   await log(user, p.venture_id, 'Product Studio', 'Built a working prototype', p.name)
   await notify(user, p.venture_id, 'prototype', `Your ${p.name} prototype is ready`, summary, `/app/ventures/${p.venture_id}?tab=prototype`)
   return rep
@@ -64,7 +65,7 @@ async function runProject(id) {
   }
   await db.update('agent_runs', run.id, {
     status: error ? 'failed' : 'succeeded', mode: 'live', error: error ?? null, duration_ms: Date.now() - t0, finished_at: now(),
-    output_summary: out ? `${p.name} · v${out.best_iteration} · ${out.average}/10` : null,
+    output_summary: out ? `${p.name} · v${out.best_iteration}${out.average == null ? '' : ` · ${out.average}/10`}` : null,
   }).catch(() => {})
 }
 

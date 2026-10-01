@@ -407,14 +407,18 @@ def _jpeg(data: bytes) -> dict:
 
 # ---------------------------------------------------------------- long-term memory (Qdrant)
 
+_indexed: set = set()
+
+
 def _memory():
     from qdrant_client import models
 
     client = design_intel.qdrant()
     if not client.collection_exists(MEMORY):
         client.create_collection(MEMORY, vectors_config=models.VectorParams(size=len(core.embed(["x"])[0]), distance=models.Distance.COSINE))
-        if os.getenv("QDRANT_URL"):
-            client.create_payload_index(MEMORY, "user_id", models.PayloadSchemaType.KEYWORD)
+    if os.getenv("QDRANT_URL") and MEMORY not in _indexed:
+        design_intel.ensure_indexes(client, MEMORY, {"user_id": models.PayloadSchemaType.KEYWORD, "average": models.PayloadSchemaType.FLOAT})
+        _indexed.add(MEMORY)
     return client, models
 
 
@@ -836,6 +840,14 @@ def build(run: Run):
             box["detail"] = "Versions scored: " + ", ".join(f"v{h['iteration']} {h['average']}" for h in s["history"]) + ". Saved the project to long-term memory so future projects can learn from it."
         return {}
 
+    def finish_lite(s: State):
+        """Low-memory hosts cannot run the browser that reviews screenshots, so the first build is the final prototype."""
+        with run.step("Studio") as box:
+            run.patch(status="done", stage="Done", best_iteration=1, scores={}, error=None)
+            box["summary"] = "Prototype built (the visual review loop is skipped on this low-memory host)"
+            box["detail"] = "Screenshot review, design critique and refinement need a browser, which does not fit in this host's memory."
+        return {}
+
     g = StateGraph(State)
     nodes = {
         "strategist": agent("Product Strategist", "product_spec", ProductSpec, STRATEGIST, strategist_user,
@@ -860,14 +872,16 @@ def build(run: Run):
                            lambda o: o.verdict),
         "failure": reviewer("Failure Agent", "failure_report", FailureReport, FAILURE, {"desktop-1", "mobile-1"},
                             lambda o: f"Biggest risk: {o.biggest_risk}", extra=lambda s: "\n\nProduct spec:\n" + _compact(s["product_spec"])),
-        "scoring": scoring, "refine": refinement, "finish": finish,
+        "scoring": scoring, "refine": refinement, "finish": finish, "finish_lite": finish_lite,
     }
     for name, fn in nodes.items():
         g.add_node(name, fn)
-    chain = ["strategist", "ux", "researcher", "designer", "mvp", "frontend", "ui", "screenshots"]
+    chain = ["strategist", "ux", "researcher", "designer", "mvp", "frontend", "ui"]
     g.add_edge(START, chain[0])
     for a, b in zip(chain, chain[1:]):
         g.add_edge(a, b)
+    g.add_conditional_edges("ui", lambda s: "finish_lite" if core.LOW_MEMORY else "screenshots")
+    g.add_edge("finish_lite", END)
     g.add_conditional_edges("screenshots", lambda s: "vision" if s["rendered"] else (
         "refine" if s["repairs"] < MAX_REPAIRS else "finish"))
     g.add_edge("vision", "critic")
@@ -893,6 +907,8 @@ def run_project(project_id: str) -> dict:
     except Exception as e:
         run.patch(status="failed", error=str(e)[:500])
         raise
+    if not s["history"]:  # built without the visual review loop
+        return {"best_iteration": 1, "average": None}
     best = max(s["history"], key=lambda h: (h["average"], -h["iteration"]))
     return {"best_iteration": best["iteration"], "average": best["average"]}
 
@@ -914,7 +930,7 @@ def edit_html(html: str, instruction: str, name: str) -> dict:
             break
     else:
         raise StudioError("Couldn't apply that change cleanly. Try describing it more specifically.")
-    check = kit.screenshot(new, [("desktop", "/")])
+    check = {"rendered": True, "errors": []} if core.LOW_MEMORY else kit.screenshot(new, [("desktop", "/")])
     if not check["rendered"]:
         raise StudioError("That change broke the prototype, so it was not applied: " + (check["errors"][0][:160] if check["errors"] else "the page rendered blank") + ". Try rephrasing it.")
     return {"html": new, "summary": out.summary, "applied": applied, "mode": "live"}
