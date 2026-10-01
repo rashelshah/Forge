@@ -4,6 +4,7 @@ import csv
 import html as _html
 import io
 import re
+import time
 import zipfile
 
 import core
@@ -144,6 +145,7 @@ class Renderer:
 
         self._pw = sync_playwright().start()
         self.browser = core.launch_browser(self._pw)
+        self._opened = time.time()
         return self
 
     def __exit__(self, *a):
@@ -151,6 +153,9 @@ class Renderer:
         self._pw.stop()
 
     def _page(self, html: str, w: int, h: int):
+        if core.BROWSER_WS_URL and time.time() - self._opened > 40:  # hosted sessions are capped: reconnect before the cap
+            self.browser.close()
+            self.browser, self._opened = core.launch_browser(self._pw), time.time()
         page = self.browser.new_page(viewport={"width": w, "height": h})
         page.set_content(html, wait_until="networkidle", timeout=45_000)
         try:

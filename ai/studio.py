@@ -564,6 +564,7 @@ class State(TypedDict, total=False):
     shots: list
     errors: list
     rendered: bool
+    browser_failed: bool
     review_report: dict
     design_feedback: dict
     failure_report: dict
@@ -730,7 +731,18 @@ def build(run: Run):
             routes = [sc["route"] for sc in s["ux_blueprint"]["screens"]][:3]
             plan = [("desktop", r) for r in routes] + [("tablet", routes[0]), ("mobile", routes[0])] + ([("mobile", routes[1])] if len(routes) > 1 else [])
             ROLES = [f"desktop-{i + 1}" for i in range(len(routes))] + ["tablet-1", "mobile-1"] + (["mobile-2"] if len(routes) > 1 else [])
-            res = kit.screenshot(s["html"], plan)
+            res = None
+            for attempt in range(2):  # a hosted browser can drop a session; retry once on a fresh connection
+                try:
+                    res = kit.screenshot(s["html"], plan)
+                    break
+                except Exception as e:
+                    print(f"screenshot attempt {attempt + 1} failed: {str(e)[:200]}", flush=True)
+                    last_err = str(e)[:200]
+            if res is None:  # the browser is unusable: finish with the best build so far instead of failing the whole project
+                box["summary"] = "The browser was unavailable, so the visual review was skipped"
+                box["detail"] = f"Screenshots could not be captured ({last_err})."
+                return {"shots": [], "errors": [], "rendered": False, "browser_failed": True}
             urls = []
             for n, sh in enumerate(res["shots"]):
                 sh["role"] = ROLES[n]
@@ -882,7 +894,7 @@ def build(run: Run):
         g.add_edge(a, b)
     g.add_conditional_edges("ui", lambda s: "finish_lite" if core.LOW_MEMORY else "screenshots")
     g.add_edge("finish_lite", END)
-    g.add_conditional_edges("screenshots", lambda s: "vision" if s["rendered"] else (
+    g.add_conditional_edges("screenshots", lambda s: ("finish" if s["history"] else "finish_lite") if s.get("browser_failed") else "vision" if s["rendered"] else (
         "refine" if s["repairs"] < MAX_REPAIRS else "finish"))
     g.add_edge("vision", "critic")
     g.add_edge("critic", "failure")

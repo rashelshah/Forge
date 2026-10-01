@@ -2,6 +2,7 @@
 shadcn-style component kit, design tokens), then runs it in a browser and screenshots it on desktop/tablet/mobile."""
 import json
 import re
+import time
 
 import core
 
@@ -745,8 +746,12 @@ def screenshot(html: str, shots: list[tuple[str, str]]) -> dict:
     out, rendered = [], True
     with sync_playwright() as pw:
         browser = core.launch_browser(pw)
+        opened = time.time()
         try:
             for device, route in shots:
+                if core.BROWSER_WS_URL and time.time() - opened > 40:  # hosted sessions are capped (~60-120s): start a fresh one before that
+                    browser.close()
+                    browser, opened = core.launch_browser(pw), time.time()
                 w, h, cap = DEVICES[device]
                 ctx = browser.new_context(viewport={"width": w, "height": h}, is_mobile=device == "mobile", has_touch=device != "desktop")
                 ctx.route("https://prototype.local/", lambda r: r.fulfill(status=200, content_type="text/html", body=html))
@@ -755,9 +760,12 @@ def screenshot(html: str, shots: list[tuple[str, str]]) -> dict:
                 page.on("console", lambda m: m.type == "error" and errors.append(m.text[:300]))
                 page.goto("https://prototype.local/#" + route, wait_until="domcontentloaded", timeout=45_000)
                 try:
-                    page.wait_for_function("document.getElementById('root') && document.getElementById('root').innerText.trim().length > 40", timeout=25_000)
+                    # polling by timer: the default (requestAnimationFrame) can stall in hidden or remote tabs and burn the whole timeout
+                    page.wait_for_function("document.getElementById('root') && document.getElementById('root').innerText.trim().length > 40", timeout=25_000, polling=250)
                 except Exception:
                     rendered = False
+                    n = page.evaluate("(document.getElementById('root') || {innerText: ''}).innerText.length")
+                    errors.append(f"RenderTimeout: the {route} screen showed {n} characters of text after 25s (scripts blocked or the app is stuck loading)")
                 page.wait_for_timeout(1800)  # loading skeletons, entrance animations, web fonts
                 # Grow the viewport to the page height instead of a full-page capture, so fixed bars (mobile tab bar, sticky
                 # headers) sit at the edges where users see them, not floating mid-page.
