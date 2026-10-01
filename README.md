@@ -64,7 +64,13 @@ The Node API owns the relational tables; the Python service owns the vector tabl
 
 ## Dashboard pages
 
-Dashboard · Ventures (+ venture workspace with Overview, Boardroom, MVP, Prototype, Competitors, Experiments, Memory tabs) · Research · Boardroom · Competitors · Experiments · Knowledge Base · Activity Feed (+ agent runs) · Settings (founder profile, plan & usage, integrations, monitoring).
+The sidebar is organised as **Venture Studio** (Ventures, Research, Boardroom, MVP Architect, Prototype, Go-To-Market, Validation Lab), **Intelligence** and **Operations** (Agent Activity, Settings).
+
+- **Competitive Intelligence** (`/app/competitive-intelligence`, formerly Competitors) — brief, actions, watchlist, feature gaps, positioning map.
+- **Market Signals** (`/app/market-signals`) — AI market radar: overview, signal feed, emerging opportunities, threat radar, trends, industry outlook. Signals must cite a source the agent actually fetched.
+- **Venture Memory** (`/app/memory`) — the knowledge layer over `venture_memory` (every agent writes to it, embedded in pgvector): what we know, learning timeline, decision journal, validated/failed assumptions, semantic search and top learnings. "Synthesize" rebuilds the derived tables from the raw memories.
+
+Run `supabase/migrations/009_market_signals_and_venture_memory.sql` to add the tables for the last two.
 
 ## Billing-ready
 

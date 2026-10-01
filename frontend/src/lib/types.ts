@@ -149,6 +149,11 @@ export interface Signal {
   source_url: string | null
   occurred_on?: string | null
   created_at: string
+  // Market Signals radar rows (type 'radar') also carry these; `detail` is the summary and `severity` the signal strength.
+  impact?: string | null
+  opportunity?: string | null
+  source?: string | null
+  confidence?: number | null
 }
 
 export interface Experiment {
@@ -286,3 +291,29 @@ export interface GtmData {
   artifacts: Record<string, any>
   prerequisites: { validation: boolean; prototype: boolean; mvp: boolean; ready: boolean }
 }
+
+// ---------------------------------------------------------------- market signals
+
+export interface MarketData {
+  outlook: { health: 'positive' | 'neutral' | 'negative'; confidence: number; drivers: string[]; risks: string[]; summary: string | null; best_area: string | null; live: boolean; created_at: string } | null
+  signals: Signal[]
+  opportunities: { id: string; title: string; description: string | null; score: number; market_size: Level; difficulty: Level; time_horizon: string }[]
+  threats: { id: string; title: string; description: string | null; severity: Level; likelihood: Level; suggested_action: string }[]
+  trends: { id: string; title: string; category: string; momentum: 'growing' | 'stable' | 'declining'; confidence: number; impact: Level; summary: string | null }[]
+  sources: { id: string; title: string; url: string; domain: string | null }[]
+}
+
+// ---------------------------------------------------------------- venture memory
+
+export interface MemoryEvidence { kind: string; title: string }
+interface Derived { id: string; evidence: MemoryEvidence[]; occurred_on: string; created_at: string }
+export interface MemoryData {
+  memories: Memory[]
+  known: { id: string; statement: string }[]
+  top: { id: string; statement: string }[]
+  validated: (Derived & { statement: string; confidence: number })[]
+  failed: (Derived & { statement: string; confidence: number; reason: string })[]
+  decisions: (Derived & { decision: string; why: string })[]
+  synthesized_at: string | null
+}
+export type MemoryHit = Memory & { score: number }

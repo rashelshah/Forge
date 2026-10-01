@@ -13,7 +13,7 @@ export const INTEL_KEYS = KEYS
 
 // ---------------------------------------------------------------- shared bits
 
-function Section({ n, title, question, children, right }: { n?: number; title: string; question: string; children: ReactNode; right?: ReactNode }) {
+export function Section({ n, title, question, children, right }: { n?: number; title: string; question: string; children: ReactNode; right?: ReactNode }) {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">

@@ -18,7 +18,7 @@ import { api } from '@/lib/api'
 import { useAction, useVenture } from '@/lib/queries'
 import type { BoardSession, Chunk, Memory, MvpPlan, PrototypeContent, Report, Stage, Validation, Venture } from '@/lib/types'
 import { ago, cn, date, titleCase } from '@/lib/utils'
-import { CompetitorsPanel } from './Competitors'
+import { CompetitiveIntelligencePanel } from './CompetitiveIntelligence'
 import { ExperimentList } from './Experiments'
 
 const STAGES: Stage[] = ['idea', 'validating', 'building', 'launched', 'paused', 'killed']
@@ -209,7 +209,7 @@ export default function VentureDetail() {
           <TabsTrigger value="mvp"><Layers />MVP Architect</TabsTrigger>
           <TabsTrigger value="prototype"><AppWindow />Prototype</TabsTrigger>
           <TabsTrigger value="gtm"><Megaphone />Go-To-Market</TabsTrigger>
-          <TabsTrigger value="competitors"><Radar />Competitors</TabsTrigger>
+          <TabsTrigger value="competitors"><Radar />Competitive Intelligence</TabsTrigger>
           <TabsTrigger value="experiments"><FlaskConical />Experiments</TabsTrigger>
           <TabsTrigger value="memory"><Brain />Memory</TabsTrigger>
         </TabsList>
@@ -248,7 +248,7 @@ export default function VentureDetail() {
 
         <TabsContent value="gtm"><GtmStudio ventureId={v.id} /></TabsContent>
 
-        <TabsContent value="competitors"><CompetitorsPanel ventureId={v.id} /></TabsContent>
+        <TabsContent value="competitors"><CompetitiveIntelligencePanel ventureId={v.id} /></TabsContent>
         <TabsContent value="experiments">
           <ExperimentList ventureId={v.id} empty={
             <Empty icon={<Rocket />} title="No experiments yet" action={<Button onClick={() => setParams({ tab: 'prototype' })}><AppWindow />Go to prototype</Button>}>

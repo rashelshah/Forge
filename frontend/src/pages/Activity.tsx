@@ -26,7 +26,7 @@ export default function Activity() {
 
   return (
     <>
-      <PageHeader eyebrow="Activity feed" title="What your agents did" description="An audit trail of every agent action and founder decision across your studio." />
+      <PageHeader eyebrow="Agent activity" title="What your agents did" description="An audit trail of every agent action and founder decision across your studio." />
       <Tabs defaultValue="feed">
         <TabsList className="mb-6"><TabsTrigger value="feed">Feed</TabsTrigger><TabsTrigger value="runs">Agent runs</TabsTrigger></TabsList>
         <TabsContent value="feed">

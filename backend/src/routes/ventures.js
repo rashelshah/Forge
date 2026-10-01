@@ -56,7 +56,8 @@ r.patch('/ventures/:id', async (req, res) => {
 r.delete('/ventures/:id', async (req, res) => {
   const v = await own('ventures', req.params.id, req.user)
   for (const t of ['research_reports', 'competitors', 'market_signals', 'agent_runs', 'boardroom_sessions', 'experiments',
-    'experiment_events', 'venture_memory', 'notifications', 'activity_logs']) {
+    'experiment_events', 'venture_memory', 'notifications', 'activity_logs', 'market_opportunities', 'market_threats', 'market_trends',
+    'industry_outlooks', 'signal_sources', 'venture_learnings', 'validated_assumptions', 'failed_assumptions', 'decision_journal']) {
     if (t === 'experiment_events') {
       const ids = (await db.list('experiments', { venture_id: v.id }, { limit: 1000 })).map((e) => e.id)
       if (ids.length) await db.remove(t, { experiment_id: ids })

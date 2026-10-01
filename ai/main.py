@@ -13,6 +13,8 @@ import core
 import design_intel
 import gtm
 import intel
+import learn
+import market
 import studio
 
 app = FastAPI(title="Forge AI agents")
@@ -224,6 +226,16 @@ def studio_forget(project_id: str):
 @app.post("/intel/run")
 def intel_run(venture: dict = Body(...), competitors: list[dict] = Body(...), mvp_features: list[str] = Body([]), recent_events: list[dict] = Body([])):
     return long_job(intel.run, venture, competitors, mvp_features, recent_events)
+
+
+@app.post("/market/run")
+def market_run(venture: dict = Body(...), context: dict = Body({})):
+    return long_job(market.run, venture, context)
+
+
+@app.post("/memory/synthesize")
+def memory_synthesize(venture: dict = Body(...), memories: list[dict] = Body(...)):
+    return long_job(learn.run, venture, memories)
 
 
 @app.post("/studio/edit")

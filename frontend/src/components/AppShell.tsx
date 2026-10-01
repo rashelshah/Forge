@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, Bell, FileSearch, FlaskConical, LayoutGrid, Library, LogOut, Palette, PanelLeft, Sparkles, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, X,
+  Activity, AppWindow, Bell, Brain, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
 import { Logo, Spark } from '@/components/brand'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
 import { Button } from '@/components/ui/button'
@@ -15,19 +15,30 @@ import { useAction, useConfig, useMe } from '@/lib/queries'
 import type { Notification } from '@/lib/types'
 import { ago, cn } from '@/lib/utils'
 
-const NAV = [
-  { to: '/app', label: 'Dashboard', icon: LayoutGrid, end: true },
-  { to: '/app/studio', label: 'Product Studio', icon: Sparkles },
-  { to: '/app/ventures', label: 'Ventures', icon: Rocket },
-  { to: '/app/research', label: 'Research', icon: FileSearch },
-  { to: '/app/boardroom', label: 'Boardroom', icon: MessagesSquare },
-  { to: '/app/competitors', label: 'Competitors', icon: Radar },
-  { to: '/app/experiments', label: 'Experiments', icon: FlaskConical },
-  { to: '/app/knowledge', label: 'Knowledge Base', icon: Library },
-  { to: '/app/design', label: 'Design Intelligence', icon: Palette, admin: true },
-  { to: '/app/activity', label: 'Activity Feed', icon: Activity },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
+// `tab` items are tabs of a venture workspace: they open the current venture (or the newest one) on that tab.
+type NavItem = { to: string; label: string; icon: LucideIcon; tab?: string }
+const NAV: { label?: string; items: NavItem[] }[] = [
+  { items: [{ to: '/app', label: 'Dashboard', icon: LayoutGrid }] },
+  { label: 'Venture Studio', items: [
+    { to: '/app/ventures', label: 'Ventures', icon: Rocket },
+    { to: '/app/research', label: 'Research', icon: FileSearch },
+    { to: '/app/boardroom', label: 'Boardroom', icon: MessagesSquare },
+    { to: '/app/mvp', label: 'MVP Architect', icon: Layers, tab: 'mvp' },
+    { to: '/app/prototype', label: 'Prototype', icon: AppWindow, tab: 'prototype' },
+    { to: '/app/go-to-market', label: 'Go-To-Market', icon: Megaphone, tab: 'gtm' },
+    { to: '/app/experiments', label: 'Validation Lab', icon: FlaskConical },
+  ] },
+  { label: 'Intelligence', items: [
+    { to: '/app/competitive-intelligence', label: 'Competitive Intelligence', icon: Radar },
+    { to: '/app/market-signals', label: 'Market Signals', icon: TrendingUp },
+    { to: '/app/memory', label: 'Venture Memory', icon: Brain },
+  ] },
+  { label: 'Operations', items: [
+    { to: '/app/activity', label: 'Agent Activity', icon: Activity },
+    { to: '/app/settings', label: 'Settings', icon: Settings },
+  ] },
 ]
+const TABS = new Set(NAV.flatMap((g) => g.items).flatMap((i) => (i.tab ? [i.tab] : [])))
 
 type ShellCtx = { newVenture: () => void }
 export const useShell = () => useOutletContext<ShellCtx>()
@@ -85,6 +96,14 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
   const { data: me } = useMe()
   const { signOut, demo } = useAuth()
   const pct = me ? Math.min(100, (100 * me.usage.agentRuns) / me.limits.agentRuns) : 0
+  const { pathname, search } = useLocation()
+  const ventureId = useMatch('/app/ventures/:id')?.params.id
+  const tab = new URLSearchParams(search).get('tab') ?? ''
+  const active = ({ to, tab: t }: NavItem) =>
+    to === '/app' ? pathname === to
+    : t ? pathname === to || (!!ventureId && tab === t)
+    : to === '/app/ventures' ? pathname === to || (!!ventureId && !TABS.has(tab))
+    : pathname === to || pathname.startsWith(`${to}/`)
   return (
     <div className="flex h-full flex-col">
       <div className={cn('flex items-center', collapsed ? 'h-[88px] flex-col justify-center gap-2' : 'h-16 justify-between pr-3 pl-5')}>
@@ -98,14 +117,24 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
           </button>
         )}
       </div>
-      <nav className={cn('flex-1 space-y-0.5 overflow-y-auto py-2', collapsed ? 'px-2' : 'px-3')}>
-        {NAV.filter((n) => !n.admin || me?.admin).map(({ to, label, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} onClick={onNavigate} title={collapsed ? label : undefined} aria-label={label}
-            className={({ isActive }) => cn('flex items-center rounded-xl py-2 text-[14px] transition', collapsed ? 'justify-center px-0' : 'gap-3 px-3',
-              isActive ? 'bg-soft font-medium text-ink shadow-press-light' : 'text-ink-2 hover:bg-soft/60 hover:text-ink')}>
-            <Icon className="size-[17px] shrink-0" strokeWidth={1.75} />
-            {!collapsed && label}
-          </NavLink>
+      <nav className={cn('flex-1 overflow-y-auto py-2', collapsed ? 'px-2' : 'px-3')}>
+        {NAV.map((group, i) => (
+          <div key={i} className={cn('space-y-0.5', i > 0 && 'mt-3 border-t border-line pt-3')}>
+            {group.label && !collapsed && <p className="px-3 pb-1 font-mono text-[10px] tracking-[0.14em] text-faint uppercase">{group.label}</p>}
+            {group.items.map((item) => {
+              const { label, icon: Icon } = item
+              const on = active(item)
+              return (
+                <Link key={item.to} to={item.tab && ventureId ? `/app/ventures/${ventureId}?tab=${item.tab}` : item.to} onClick={onNavigate} aria-current={on ? 'page' : undefined}
+                  title={collapsed ? label : undefined} aria-label={label}
+                  className={cn('flex items-center rounded-xl py-2 text-[14px] transition', collapsed ? 'justify-center px-0' : 'gap-3 px-3',
+                    on ? 'bg-soft font-medium text-ink shadow-press-light' : 'text-ink-2 hover:bg-soft/60 hover:text-ink')}>
+                  <Icon className="size-[17px] shrink-0" strokeWidth={1.75} />
+                  {!collapsed && label}
+                </Link>
+              )
+            })}
+          </div>
         ))}
       </nav>
       <div className={cn('space-y-3 p-3', collapsed && 'px-2')}>

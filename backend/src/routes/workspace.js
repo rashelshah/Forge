@@ -77,7 +77,7 @@ async function scanCompetitor(user, venture, comp) {
     await db.insert('market_signals', { user_id: user.id, venture_id: venture.id, competitor_id: comp.id, ...signalRow(s) })
     await remember(user, venture.id, 'competitor', s.title, `${s.detail}\nRecommended response: ${s.recommended_response}`)
     if (s.severity === 'medium' || s.severity === 'high') {
-      await notify(user, venture.id, 'competitor', s.title, `${s.detail}\n\nRecommended response: ${s.recommended_response}`, `/app/competitors?venture=${venture.id}`)
+      await notify(user, venture.id, 'competitor', s.title, `${s.detail}\n\nRecommended response: ${s.recommended_response}`, `/app/competitive-intelligence?venture=${venture.id}`)
     }
   }
   await log(user, venture.id, 'Competitor Intelligence Agent', `Scanned ${comp.name}`, `${out.signals.length} signal(s)`)
@@ -98,7 +98,7 @@ export async function monitorUser(user) {
     for (const s of out.signals) {
       await db.insert('market_signals', { user_id: user.id, venture_id: v.id, ...signalRow(s) })
       await remember(user, v.id, 'research', s.title, `${s.detail}\nRecommended response: ${s.recommended_response}`)
-      await notify(user, v.id, s.type, s.title, `${s.detail}\n\nRecommended response: ${s.recommended_response}`, `/app/competitors?venture=${v.id}`)
+      await notify(user, v.id, s.type, s.title, `${s.detail}\n\nRecommended response: ${s.recommended_response}`, `/app/competitive-intelligence?venture=${v.id}`)
       signals++
     }
   }

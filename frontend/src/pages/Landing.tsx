@@ -118,7 +118,7 @@ function Cta() {
 function Footer() {
   const cols: Record<string, [string, string][]> = {
     Platform: [['Opportunity Discovery', '/app/research'], ['Validation Engine', '/app/ventures'], ['Boardroom', '/app/boardroom'], ['MVP Architect', '/app/ventures']],
-    Intelligence: [['Competitor Radar', '/app/competitors'], ['Experiment Center', '/app/experiments'], ['Activity Feed', '/app/activity'], ['Knowledge Base', '/app/knowledge']],
+    Intelligence: [['Competitive Intelligence', '/app/competitive-intelligence'], ['Market Signals', '/app/market-signals'], ['Venture Memory', '/app/memory'], ['Experiment Center', '/app/experiments'], ['Activity Feed', '/app/activity'], ['Knowledge Base', '/app/knowledge']],
     Company: [['Pricing', '#pricing'], ['How it works', '#how'], ['Log in', '/login'], ['Open the studio', '/app']],
   }
   return (

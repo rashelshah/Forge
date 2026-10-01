@@ -90,12 +90,12 @@ export async function ai(path, body, { method = body === undefined ? 'GET' : 'PO
 
 export const ventureCtx = (v) => ({ id: v.id, name: v.name, idea: v.idea, stage: v.stage, overall_score: v.overall_score, scores: v.scores })
 
-export async function runAgent(user, ventureId, agent, path, body, summarize = () => null) {
+export async function runAgent(user, ventureId, agent, path, body, summarize = () => null, timeout) {
   await requireQuota(user, 'agentRuns')
   const run = await db.insert('agent_runs', { user_id: user.id, venture_id: ventureId, agent, status: 'running' })
   const t0 = Date.now()
   try {
-    const out = await ai(path, body)
+    const out = await ai(path, body, { timeout })
     await db.update('agent_runs', run.id, {
       status: 'succeeded', mode: out.mode, output_summary: summarize(out), duration_ms: Date.now() - t0, finished_at: new Date().toISOString(),
     })

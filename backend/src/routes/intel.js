@@ -70,7 +70,7 @@ export async function runIntelForVenture(user, v, rep) {
     rep = await db.update('research_reports', rep.id, { content, summary: out.report.brief.recommendation.slice(0, 280), created_at: now() })
     await remember(user, v.id, 'competitor', 'Competitive intelligence brief', `${out.report.insight.insight}\nRecommendation: ${out.report.insight.recommendation}`)
     await log(user, v.id, 'Competitive Intelligence Officer', 'Updated the competitive intelligence brief', `${out.competitors.length} competitors, ${fresh} new event(s)`)
-    await notify(user, v.id, 'competitor', 'Competitive brief updated', out.report.brief.recommendation, `/app/competitors?venture=${v.id}`)
+    await notify(user, v.id, 'competitor', 'Competitive brief updated', out.report.brief.recommendation, `/app/competitive-intelligence?venture=${v.id}`)
     await db.update('agent_runs', run.id, { status: 'succeeded', mode: 'live', duration_ms: Date.now() - t0, finished_at: now(), output_summary: `${out.competitors.length} competitors · ${fresh} new event(s)` })
     return rep
   } catch (e) {
@@ -88,7 +88,7 @@ r.get('/intel', async (req, res) => {
     latestReport(v.id, 'intel'), db.list('competitors', { venture_id: v.id }), db.list('market_signals', { venture_id: v.id }, { limit: 300 }),
     db.list('competitor_snapshots', { venture_id: v.id }, { limit: 500, ascending: true }),
   ])
-  res.json({ report, competitors, signals: signals.filter((s) => s.competitor_id), market: signals.filter((s) => !s.competitor_id).slice(0, 8), memory: buildMemory(snaps) })
+  res.json({ report, competitors, signals: signals.filter((s) => s.competitor_id), market: signals.filter((s) => !s.competitor_id && s.type !== 'radar').slice(0, 8), memory: buildMemory(snaps) })
 })
 
 r.post('/intel/run', async (req, res) => {

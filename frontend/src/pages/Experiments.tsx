@@ -97,7 +97,7 @@ export default function Experiments() {
   const [open, setOpen] = useState(false)
   return (
     <>
-      <PageHeader eyebrow="Experiment center" title="Experiments" description="Share prototypes with real users, log interviews and surveys. Results flow into venture memory and future agent decisions."
+      <PageHeader eyebrow="Validation lab" title="Validation Lab" description="Share prototypes with real users, log interviews and surveys. Results flow into venture memory and future agent decisions."
         actions={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>} />
       <ExperimentList empty={<Empty icon={<FlaskConical />} title="No experiments yet" action={<Button onClick={() => setOpen(true)}><Plus />New experiment</Button>}>Build a prototype from a venture and share it with testers, or log interviews and surveys by hand.</Empty>} />
       <NewExperiment open={open} onOpenChange={setOpen} />

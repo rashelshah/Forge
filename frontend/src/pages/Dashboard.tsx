@@ -108,7 +108,7 @@ export default function Dashboard() {
 
             <div className="space-y-6">
               <Card>
-                <CardHeader><CardTitle>Market signals</CardTitle><Link to="/app/competitors" className="text-xs text-muted hover:text-ink">View all</Link></CardHeader>
+                <CardHeader><CardTitle>Market signals</CardTitle><Link to="/app/competitive-intelligence" className="text-xs text-muted hover:text-ink">View all</Link></CardHeader>
                 <div className="p-2">
                   {data.signals.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted">Track competitors to receive signals.</p>}
                   {data.signals.slice(0, 5).map((s) => (

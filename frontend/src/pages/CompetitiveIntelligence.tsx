@@ -46,7 +46,7 @@ function AddCompetitor({ ventureId, open, onOpenChange }: { ventureId?: string; 
   )
 }
 
-export function CompetitorsPanel({ ventureId }: { ventureId: string }) {
+export function CompetitiveIntelligencePanel({ ventureId }: { ventureId: string }) {
   const { data: ventures = [] } = useVentures()
   const [open, setOpen] = useState(false)
   const intel = useQuery({
@@ -62,19 +62,19 @@ export function CompetitorsPanel({ ventureId }: { ventureId: string }) {
   )
 }
 
-export default function Competitors() {
+export default function CompetitiveIntelligence() {
   const [params, setParams] = useSearchParams()
   const { data: ventures = [], isLoading } = useVentures()
   const venture = params.get('venture') ?? ventures[0]?.id
   return (
     <>
-      <PageHeader eyebrow="Competitive intelligence" title="Competitors" description="An AI strategy consultant that watches your competitors, finds the gaps and tells you what to do next."
+      <PageHeader eyebrow="Intelligence" title="Competitive Intelligence" description="An AI strategy consultant that watches your competitors, finds the gaps and tells you what to do next."
         actions={ventures.length > 1 ? (
           <Select value={venture ?? ''} onChange={(e) => setParams({ venture: e.target.value })} className="h-10 w-56" aria-label="Venture">
             {ventures.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </Select>
         ) : undefined} />
-      {isLoading ? <Loading /> : venture ? <CompetitorsPanel key={venture} ventureId={venture} /> : <Empty icon={<Radar />} title="Create a venture first">Competitive intelligence is always relative to your own product.</Empty>}
+      {isLoading ? <Loading /> : venture ? <CompetitiveIntelligencePanel key={venture} ventureId={venture} /> : <Empty icon={<Radar />} title="Create a venture first">Competitive intelligence is always relative to your own product.</Empty>}
     </>
   )
 }
