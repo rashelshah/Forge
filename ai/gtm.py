@@ -7,6 +7,7 @@ Every agent saves its result to Supabase as it finishes (so the UI can follow al
 (logo pack, graphics, ad mockups, PPTX/PDF deck, guidelines PDF, CSVs) is uploaded to Supabase Storage.
 """
 import base64
+from concurrent.futures import ThreadPoolExecutor
 import os
 import re
 import time
@@ -470,6 +471,7 @@ def image_concept(prompt: str) -> bytes | None:
 def build(run, ctx: dict):
     name = ctx["venture"]["name"]
     files = Files(run)
+    prefetched: set[str] = set()
     CTX = "STARTUP CONTEXT (measured facts only):\n" + _compact(ctx)
     prior = lambda s, *keys: "\n\n".join(f"{k.upper()} (decided):\n{_compact(s[k])}" for k in keys if k in s)
 
@@ -477,10 +479,20 @@ def build(run, ctx: dict):
         """Run an LLM agent, or reuse its saved result when resuming a failed run."""
         cached = run.load(kind)
         if cached:
-            return cached, True
+            return cached, kind not in prefetched  # content written moments ago by a parallel prefetch is new, not "reused"
         d = ask(schema, system, user, max_tokens=max_tokens, temperature=0.6).model_dump()
         run.save(kind, d)
         return d, False
+
+    def prefetch(kind, schema, system, user_fn, max_tokens):
+        """Write an agent's LLM output ahead of its turn, in parallel with other agents. The agent's own node (which renders files
+        one at a time, so only one browser connection is ever open) then finds it ready instead of waiting on the model."""
+        def fn(s):
+            if not run.load(kind):
+                gen(kind, schema, system, user_fn(s), max_tokens)
+                prefetched.add(kind)
+            return {}
+        return fn
 
     def reuse(box, fresh, text):
         box["summary"] = text + ("" if fresh else " (reused from the earlier run)")
@@ -492,6 +504,9 @@ def build(run, ctx: dict):
                 box["summary"], box["detail"] = summary(d) + (" (reused from the earlier run)" if cached else ""), d.get("reasoning")
             return {key: d}
         return fn
+
+    GROWTH_KEYS = ("brand", "positioning", "messaging", "growth")
+    deck_user = lambda s: f"{CTX}\n\n{prior(s, *GROWTH_KEYS)}\n\nCOMPETITION NOTE: use the competitors and white space in the context."
 
     def brand_kit(s):
         v = s["visual"]
@@ -523,10 +538,11 @@ def build(run, ctx: dict):
                     png = R.logo_png(r, R.logo_svg("icon", name, R.build_mark(c, name, t), t), 512, 512, t["paper"])
                     c["png_url"] = files.add(f"concept_{i + 1}", f"Logo concept {i + 1}: {c['name']}", "concepts", f"concept-{i + 1}.png", png, preview=True)
                 image_ok = False
-                for i, c in enumerate(concepts):
-                    img = image_concept(c["image_prompt"])
+                with ThreadPoolExecutor(max_workers=len(concepts) or 1) as ex:  # the image API is slow: ask for all concepts at once
+                    imgs = list(ex.map(lambda c: image_concept(c["image_prompt"]), concepts))
+                for i, (c, img) in enumerate(zip(concepts, imgs)):
                     if not img:
-                        break
+                        continue
                     image_ok = True
                     c["image_url"] = files.add(f"concept_image_{i + 1}", f"AI concept image {i + 1}", "concepts", f"concept-ai-{i + 1}.png", img, preview=True)
                 d = {"brand": s["brand"], "positioning": s["positioning"], "messaging": s["messaging"], "visual": {**v}}
@@ -596,7 +612,7 @@ def build(run, ctx: dict):
 
     def deck(s):
         with run.step("Presentation Generator") as box:
-            d, cached = gen("deck", Deck, DECK, f"{CTX}\n\n{prior(s, 'brand', 'positioning', 'messaging', 'growth')}\n\nCOMPETITION NOTE: use the competitors and white space in the context.", 7000)
+            d, cached = gen("deck", Deck, DECK, deck_user(s), 7000)
             t, icon = s["kit"]["t"], s["kit"]["icon"]
             slides = [{"layout": "cover", "title": name, "headline": s["brand"]["tagline"]}] + [
                 {"title": x["title"], "headline": x["headline"], "bullets": x["bullets"], "callout": x.get("callout"), "layout": "split" if x.get("callout") else "bullets"} for x in d["slides"][:10]]
@@ -670,14 +686,27 @@ def build(run, ctx: dict):
         "landing": strategist("landing", "Landing Page Copywriter", Landing, LANDING, ["brand", "positioning", "messaging"], lambda d: f"“{d['hero']['headline']}” + {len(d['features'])} features, {len(d['faq'])} FAQs", 7000),
         "growth": strategist("growth", "Growth Strategist", Growth, GROWTH, ["brand", "positioning", "messaging"], lambda d: " → ".join(p["name"] for p in d["launch_strategy"]), 7500),
         "content": content, "marketing": marketing, "ads": ads, "deck": deck, "readiness": readiness,
+        # silent parallel prefetch of the LLM output for the agents that also render files
+        "pre_visual": prefetch("visual", Visual, VISUAL, lambda s: f"{CTX}\n\n{prior(s, 'brand', 'positioning')}", 7000),
+        "pre_marketing": prefetch("marketing", Marketing, MARKETING, lambda s: f"{CTX}\n\n{prior(s, *GROWTH_KEYS)}", 6500),
+        "pre_ads": prefetch("ads", Ads, ADS, lambda s: f"{CTX}\n\n{prior(s, *GROWTH_KEYS)}", 6500),
+        "pre_deck": prefetch("deck", Deck, DECK, deck_user, 7000),
     }
-    order = list(nodes)
     for n, fn in nodes.items():
         g.add_node(n, fn)
-    g.add_edge(START, order[0])
-    for a, b in zip(order, order[1:]):
-        g.add_edge(a, b)
-    g.add_edge(order[-1], END)
+    # Waves run in parallel; rendering (visual -> marketing -> ads -> deck) stays sequential so one browser connection is open at a time.
+    g.add_edge(START, "brand")
+    g.add_edge("brand", "positioning")
+    g.add_edge("positioning", "messaging")
+    g.add_edge("positioning", "pre_visual")
+    g.add_edge("messaging", "landing")
+    g.add_edge("messaging", "growth")
+    for n in ("content", "pre_marketing", "pre_ads", "pre_deck"):
+        g.add_edge("growth", n)
+    g.add_edge(["pre_visual", "landing", "content", "pre_marketing", "pre_ads", "pre_deck"], "visual")
+    for a_, b_ in (("visual", "marketing"), ("marketing", "ads"), ("ads", "deck"), ("deck", "readiness")):
+        g.add_edge(a_, b_)
+    g.add_edge("readiness", END)
     return g.compile()
 
 
@@ -694,7 +723,7 @@ def run_gtm(run_id: str, ctx: dict, fresh: bool = False) -> dict:
     run = studio.Run(rows[0], ("gtm_runs", "gtm_events", "gtm_artifacts", "run_id"))
     run.patch(status="running", stage="Starting", error=None)
     try:
-        s = build(run, ctx).invoke({}, config={"recursion_limit": 60})
+        s = build(run, ctx).invoke({}, config={"recursion_limit": 60, "max_concurrency": 4})
     except Exception as e:
         run.patch(status="failed", error=str(e)[:500])
         raise

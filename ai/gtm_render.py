@@ -158,7 +158,7 @@ class Renderer:
             self.browser.close()
             self.browser, self._opened = core.launch_browser(self._pw), time.time()
         page = self.browser.new_page(viewport={"width": w, "height": h})
-        page.set_content(html, wait_until="networkidle", timeout=45_000)
+        page.set_content(html, wait_until="load", timeout=45_000)
         try:
             page.evaluate("document.fonts.ready")
         except Exception:
