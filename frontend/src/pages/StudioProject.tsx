@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { BotAvatar } from 'bot-avatars'
 import { Boxes, Camera, Check, Code2, Compass, Database, Download, Eye, FileText, Flag, Gauge, Hammer, LayoutTemplate, Loader2, Palette, PenTool, RefreshCw, Search, ShieldAlert, Sparkles, Trash2, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -21,6 +22,24 @@ const ICONS: Record<string, typeof Code2> = {
   'Product Strategist': Compass, 'UX Architect': LayoutTemplate, 'Design Researcher': Search, 'Product Designer': Palette, 'MVP Architect': Database,
   'Frontend Architect': Boxes, 'UI Engineer': Code2, 'Screenshot Agent': Camera, 'Vision Reviewer': Eye, 'Design Critic': PenTool, 'Failure Agent': ShieldAlert,
   'Quality Scorer': Gauge, 'Refinement Agent': Hammer, Studio: Flag,
+}
+
+/** Unique bot-avatar type for each studio agent — no two share the same shape. */
+const STUDIO_BOT_TYPES: Record<string, string> = {
+  'Product Strategist': 'clover',
+  'UX Architect': 'triangle',
+  'Design Researcher': 'blob',
+  'Product Designer': 'cat',
+  'MVP Architect': 'square',
+  'Frontend Architect': 'mech',
+  'UI Engineer': 'pill',
+  'Screenshot Agent': 'ghost',
+  'Vision Reviewer': 'drop',
+  'Design Critic': 'pebble',
+  'Failure Agent': 'puddle',
+  'Quality Scorer': 'circle',
+  'Refinement Agent': 'hexagon',
+  Studio: 'star',
 }
 const DOCS = [['product_spec', 'Product requirements'], ['ux_blueprint', 'UX blueprint'], ['design_spec', 'Design spec'], ['technical_spec', 'Technical spec'], ['frontend_architecture', 'Frontend architecture']] as const
 const SEVERITY = { high: 'rose', medium: 'amber', low: 'neutral' } as const
@@ -46,18 +65,26 @@ const Issues = ({ items }: { items?: { severity: 'high' | 'medium' | 'low'; wher
 
 function EventRow({ e, open }: { e: StudioEvent; open: boolean }) {
   const Icon = ICONS[e.agent] ?? Sparkles
+  const botType = STUDIO_BOT_TYPES[e.agent] ?? 'circle'
+  const isRunning = e.status === 'running'
   return (
     <li className="flex gap-3">
       <div className="flex flex-col items-center">
-        <span className={cn('grid size-8 shrink-0 place-items-center rounded-full border', e.status === 'failed' ? 'border-rose/40 bg-[#fbe4e0] text-rose' : e.status === 'running' ? 'border-amber/40 bg-[#fbf0d9] text-[#8a5e12]' : 'border-line bg-white text-ink-2')}>
-          {e.status === 'running' ? <Loader2 className="size-4 animate-spin" /> : e.status === 'failed' ? <X className="size-4" /> : <Icon className="size-4" />}
-        </span>
+        {isRunning ? (
+          <span className="shrink-0 leading-none" title={`${e.agent} is working…`}>
+            <BotAvatar type={botType as any} size={32} state="working" face="eyes" shading="fabric" />
+          </span>
+        ) : (
+          <span className={cn('grid size-8 shrink-0 place-items-center rounded-full border', e.status === 'failed' ? 'border-rose/40 bg-[#fbe4e0] text-rose' : 'border-line bg-white text-ink-2')}>
+            {e.status === 'failed' ? <X className="size-4" /> : <Icon className="size-4" />}
+          </span>
+        )}
         <span className="mt-1 w-px flex-1 bg-line" />
       </div>
       <div className="min-w-0 flex-1 pb-6">
         <p className="flex flex-wrap items-center gap-2 text-[15px] font-medium">{e.agent}{e.iteration > 0 && <Badge tone="outline">v{e.iteration}</Badge>}{e.status === 'done' && <Check className="size-3.5 text-[#5d8a2b]" />}<span className="text-xs font-normal text-faint">{ago(e.created_at)}</span></p>
         {e.summary && <p className="mt-0.5 text-sm text-ink-2">{e.summary}</p>}
-        {e.status === 'running' && <p className="mt-0.5 text-sm text-muted">Working…</p>}
+        {isRunning && <p className="mt-0.5 text-sm text-muted">Working…</p>}
         {e.detail && (
           <details open={open || e.status === 'failed'} className="mt-2 rounded-xl border border-line bg-white px-3 py-2 text-sm text-ink-2">
             <summary className="cursor-pointer text-xs text-muted select-none">{e.status === 'failed' ? 'Error' : 'Reasoning'}</summary>

@@ -201,18 +201,29 @@ export function BoardInSession({ question, rounds, messages }: { question: strin
       <div className="relative p-6 sm:p-8">
         <div className="flex items-center gap-2 text-xs text-muted"><span className="size-1.5 animate-pulse rounded-full bg-saffron" />The board is meeting · round {currentRound} of {rounds}</div>
         <p className="mt-2 text-xl font-medium tracking-[-0.01em]">“{question}”</p>
-        <div className="mt-6 grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-6">
           {ORDER.map((k) => {
             const active = next === k
             const finished = (spoke.has(k) || !next) && !active
+            const avatarState: 'working' | 'sleeping' | 'default' = active ? 'working' : finished ? 'sleeping' : 'default'
             return (
               <div key={k} className="flex flex-col items-center text-center">
                 <div className="relative">
-                  {active && <motion.span layoutId="speaker" className="absolute -inset-1.5 z-0 rounded-full bg-[conic-gradient(from_0deg,#ec8a44,#6a88e2,#ec8a44)] opacity-80 blur-[2px]" />}
-                  <div className={cn('relative z-10 transition', !active && !finished && 'opacity-40')}><AgentAvatar agent={k} size={44} /></div>
-                  {finished && <span className="absolute -right-1 -bottom-1 z-20 grid size-4 place-items-center rounded-full bg-leaf text-white"><Check className="size-2.5" /></span>}
+                  <div className={cn('relative transition-opacity duration-300', !active && !finished && 'opacity-35')}>
+                    <AgentAvatar agent={k} size={52} state={avatarState} />
+                  </div>
+                  {finished && (
+                    <span className="absolute -right-1 -bottom-1 z-20 grid size-4 place-items-center rounded-full bg-leaf text-white shadow">
+                      <Check className="size-2.5" />
+                    </span>
+                  )}
+                  {active && (
+                    <span className="absolute -right-1 -bottom-1 z-20 grid size-4 place-items-center rounded-full bg-saffron text-white shadow">
+                      <span className="size-1.5 animate-pulse rounded-full bg-white" />
+                    </span>
+                  )}
                 </div>
-                <p className="mt-2 text-xs font-medium">{AGENTS[k].name}</p>
+                <p className={cn('mt-2 text-xs font-medium transition-colors', active && 'text-saffron')}>{AGENTS[k].name}</p>
               </div>
             )
           })}

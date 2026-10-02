@@ -1,3 +1,4 @@
+import { BotAvatar, type BotAvatarType } from 'bot-avatars'
 import { AlertCircle, Briefcase, Cpu, Crown, Flame, Megaphone, Puzzle } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
@@ -143,12 +144,36 @@ export const AGENTS: Record<AgentKey, { name: string; role: string; icon: typeof
   failure: { name: 'Failure Agent', role: 'Why this will fail', icon: Flame, tone: 'rose', bubble: 'bg-[#fdf0ed] border-[#f5cfc6]' },
 }
 
-export function AgentAvatar({ agent, size = 36 }: { agent: AgentKey; size?: number }) {
+/** Unique bot-avatar shape for every boardroom agent — no two are the same. */
+export const AGENT_BOT_TYPES: Record<AgentKey, BotAvatarType> = {
+  ceo: 'star',
+  investor: 'hexagon',
+  product: 'flower',
+  growth: 'cloud',
+  technical: 'droid',
+  failure: 'alien',
+}
+
+/**
+ * AgentAvatar — renders a BotAvatar for each boardroom agent.
+ * Pass `state="working"` while the agent is processing.
+ * Falls back to gradient + icon for very small sizes (< 24 px) where the bot canvas is noisy.
+ */
+export function AgentAvatar({ agent, size = 36, state = 'default' }: { agent: AgentKey; size?: number; state?: 'default' | 'working' | 'sleeping' }) {
   const A = AGENTS[agent]
-  const Icon = A.icon
+  const botType = AGENT_BOT_TYPES[agent]
+  if (size < 24) {
+    // Compact stacked list — keep the gradient pill for legibility
+    const Icon = A.icon
+    return (
+      <span className={cn('grid shrink-0 place-items-center rounded-full text-white ring-2 ring-white', GRADIENTS[A.tone])} style={{ width: size, height: size }}>
+        <Icon style={{ width: size * 0.45, height: size * 0.45 }} />
+      </span>
+    )
+  }
   return (
-    <span className={cn('grid shrink-0 place-items-center rounded-full text-white ring-2 ring-white', GRADIENTS[A.tone])} style={{ width: size, height: size }}>
-      <Icon style={{ width: size * 0.45, height: size * 0.45 }} />
+    <span className="shrink-0 leading-none" title={A.name}>
+      <BotAvatar type={botType} size={size} state={state} face="eyes" shading="fabric" seed={(['ceo','investor','product','growth','technical','failure'] as AgentKey[]).indexOf(agent) / 6} />
     </span>
   )
 }

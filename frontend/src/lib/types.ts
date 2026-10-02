@@ -236,6 +236,7 @@ export interface DesignReference {
 
 export interface StudioProject {
   id: string
+  venture_id: string | null
   name: string
   idea: string
   audience: string | null

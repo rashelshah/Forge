@@ -127,11 +127,29 @@ r.post('/studio/projects', async (req, res) => {
   const idea = text(req.body.idea)
   if (idea.length < 10) throw new HttpError(400, 'Describe the startup idea in a sentence or two')
   await requireQuota(req.user, 'agentRuns')
+  // Optional: link this Studio run to a venture so the result mirrors into the Prototype tab.
+  let venture_id = null
+  if (req.body.venture_id) {
+    const v = await own('ventures', String(req.body.venture_id), req.user)
+    venture_id = v.id
+  }
   const p = await db.insert(TABLE, {
-    user_id: req.user.id, name: text(req.body.name, 80) || idea.split(/\s+/).slice(0, 3).join(' '), idea,
+    user_id: req.user.id, venture_id, name: text(req.body.name, 80) || idea.split(/\s+/).slice(0, 3).join(' '), idea,
     audience: text(req.body.audience, 300) || null, industry: text(req.body.industry, 100) || null, requirements: text(req.body.requirements, 1500) || null,
     max_iterations: Math.min(5, Math.max(1, Number(req.body.max_iterations) || 3)), status: 'queued',
   })
+  // If linked to a venture, create/update the prototype report so it shows up in the Prototype tab immediately with a building state.
+  if (venture_id) {
+    const existing = await latestReport(venture_id, 'prototype')
+    const build = { status: 'building', stage: 'spec', agent: 'Queued', started_at: now(), studio_project_id: p.id }
+    if (existing) {
+      await db.update('research_reports', existing.id, { content: { ...existing.content, build } })
+    } else {
+      await db.insert('research_reports', { user_id: req.user.id, venture_id, kind: 'prototype',
+        title: `Prototype · ${p.name}`, summary: 'Building…', mode: 'live',
+        content: { title: p.name, html: null, summary: 'Building…', history: [], previous_html: null, build, mode: 'live' } })
+    }
+  }
   enqueue(p.id)
   res.status(201).json(p)
 })

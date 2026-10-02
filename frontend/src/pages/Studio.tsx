@@ -9,7 +9,7 @@ import { Input, Select, Textarea } from '@/components/ui/input'
 import { StatusBadge } from '@/components/studio'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
-import { useAction } from '@/lib/queries'
+import { useAction, useVentures } from '@/lib/queries'
 import { avg } from '@/lib/studio'
 import type { StudioProject } from '@/lib/types'
 import { ago } from '@/lib/utils'
@@ -21,12 +21,13 @@ const EXAMPLES = [
 
 export default function Studio() {
   const nav = useNavigate()
-  const [f, setF] = useState({ name: '', idea: '', audience: '', industry: '', requirements: '', max_iterations: '3' })
+  const { data: ventures = [] } = useVentures()
+  const [f, setF] = useState({ name: '', idea: '', audience: '', industry: '', requirements: '', max_iterations: '3', venture_id: '' })
   const list = useQuery({
     queryKey: ['studio'], queryFn: () => api<StudioProject[]>('/studio/projects'), retry: false,
     refetchInterval: (q) => (q.state.data?.some((p) => p.status === 'queued' || p.status === 'running') ? 4000 : false),
   })
-  const create = useAction(() => api<StudioProject>('/studio/projects', { ...f, max_iterations: Number(f.max_iterations) }), [['studio']])
+  const create = useAction(() => api<StudioProject>('/studio/projects', { ...f, max_iterations: Number(f.max_iterations), venture_id: f.venture_id || undefined }), [['studio'], ['research']])
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value })
 
   return (
@@ -49,6 +50,16 @@ export default function Studio() {
             </div>
           </div>
           <div><Label htmlFor="sr">Requirements (optional)</Label><Textarea id="sr" rows={2} value={f.requirements} onChange={set('requirements')} placeholder="Must feel calm and fast. Needs a mobile-friendly daily queue." /></div>
+          {ventures.length > 0 && (
+            <div>
+              <Label htmlFor="sv">Link to venture (optional)</Label>
+              <Select id="sv" value={f.venture_id} onChange={set('venture_id')}>
+                <option value="">None — standalone project</option>
+                {ventures.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </Select>
+              {f.venture_id && <p className="mt-1 text-xs text-muted">The finished prototype will automatically appear in that venture’s Prototype tab.</p>}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" loading={create.isPending} disabled={f.idea.trim().length < 10 || !f.name.trim()}><Wand2 />Assemble the team</Button>
             <span className="text-xs text-muted">A full run takes roughly 10–25 minutes on free-tier models.</span>

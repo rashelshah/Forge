@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppWindow, Brain, FlaskConical, Megaphone, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
@@ -29,6 +29,31 @@ function useReports(ventureId: string) {
   const q = useQuery({ queryKey: ['research', { venture_id: ventureId }], queryFn: () => api<Report[]>(`/research?venture_id=${ventureId}`) })
   const latest = <C,>(kind: Report['kind']) => q.data?.find((r) => r.kind === kind) as Report<C> | undefined
   return { ...q, latest }
+}
+
+/** Poll for any Studio project linked to this venture (queued or running = syncing in progress). */
+function useLinkedStudioProject(ventureId: string) {
+  const qc = useQueryClient()
+  type SP = { id: string; name: string; status: string; stage: string | null; iteration: number; venture_id: string | null }
+  const q = useQuery({
+    queryKey: ['studio'],
+    queryFn: () => api<SP[]>('/studio/projects'),
+    refetchInterval: (query) => {
+      const linked = (query.state.data as SP[] | undefined)?.find((p) => p.venture_id === ventureId)
+      return linked?.status === 'queued' || linked?.status === 'running' ? 4000 : false
+    },
+  })
+  const linked = q.data?.find((p) => p.venture_id === ventureId && (p.status === 'queued' || p.status === 'running' || p.status === 'done'))
+  // When the studio project completes, invalidate research so the prototype report appears.
+  const prevStatus = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const cur = linked?.status
+    if (prevStatus.current && (prevStatus.current === 'queued' || prevStatus.current === 'running') && cur === 'done') {
+      qc.invalidateQueries({ queryKey: ['research', { venture_id: ventureId }] })
+    }
+    prevStatus.current = cur
+  }, [linked?.status, ventureId, qc])
+  return linked
 }
 
 function Generating({ label }: { label: string }) {
@@ -176,6 +201,8 @@ export default function VentureDetail() {
       validate.mutate()
     }
   }, [loc.state, v, nav, validate])
+  // Must be called unconditionally BEFORE any early returns to obey the Rules of Hooks.
+  const linkedStudio = useLinkedStudioProject(id)
 
   if (isLoading) return <Loading rows={4} />
   if (error || !v) return <ErrorNote error={error ?? new Error('Venture not found')} />
@@ -253,7 +280,31 @@ export default function VentureDetail() {
           </Generator>
         </TabsContent>
 
-        <TabsContent value="prototype"><PrototypeStudio venture={v} report={prototype} /></TabsContent>
+        <TabsContent value="prototype">
+          {/* If there's no prototype report yet but a linked Studio project exists, show its progress */}
+          {!prototype && linkedStudio && (linkedStudio.status === 'queued' || linkedStudio.status === 'running') ? (
+            <Card className="relative overflow-hidden p-8">
+              <div className="aurora-soft -z-10" />
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <p className="text-lg font-medium">Building your prototype…</p>
+                  <p className="mt-1 text-sm text-muted">A team of AI agents is designing, building, screenshotting and reviewing it — usually 2–4 minutes.</p>
+                  {linkedStudio.stage && (
+                    <p className="mt-2 text-sm text-ink-2">Now: <b className="font-medium">{linkedStudio.stage}</b>{linkedStudio.iteration > 0 ? ` · version ${linkedStudio.iteration}` : ''} · <Link to={`/app/studio/${linkedStudio.id}`} className="text-azure hover:underline">Watch the team →</Link></p>
+                  )}
+                  {!linkedStudio.stage && linkedStudio.status === 'queued' && (
+                    <p className="mt-2 text-sm text-ink-2">Waiting in queue · <Link to={`/app/studio/${linkedStudio.id}`} className="text-azure hover:underline">Watch the team →</Link></p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Loader2 className="size-5 animate-spin text-saffron" />
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <PrototypeStudio venture={v} report={prototype} />
+          )}
+        </TabsContent>
 
         <TabsContent value="gtm"><GtmStudio ventureId={v.id} /></TabsContent>
 
