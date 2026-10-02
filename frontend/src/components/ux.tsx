@@ -88,8 +88,8 @@ export function FoldSection({ id, title, hint, defaultOpen, aside, children }: {
   }, [id])
   return (
     <section id={id} className="scroll-mt-24">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex min-w-0 flex-[1_1_20rem] cursor-pointer items-center gap-3 rounded-card border border-line bg-white px-5 py-4 text-left transition hover:border-line-2">
+      <div className="flex flex-col gap-2.5">
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex min-w-0 w-full cursor-pointer items-center gap-3 rounded-card border border-line bg-white px-5 py-4 text-left transition hover:border-line-2">
           <span className="min-w-0 flex-1"><span className="block text-lg font-medium tracking-[-0.01em]">{title}</span>{hint && <span className="mt-0.5 block text-xs text-muted">{hint}</span>}</span>
           <span className="shrink-0 text-xs text-azure">{open ? 'Hide' : 'View details'}</span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted transition', open && 'rotate-180')} />
