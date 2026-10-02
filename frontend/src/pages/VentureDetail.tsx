@@ -239,7 +239,7 @@ export default function VentureDetail() {
       </div>
 
       <Tabs value={tab} onValueChange={(t) => setParams({ tab: t })}>
-        <TabsList className="mb-6">
+        <TabsList className="sticky top-16 z-30 -mx-4 mb-6 bg-canvas/90 px-4 pt-4 backdrop-blur-md sm:-mx-8 sm:px-8">
           <TabsTrigger value="overview"><Gauge />Overview</TabsTrigger>
           <TabsTrigger value="boardroom"><MessagesSquare />Boardroom</TabsTrigger>
           <TabsTrigger value="mvp"><Layers />MVP Architect</TabsTrigger>

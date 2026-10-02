@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, AppWindow, Bell, Brain, CircleHelp, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
+  Activity, AppWindow, ArrowUp, Bell, Brain, CircleHelp, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
 } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
@@ -233,6 +233,27 @@ export function AppShell() {
       </main>
       <NewVentureDialog open={newOpen} onOpenChange={setNewOpen} />
       <ProductTour open={tourOpen} onClose={closeTour} onCreate={() => setNewOpen(true)} setSidebar={setMobile} />
+      <ScrollToTop />
     </div>
+  )
+}
+
+function ScrollToTop() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 400)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+  if (!show) return null
+  return (
+    <Button
+      size="icon"
+      className="fixed bottom-24 right-4 z-50 h-10 w-10 cursor-pointer rounded-full bg-dark text-white shadow-lg transition hover:bg-ink hover:-translate-y-1 sm:bottom-8 sm:right-8"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Scroll to top"
+    >
+      <ArrowUp className="size-4" />
+    </Button>
   )
 }
