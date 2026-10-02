@@ -180,7 +180,7 @@ export function AppShell() {
   // A brand-new founder (no ventures yet, tour never finished or skipped) is greeted with the tour. Finishing or skipping it is remembered
   // on the account (and in this browser, in case that save fails), so it never reappears; the ? button replays it.
   useEffect(() => {
-    if (!me || me.settings.onboarded || me.usage.ventures > 0 || tourSeen(me.id)) return
+    if (!me || me.settings?.onboarded || me.usage.ventures > 0 || tourSeen(me.id)) return
     const t = setTimeout(() => setTourOpen(true), 700)
     return () => clearTimeout(t)
   }, [me])
@@ -188,7 +188,7 @@ export function AppShell() {
     setTourOpen(false)
     if (!me) return
     try { localStorage.setItem(tourKey(me.id), 'done') } catch { /* private mode */ }
-    if (!me.settings.onboarded) api('/me', { settings: { onboarded: true } }, 'PATCH').then(() => qc.invalidateQueries({ queryKey: ['me'] })).catch(() => {})
+    if (!me.settings?.onboarded) api('/me', { settings: { onboarded: true } }, 'PATCH').then(() => qc.invalidateQueries({ queryKey: ['me'] })).catch(() => {})
   }
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('forge:sidebar') === 'collapsed' } catch { return false } })
   const loc = useLocation()
@@ -213,7 +213,7 @@ export function AppShell() {
         )}
       </AnimatePresence>
 
-      <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line/70 bg-canvas/80 px-4 backdrop-blur sm:px-8">
+      <header className="sticky top-0 z-20 flex h-16 items-center gap-2 border-b border-line/70 bg-canvas/80 px-3 backdrop-blur sm:gap-3 sm:px-8">
         <button className="rounded-full p-2 text-ink-2 hover:bg-soft lg:hidden cursor-pointer" onClick={() => setMobile(true)} aria-label="Open menu"><Menu className="size-5" /></button>
         <Logo to="/app" className="lg:hidden" />
         <div className="ml-auto flex items-center gap-2">

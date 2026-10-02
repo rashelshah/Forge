@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Brain, CircleHelp, FlaskConical, FileSearch, Layers, LayoutGrid, Megaphone, MessagesSquare, Plus, Radar, Rocket, Settings, Sparkles, TrendingUp, X, AppWindow, type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -108,7 +108,7 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
   useEffect(() => { if (open) setI(0) }, [open])
 
   // On small screens the sidebar is a drawer: open it for sidebar steps, close it for the rest.
-  useEffect(() => { if (open && !isDesktop()) setSidebar(!!step.nav) }, [open, step, setSidebar])
+  useEffect(() => { if (open && !isDesktop()) setSidebar(!!step.nav) }, [open, step, setSidebar, vw])
 
   useEffect(() => {
     if (!open) return
@@ -136,17 +136,31 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
   const next = () => (last ? finish('done') : setI((n) => Math.min(STEPS.length - 1, n + 1)))
   const back = () => setI((n) => Math.max(0, n - 1))
 
+  // The key handler is installed once per open; it reads the latest finish() through a ref so it never acts on a stale render.
+  const act = useRef({ finish, last })
+  act.current = { finish, last }
   useEffect(() => {
     if (!open) return
+    const opener = document.activeElement as HTMLElement | null
     const key = (e: KeyboardEvent) => {
+      const { finish, last } = act.current
       if (e.key === 'Escape') finish('skipped')
-      else if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); if (last) finish('done'); else setI((n) => n + 1) }
+      // Enter and Space are left to the focused button, so Enter on "Skip tour" skips instead of also advancing.
+      else if (e.key === 'ArrowRight' && !last) setI((n) => n + 1)
       else if (e.key === 'ArrowLeft') setI((n) => Math.max(0, n - 1))
+      else if (e.key === 'Tab') {
+        // Keep keyboard focus inside the tour: Tab must never reach the page behind it.
+        const items = [...document.querySelectorAll<HTMLElement>('[role=dialog] button:not([disabled])')]
+        if (!items.length) return
+        const at = items.indexOf(document.activeElement as HTMLElement)
+        const to = e.shiftKey ? (at <= 0 ? items.length - 1 : at - 1) : (at < 0 || at === items.length - 1 ? 0 : at + 1)
+        e.preventDefault()
+        items[to].focus()
+      }
     }
     window.addEventListener('keydown', key)
-    return () => window.removeEventListener('keydown', key)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, last])
+    return () => { window.removeEventListener('keydown', key); opener?.focus?.() }
+  }, [open])
 
   if (!open) return null
 
@@ -178,7 +192,7 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
 
       <AnimatePresence mode="wait">
         <motion.div key={step.id} ref={setCardEl} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}
-          className={cn('absolute overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_24px_70px_-12px_rgba(16,18,31,0.55)]', centred && 'text-center')} style={pos}>
+          className={cn('absolute overflow-y-auto rounded-3xl border border-white/60 bg-white shadow-[0_24px_70px_-12px_rgba(16,18,31,0.55)]', centred && 'text-center')} style={{ ...pos, maxHeight: vh - 2 * PAD }}>
           {centred && <div className="aurora-soft absolute inset-0 -z-0 opacity-80" />}
           <div className="relative p-5 sm:p-6">
             <div className={cn('flex items-center gap-3', centred && 'flex-col')}>
@@ -192,7 +206,7 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
             <p className={cn('mt-3 text-[14.5px] leading-relaxed text-ink-2', centred && 'mx-auto max-w-sm')}>{step.body}</p>
             {step.tip && <p className="mt-3 rounded-xl bg-[#f4f7fe] px-3 py-2 text-[13px] leading-snug text-ink-2"><span className="font-medium text-azure">Tip · </span>{step.tip}</p>}
             {step.id === 'welcome' && (
-              <div className="mt-4 flex justify-center gap-1 text-[11px] text-ink-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-x-1 gap-y-1.5 text-[11px] text-ink-2">
                 {['Idea', 'Validate', 'Debate', 'Build', 'Launch'].map((s, n) => <span key={s} className="flex items-center gap-1"><span className="rounded-full border border-line bg-white px-2 py-1">{s}</span>{n < 4 && <ArrowRight className="size-3 text-faint" />}</span>)}
               </div>
             )}
