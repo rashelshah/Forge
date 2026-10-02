@@ -103,12 +103,15 @@ function Pricing() {
 
 function FooterMascot() {
   return (
-    <section className="relative w-full overflow-hidden bg-canvas pointer-events-none -mt-8 sm:-mt-16 h-[450px] sm:h-[500px]">
-      <div className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto grayscale">
+    <section className="relative w-full overflow-hidden bg-canvas pointer-events-none -mt-8 sm:-mt-16 h-[200px] sm:h-[500px]">
+      
+      {/* 800x800 logical footprint. Scales to 320x320 on mobile (scale 0.4), fitting completely within the screen width. */}
+      <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[800px] h-[800px] pointer-events-auto grayscale origin-top scale-[0.4] sm:scale-100">
         <BotAvatar type="circle" size={800} shading="flat" color="#fcfcfc" ink="#a9aab1" interactive={true} turn={0} jumpEvery={0} />
       </div>
-      {/* Platform line for the mascot to rest on, slightly wider than the mascot */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[850px] max-w-[90vw] border-b border-line" />
+
+      {/* Platform line: matches the scaled sizes (340px on mobile, 850px on desktop) */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[340px] sm:w-[850px] border-b border-line" />
     </section>
   )
 }
