@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Check, Download, Loader2, Megaphone, RefreshCw, Rocket, Target, TrendingUp } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { Empty, ErrorNote, ScoreRing } from '@/components/bits'
+import { ConfirmButton, Empty, ErrorNote, ScoreRing } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Disclose, FoldSection, FounderBrief, InsightCard, LongText, RiskCard, gist } from '@/components/ux'
 import { Button } from '@/components/ui/button'
@@ -337,7 +337,11 @@ export function GtmStudio({ ventureId }: { ventureId: string }) {
         <p className="min-w-0 flex-[1_1_16rem] text-sm">{running ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />{run.stage ?? 'Starting'} — the launch team is working (about 3–8 minutes)…</span>
           : run.status === 'failed' ? <span className="text-rose">Stopped: {run.error}</span> : <>Launch package updated {ago(run.updated_at)}</>}</p>
         {run.status === 'failed' && <Button size="sm" onClick={() => start.mutate(false)} loading={start.isPending}><RefreshCw />Resume</Button>}
-        {run.status === 'done' && <Button size="sm" variant="light" onClick={() => confirm('Rebuild everything from scratch? Current assets are replaced.') && start.mutate(true)} loading={start.isPending}><RefreshCw />Rebuild</Button>}
+        {run.status === 'done' && (
+          <ConfirmButton prompt="Rebuild package?" description="Rebuild everything from scratch? Current assets are replaced." onConfirm={() => start.mutate(true)}>
+            <Button size="sm" variant="light" loading={start.isPending}><RefreshCw />Rebuild</Button>
+          </ConfirmButton>
+        )}
       </div>
 
       {events.length > 0 && (running || run.status === 'failed') && (

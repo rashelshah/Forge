@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { AppWindow, ArrowLeft, Compass, FileSearch, FlaskConical, Gauge, Layers, LayoutTemplate, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
+import { ConfirmButton, Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
 import { OpportunityCard, ReportBody, ResearchBrief, ResearchInsights, ventureFromOpportunity } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -108,7 +108,11 @@ export function ReportPage() {
       <Link to="/app/research" className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft className="size-4" />Research</Link>
       <PageHeader eyebrow={KINDS[r.kind].label} title={r.title}
         description={<span className="flex flex-wrap items-center gap-2">{date(r.created_at)}{venture && <>· <Link className="text-azure hover:underline" to={`/app/ventures/${venture.id}`}>{venture.name}</Link></>}<ModeBadge mode={r.mode} /></span>}
-        actions={<Button size="icon" variant="ghost" aria-label="Delete report" onClick={() => confirm('Delete this report?') && del.mutate(undefined, { onSuccess: () => nav('/app/research') })}><Trash2 /></Button>} />
+        actions={
+          <ConfirmButton prompt="Delete report?" description="Delete this report?" onConfirm={() => del.mutate(undefined, { onSuccess: () => nav('/app/research') })}>
+            <Button size="icon" variant="ghost" aria-label="Delete report"><Trash2 /></Button>
+          </ConfirmButton>
+        } />
       {(r.kind === 'discovery' || r.kind === 'validation') && <ResearchBrief reports={[r]} />}
       {r.kind === 'discovery' ? (
         <div className="space-y-3">

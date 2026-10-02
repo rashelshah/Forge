@@ -1,7 +1,9 @@
 import { BotAvatar, type BotAvatarType } from 'bot-avatars'
 import { AlertCircle, Briefcase, Cpu, Crown, Flame, Megaphone, Puzzle } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { AgentKey, Decision, Mode, ScoreKey, Stage } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -185,5 +187,22 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
       <p className="mt-2 font-display text-[34px] leading-none font-medium tracking-[-0.03em] tabular-nums">{value}</p>
       {hint && <p className="mt-2 text-xs text-muted">{hint}</p>}
     </div>
+  )
+}
+
+export function ConfirmButton({ prompt = "Are you sure?", description, onConfirm, children, danger = true }: { prompt?: string; description: string; onConfirm: () => void; children: ReactNode; danger?: boolean }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent>
+        <DialogTitle>{prompt}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button className={danger ? 'bg-rose hover:bg-rose/90' : 'bg-ink hover:bg-ink/90 text-white'} onClick={() => { setOpen(false); onConfirm() }}>Confirm</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { BotAvatar } from 'bot-avatars'
 import { AppWindow, Brain, FlaskConical, Megaphone, Gauge, Layers, Loader2, MessagesSquare, Radar, RefreshCw, Rocket, Search, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router'
 import { DECISION_COPY, LiveBoardroom } from '@/components/boardroom'
-import { DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
+import { ConfirmButton, DecisionBadge, Empty, ErrorNote, Loading, ModeBadge, ScoreRing, StageBadge } from '@/components/bits'
 import { GtmStudio } from '@/components/gtm'
 import { CommandCenter } from '@/components/overview'
 import { PrototypeStudio } from '@/components/prototype'
@@ -56,10 +57,15 @@ function useLinkedStudioProject(ventureId: string) {
   return linked
 }
 
-function Generating({ label }: { label: string }) {
+function Generating({ label, avatar }: { label: string; avatar?: string }) {
   return (
-    <Card className="flex items-center gap-3 p-6 text-sm text-ink-2">
-      <Loader2 className="size-4 animate-spin text-saffron" />{label}
+    <Card className="flex items-center gap-4 p-6 text-sm text-ink-2">
+      {avatar ? (
+        <div className="shrink-0"><BotAvatar type={avatar as any} size={28} state="working" /></div>
+      ) : (
+        <Loader2 className="size-4 shrink-0 animate-spin text-saffron" />
+      )}
+      <span className="min-w-0 flex-1">{label}</span>
     </Card>
   )
 }
@@ -83,7 +89,7 @@ function Overview({ v, validation, validate }: { v: Venture; validation?: Report
           <div className="flex items-center gap-2"><h3 className="text-xl">Validation</h3><ModeBadge mode={validation?.mode} />{validation && <span className="text-xs text-muted">{ago(validation.created_at)}</span>}</div>
           {validation && <Button size="sm" variant="light" onClick={() => validate.mutate()} loading={validate.isPending}><RefreshCw />Re-run</Button>}
         </div>
-        {validate.isPending ? <Generating label="Validation Engine is gathering evidence and scoring demand, competition, defensibility, revenue and founder fit…" />
+        {validate.isPending ? <Generating label="Validation Engine is gathering evidence and scoring demand, competition, defensibility, revenue and founder fit…" avatar="hexagon" />
           : validation ? <ValidationView v={validation.content} />
           : <Empty icon={<Gauge />} title="Not validated yet" action={<Button onClick={() => validate.mutate()}><Sparkles />Run validation</Button>}>Five evidence-backed scores: demand, competition, defensibility, revenue potential and founder fit.</Empty>}
       </div>
@@ -97,7 +103,7 @@ function useValidate(id: string) {
 
 // ---------------------------------------------------------------- generators
 
-function Generator<C>({ v, kind, report, label, running, empty, children }: { v: Venture; kind: 'mvp'; report?: Report<C>; label: string; running: string; empty: string; children: (c: C) => React.ReactNode }) {
+function Generator<C>({ v, kind, report, label, running, empty, avatar, children }: { v: Venture; kind: 'mvp'; report?: Report<C>; label: string; running: string; empty: string; avatar?: string; children: (c: C) => React.ReactNode }) {
   const gen = useAction(() => api(`/ventures/${v.id}/${kind}`, {}), [['research'], ['memory'], ['me'], ['activity']], `${label} ready`)
   return (
     <div className="space-y-4">
@@ -105,7 +111,7 @@ function Generator<C>({ v, kind, report, label, running, empty, children }: { v:
         <div className="flex items-center gap-2"><ModeBadge mode={report?.mode} />{report && <span className="text-xs text-muted">Generated {ago(report.created_at)}</span>}</div>
         {report && <Button size="sm" variant="light" onClick={() => gen.mutate()} loading={gen.isPending}><RefreshCw />Regenerate</Button>}
       </div>
-      {gen.isPending ? <Generating label={running} /> : report ? children(report.content)
+      {gen.isPending ? <Generating label={running} avatar={avatar} /> : report ? children(report.content)
         : <Empty icon={<Layers />} title={`No ${label.toLowerCase()} yet`} action={<Button onClick={() => gen.mutate()}><Sparkles />Generate {label.toLowerCase()}</Button>}>{empty}</Empty>}
     </div>
   )
@@ -234,7 +240,9 @@ export default function VentureDetail() {
           <Select value={v.stage} onChange={(e) => update.mutate({ stage: e.target.value as Stage })} className="h-9 w-36 text-sm capitalize" aria-label="Stage">
             {STAGES.map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
           </Select>
-          <Button size="icon" variant="ghost" aria-label="Delete venture" onClick={() => confirm(`Delete ${v.name} and everything its agents produced?`) && remove.mutate(undefined, { onSuccess: () => nav('/app/ventures') })}><Trash2 /></Button>
+          <ConfirmButton prompt="Delete venture?" description={`Delete ${v.name} and everything its agents produced?`} onConfirm={() => remove.mutate(undefined, { onSuccess: () => nav('/app/ventures') })}>
+            <Button size="icon" variant="ghost" aria-label="Delete venture"><Trash2 /></Button>
+          </ConfirmButton>
         </div>
       </div>
 
@@ -274,7 +282,7 @@ export default function VentureDetail() {
         </TabsContent>
 
         <TabsContent value="mvp">
-          <Generator v={v} kind="mvp" report={mvp} label="MVP blueprint" running="MVP Architect is weighing scope, build vs buy, risks and launch order against your validation, competitors and boardroom findings…"
+          <Generator v={v} kind="mvp" report={mvp} label="MVP blueprint" avatar="mech" running="MVP Architect is weighing scope, build vs buy, risks and launch order against your validation, competitors and boardroom findings…"
             empty="An AI CTO's plan: what to build first and delay, build vs buy, launch roadmap, costs, risks and success metrics, plus the features, stories, schema and APIs behind it.">
             {(m) => <MvpView m={m} />}
           </Generator>

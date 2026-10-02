@@ -3,7 +3,7 @@ import { BadgeCheck, Copy, ExternalLink, FlaskConical, FlaskRound, GraduationCap
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
-import { Empty, ErrorNote, Loading, PageHeader, Stat } from '@/components/bits'
+import { ConfirmButton, Empty, ErrorNote, Loading, PageHeader, Stat } from '@/components/bits'
 import { AnalysisView } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -195,7 +195,9 @@ export function ExperimentDetail() {
             {['draft', 'running', 'completed'].map((s) => <option key={s} value={s}>{titleCase(s)}</option>)}
           </Select>
           <Button onClick={() => analyze.mutate()} loading={analyze.isPending}><Sparkles />Analyze results</Button>
-          <Button size="icon" variant="ghost" aria-label="Delete experiment" onClick={() => confirm('Delete this experiment and its data?') && del.mutate(undefined, { onSuccess: () => nav('/app/experiments') })}><Trash2 /></Button>
+          <ConfirmButton prompt="Delete experiment?" description="Delete this experiment and its data?" onConfirm={() => del.mutate(undefined, { onSuccess: () => nav('/app/experiments') })}>
+            <Button size="icon" variant="ghost" aria-label="Delete experiment"><Trash2 /></Button>
+          </ConfirmButton>
         </>} />
 
       {latest && <LabBrief className="mb-6" rows={[{ e, a: latest }]} />}

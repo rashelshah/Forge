@@ -6,7 +6,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
-import { Empty, ModeBadge } from '@/components/bits'
+import { ConfirmButton, Empty, ModeBadge } from '@/components/bits'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/input'
@@ -312,9 +312,11 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
           </form>
           
           <div className="pt-2 border-t border-line border-dashed">
-            <Button variant="light" className="w-full text-muted hover:text-ink" disabled={building} onClick={() => confirm('Start over with a brand new prototype? Your current version stays until the new one is ready, and you can undo afterwards.') && generate.mutate()}>
-              <Wand2 className="size-4 mr-2" /> Start over from scratch
-            </Button>
+            <ConfirmButton prompt="Start over?" description="Start over with a brand new prototype? Your current version stays until the new one is ready, and you can undo afterwards." onConfirm={() => generate.mutate()}>
+              <Button variant="light" className="w-full text-muted hover:text-ink" disabled={building}>
+                <Wand2 className="size-4 mr-2" /> Start over from scratch
+              </Button>
+            </ConfirmButton>
           </div>
         </div>
       </Card>
