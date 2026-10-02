@@ -45,7 +45,7 @@ export function AgentFeatures() {
     <section className="px-4 py-24 sm:px-6">
       <div className="mx-auto max-w-[1040px] space-y-6">
         {/* Feature 1: Boardroom Partners */}
-        <motion.div {...fade} className="relative rounded-[32px] bg-white px-8 py-8 sm:px-14 sm:py-10 flex flex-col md:flex-row items-center justify-between border border-line shadow-float min-h-[220px]">
+        <motion.div {...fade} className="relative rounded-[32px] bg-white px-6 pt-10 pb-40 sm:px-14 sm:py-10 flex flex-col md:flex-row items-center justify-between border border-line shadow-float min-h-[220px]">
           <div className="max-w-[440px] z-10 relative">
             <h2 className="text-[28px] sm:text-[36px] font-medium tracking-tight text-ink mb-5 leading-tight">AI partners that push back</h2>
             <p className="text-[16px] sm:text-[18px] leading-[1.6] text-ink-2">
@@ -55,12 +55,12 @@ export function AgentFeatures() {
 
           {/* Wrapper to clip the bottom edge but allow spilling out the top */}
           <div className="absolute inset-x-0 bottom-0 top-[-300px] overflow-hidden rounded-b-[32px] pointer-events-none z-0">
-            <div className="absolute right-[-20%] bottom-[-20px] md:right-[-5%] md:bottom-[-70px] drop-shadow-2xl">
+            <div className="absolute right-[-10%] bottom-[-20px] md:right-[-5%] md:bottom-[-70px] drop-shadow-2xl">
               <div className="hidden md:block">
                 <ExpressiveAgent agent="investor" size={500} />
               </div>
               <div className="block md:hidden">
-                <ExpressiveAgent agent="investor" size={300} />
+                <ExpressiveAgent agent="investor" size={260} />
               </div>
             </div>
           </div>
