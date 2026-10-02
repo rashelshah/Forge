@@ -1,4 +1,5 @@
-import { ArrowRight, Check, ExternalLink, Loader2, Minus, Plus, RefreshCw, Shield, Sparkles, Swords, Target, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { BotAvatar } from 'bot-avatars'
+import { ArrowRight, Check, ExternalLink, Minus, Plus, RefreshCw, Shield, Sparkles, Swords, Target, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -337,9 +338,9 @@ export function IntelPanel({ ventureId, ventureName, data, isLoading, onAdd }: {
   if (isLoading) return <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-card bg-soft" />)}</div>
   const status = (
     <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-white px-4 py-3">
-      <Swords className="size-4 text-saffron" />
+      {building ? <BotAvatar type="drop" size={24} state="working" /> : <Swords className="size-4 shrink-0 text-saffron" />}
       <p className="min-w-0 flex-[1_1_16rem] text-sm">
-        {building ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />The Competitive Intelligence Officer is reading {competitors.length} competitor{competitors.length === 1 ? '' : 's'} — usually about a minute…</span>
+        {building ? <span>The Competitive Intelligence Officer is reading {competitors.length} competitor{competitors.length === 1 ? '' : 's'} — usually about a minute…</span>
           : ready ? <>Analysis updated <b className="font-medium">{ago(report.generated_at)}</b> · {competitors.length} competitor{competitors.length === 1 ? '' : 's'} tracked</> : 'Your AI strategy consultant for the competitive landscape.'}
       </p>
       <Button size="sm" variant="light" onClick={onAdd}><Plus />Track competitor</Button>
