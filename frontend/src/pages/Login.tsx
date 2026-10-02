@@ -68,43 +68,26 @@ export default function Login() {
   return (
     <div className="relative isolate flex min-h-screen flex-col items-center overflow-hidden px-4">
       <div className="absolute inset-x-0 top-0 -z-10 h-[620px]"><div className="aurora" /><div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-canvas" /></div>
-      <div className="flex h-[68px] w-full max-w-[1120px] items-center"><Logo /></div>
-      <div className="mt-14 w-full max-w-[420px] text-center">
-        <Ornament className="mx-auto w-[130px]" />
-        <div className="mt-5"><Eyebrow>{mode === 'signin' ? 'Welcome back, founder' : 'Open your venture studio'}</Eyebrow></div>
-        <h1 className="mt-5 text-[40px] leading-tight font-[425]">{mode === 'signin' ? 'Log in to Forge' : 'Create your account'}</h1>
-      </div>
+      <div className="flex h-[68px] w-full max-w-[1120px] items-center shrink-0"><Logo /></div>
+      
+      <div className="flex w-full flex-1 flex-col items-center justify-center pb-20">
+        <div className="w-full max-w-[420px] text-center">
+          <Ornament className="mx-auto w-[130px]" />
+          <div className="mt-5"><Eyebrow>{mode === 'signin' ? 'Welcome back, founder' : 'Open your venture studio'}</Eyebrow></div>
+          <h1 className="mt-5 text-[40px] leading-tight font-[425]">{mode === 'signin' ? 'Log in to Forge' : 'Create your account'}</h1>
+        </div>
 
-      <div className="mt-8 w-full max-w-[420px] rounded-[20px] border border-line bg-white/90 p-7 shadow-float backdrop-blur">
-        {demo ? (
-          <div className="text-center">
-            <p className="text-[15px] text-ink-2">
-              This workspace runs in <span className="font-medium text-ink">local demo mode</span> — no account needed. Add Supabase keys to
-              <code className="mx-1 rounded bg-soft px-1.5 py-0.5 font-mono text-xs">.env</code>to enable real authentication.
-            </p>
-            <Button asChild className="mt-6 w-full"><Link to="/app">Enter the studio <ArrowRight /></Link></Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Google Sign In */}
-            <Button
-              type="button"
-              variant="white"
-              className="w-full"
-              onClick={googleSignIn}
-              disabled={busy}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </Button>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-line" />
-              <span className="text-xs text-muted">or continue with email</span>
-              <div className="h-px flex-1 bg-line" />
+        <div className="mt-8 w-full max-w-[420px] rounded-[20px] border border-line bg-white/90 p-7 shadow-float backdrop-blur">
+          {demo ? (
+            <div className="text-center">
+              <p className="text-[15px] text-ink-2">
+                This workspace runs in <span className="font-medium text-ink">local demo mode</span> — no account needed. Add Supabase keys to
+                <code className="mx-1 rounded bg-soft px-1.5 py-0.5 font-mono text-xs">.env</code>to enable real authentication.
+              </p>
+              <Button asChild className="mt-6 w-full"><Link to="/app">Enter the studio <ArrowRight /></Link></Button>
             </div>
-
+          ) : (
+          <div className="space-y-4">
             <form onSubmit={submit} className="space-y-4">
               {mode === 'signup' && (
                 <div><Label htmlFor="name">Full name</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" /></div>
@@ -116,15 +99,36 @@ export default function Login() {
               </div>
               <Button type="submit" className="w-full" loading={busy}>{mode === 'signin' ? 'Log in' : 'Create account'}</Button>
               {mode === 'signin' && <Button type="button" variant="light" className="w-full" onClick={magicLink} disabled={busy}>Email me a magic link</Button>}
-              <p className="pt-1 text-center text-sm text-muted">
-                {mode === 'signin' ? 'New to Forge? ' : 'Already have an account? '}
-                <button type="button" className="font-medium text-azure hover:underline cursor-pointer" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-                  {mode === 'signin' ? 'Create an account' : 'Log in'}
-                </button>
-              </p>
             </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-line" />
+              <span className="text-xs text-muted">or continue with</span>
+              <div className="h-px flex-1 bg-line" />
+            </div>
+
+            {/* Google Sign In */}
+            <Button
+              type="button"
+              variant="white"
+              className="w-full"
+              onClick={googleSignIn}
+              disabled={busy}
+            >
+              <GoogleIcon />
+              Google
+            </Button>
+
+            <p className="pt-1 text-center text-sm text-muted">
+              {mode === 'signin' ? 'New to Forge? ' : 'Already have an account? '}
+              <button type="button" className="font-medium text-azure hover:underline cursor-pointer" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
+                {mode === 'signin' ? 'Create an account' : 'Log in'}
+              </button>
+            </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   )
