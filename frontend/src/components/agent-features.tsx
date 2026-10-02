@@ -66,42 +66,7 @@ export function AgentFeatures() {
           </div>
         </motion.div>
 
-        {/* Feature 2: Connect the Bots */}
-        <motion.div {...fade} className="relative overflow-hidden rounded-[32px] bg-white px-8 py-16 sm:px-16 sm:py-24 flex flex-col items-center justify-center text-center border border-line shadow-float">
-          <div className="max-w-[540px] z-10 mb-16">
-            <h2 className="text-[28px] sm:text-[36px] font-medium tracking-tight text-ink mb-5 leading-tight">A complete venture studio</h2>
-            <p className="text-[16px] sm:text-[18px] leading-[1.6] text-ink-2">
-              Watch your startup evolve as specialized agents pass work between themselves. The Growth agent builds your go-to-market plan based on the Product agent's MVP blueprint, without needing your approval for every step.
-            </p>
-          </div>
 
-          <div className="flex items-center justify-center z-10 pb-4">
-            {/* Bot 1: Product */}
-            <div className="z-10 -mr-3 rounded-full border-[3px] border-white bg-white overflow-hidden shadow-sm">
-              <AgentAvatar agent="product" size={56} state="working" face="mouth" interactive={false} />
-            </div>
-
-            {/* Comms pill */}
-            <div className="bg-[#f0f3ff] border border-[#d5defb] rounded-full px-5 py-2.5 flex items-center gap-2.5 z-20 shadow-lg relative transform translate-y-[-2px]">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo animate-pulse" />
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo animate-pulse" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo animate-pulse" style={{ animationDelay: '300ms' }} />
-              </div>
-              <span className="text-indigo text-[15px] font-medium tracking-wide">Looping in Comms...</span>
-            </div>
-
-            {/* Bot 2: Growth */}
-            <div className="z-10 -ml-3 rounded-full border-[3px] border-white bg-white overflow-hidden shadow-sm">
-              <AgentAvatar agent="growth" size={56} state="working" glasses="round" interactive={false} />
-            </div>
-
-            {/* Bot 3: Investor */}
-            <div className="z-0 -ml-4 rounded-full border-[3px] border-white bg-white overflow-hidden shadow-sm">
-              <AgentAvatar agent="investor" size={56} state="sleeping" interactive={false} />
-            </div>
-          </div>
-        </motion.div>
       </div>
     </section>
   )
