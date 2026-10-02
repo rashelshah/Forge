@@ -150,7 +150,7 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
   const [device, setDevice] = useState<keyof typeof DEVICES>('desktop')
   const [instruction, setInstruction] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [nonce, setNonce] = useState(0)
+  const [nonce] = useState(0)
   const [full, setFull] = useState(false)
   const inv = [['research'], ['memory'], ['me'], ['activity']]
 
@@ -175,6 +175,11 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
   }, [polled])
   const edit = useAction((text: string) => api<Report<PrototypeContent>>(`/research/${report!.id}/prototype/edit`, { instruction: text }).then((r) => (put(r), r)), inv, (r) => r.summary ?? 'Updated')
   const undo = useAction(() => api<Report<PrototypeContent>>(`/research/${report!.id}/prototype/undo`, {}).then((r) => (put(r), r)), inv, 'Reverted to the previous version')
+  const sync = useAction(
+    () => api<Report<PrototypeContent>>(`/studio/projects/${report!.content.studio_project_id}/resync`, { venture_id: venture.id })
+      .then((r) => { put(r); qc.invalidateQueries({ queryKey: ['research', { venture_id: venture.id }] }); return r }),
+    inv, 'Synced — showing the latest prototype'
+  )
   const launch = useAction(() => api<Experiment>('/experiments', {
     venture_id: venture.id, type: 'prototype', prototype_report_id: report!.id, name: `${venture.name} prototype test`,
     hypothesis: 'At least 10% of people who try the prototype join the waitlist.', target_conversion: 10,
@@ -235,7 +240,12 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
               )
             })}
           </div>
-          <Button size="sm" variant="ghost" onClick={() => setNonce((n) => n + 1)}><RefreshCw />Restart</Button>
+          {/* Sync latest: re-push the studio project's best HTML into this venture's prototype report */}
+          {c.studio_project_id && (
+            <Button size="sm" variant="ghost" loading={sync.isPending} onClick={() => sync.mutate()}>
+              <RefreshCw />Sync latest
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={() => setFull(true)}><Maximize2 />Full screen</Button>
           <Button size="sm" variant="ghost" onClick={download}><Download />Download code</Button>
           <div className="ml-auto flex items-center gap-2">

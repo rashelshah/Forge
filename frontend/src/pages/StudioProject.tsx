@@ -12,7 +12,7 @@ import { Disclose } from '@/components/ux'
 import { Select } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, download } from '@/lib/api'
-import { useAction } from '@/lib/queries'
+import { useAction, useVentures } from '@/lib/queries'
 import type { StudioDetail, StudioEvent } from '@/lib/types'
 import { ago, cn, titleCase } from '@/lib/utils'
 import { StatusBadge } from '@/components/studio'
@@ -102,6 +102,8 @@ export default function StudioProject() {
   const [ver, setVer] = useState<number | null>(null)
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [doc, setDoc] = useState<(typeof DOCS)[number][0]>('product_spec')
+  const [pushVenture, setPushVenture] = useState('')
+  const { data: ventures = [] } = useVentures()
   const q = useQuery({
     queryKey: ['studio', id], queryFn: () => api<StudioDetail>(`/studio/projects/${id}`), retry: false,
     refetchInterval: (query) => (['queued', 'running'].includes(query.state.data?.project.status ?? '') ? 2500 : false),
@@ -112,6 +114,11 @@ export default function StudioProject() {
   const retry = useAction(() => api(`/studio/projects/${id}/retry`, {}), [['studio']], 'Restarting the team')
   const del = useAction(() => api(`/studio/projects/${id}`, undefined, 'DELETE'), [['studio']], 'Deleted')
   const save = useAction((f: 'html' | 'md' | 'json') => download(`/studio/projects/${id}/export?format=${f}&iteration=${version}`, `${p?.name ?? 'prototype'}.${f === 'md' ? 'md' : f}`))
+  const resync = useAction(
+    () => api(`/studio/projects/${id}/resync`, { venture_id: pushVenture }),
+    [['research'], ['studio']],
+    'Prototype synced to venture — open the Prototype tab to see it'
+  )
 
   if (q.error) return <ErrorNote error={q.error} />
   if (!q.data || !p) return <Loading />
@@ -141,6 +148,24 @@ export default function StudioProject() {
       {running && <p className="mb-4 flex items-center gap-2 text-sm text-muted"><Loader2 className="size-4 animate-spin" />{p.status === 'queued' ? 'Waiting for the team to be free…' : `${p.stage ?? 'Starting'} — version ${p.iteration || 1} of up to ${p.max_iterations}`}</p>}
       {p.error && <div className="mb-4"><ErrorNote error={new Error(p.error)} /></div>}
       {Object.keys(p.scores).length > 0 && <Card className="mb-6 p-4"><div className="mb-2 flex items-baseline justify-between"><p className="text-sm font-medium">Quality scores <span className="font-normal text-muted">(0–10, target ≥ 9)</span></p><p className="text-sm tabular-nums">Average <b>{avg(p.scores)}</b></p></div><Scores scores={p.scores} /></Card>}
+
+      {/* Push to venture: sync the best HTML into a venture's Prototype tab */}
+      {p.status === 'done' && !p.venture_id && ventures.length > 0 && (
+        <Card className="mb-6 flex flex-wrap items-center gap-3 p-4">
+          <div className="flex-1">
+            <p className="text-sm font-medium">Push to a venture's Prototype tab</p>
+            <p className="text-xs text-muted mt-0.5">This project isn't linked to a venture yet. Pick one to sync the finished prototype there.</p>
+          </div>
+          <Select className="w-52" value={pushVenture} onChange={(e) => setPushVenture(e.target.value)}>
+            <option value="">Select a venture…</option>
+            {ventures.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </Select>
+          <Button variant="outline" disabled={!pushVenture} loading={resync.isPending}
+            onClick={() => resync.mutate(undefined, { onSuccess: () => nav(`/app/ventures/${pushVenture}?tab=prototype`) })}>
+            <RefreshCw />Sync prototype
+          </Button>
+        </Card>
+      )}
 
       <Tabs defaultValue="timeline">
         <TabsList>

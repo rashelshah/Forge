@@ -210,6 +210,47 @@ r.post('/studio/projects/:id/retry', async (req, res) => {
   res.json(out)
 })
 
+/**
+ * Re-sync: push the best-version HTML from a completed studio project into the venture’s
+ * prototype report. Useful when the original run had no venture_id, or a newer run
+ * should replace the one the venture currently shows.
+ */
+r.post('/studio/projects/:id/resync', async (req, res) => {
+  const p = await own(TABLE, req.params.id, req.user)
+  if (p.status !== 'done') throw new HttpError(409, 'The project has not finished yet')
+  if (!p.best_iteration) throw new HttpError(409, 'No best iteration recorded')
+
+  // If the project has no venture_id yet, allow the caller to supply one.
+  let venture_id = p.venture_id
+  if (!venture_id && req.body?.venture_id) {
+    const v = await own('ventures', String(req.body.venture_id), req.user)
+    venture_id = v.id
+    await db.update(TABLE, p.id, { venture_id })
+  }
+  if (!venture_id) throw new HttpError(400, 'This project is not linked to a venture. Pass venture_id in the request body to link it first.')
+
+  const [html, spec] = await Promise.all([
+    versionHtml(p.id, p.best_iteration),
+    supabase.from('studio_artifacts').select('tagline:content->>tagline').eq('project_id', p.id).eq('kind', 'product_spec').limit(1).then(check),
+  ])
+  const avg_score = p.scores && Object.keys(p.scores).length ? +(Object.values(p.scores).reduce((a, b) => a + b, 0) / Object.values(p.scores).length).toFixed(1) : null
+  const summary = `${p.name} — ${spec[0]?.tagline ?? 'built by the Product Studio team'}`
+  const existing = await latestReport(venture_id, 'prototype')
+  let rep
+  if (existing) {
+    rep = await db.update('research_reports', existing.id, {
+      summary, created_at: now(),
+      content: { ...existing.content, title: p.name, html, summary, history: [], previous_html: existing.content?.html ?? null, build: null, mode: 'live', studio_project_id: p.id, studio_score: avg_score },
+    })
+  } else {
+    rep = await db.insert('research_reports', {
+      user_id: req.user.id, venture_id, kind: 'prototype', title: `Prototype · ${p.name}`, summary, mode: 'live',
+      content: { title: p.name, html, summary, history: [], previous_html: null, build: null, mode: 'live', studio_project_id: p.id, studio_score: avg_score },
+    })
+  }
+  res.json(rep)
+})
+
 r.delete('/studio/projects/:id', async (req, res) => {
   const p = await own(TABLE, req.params.id, req.user)
   if (p.status === 'running') throw new HttpError(409, 'Wait for the run to finish (or fail) before deleting')
