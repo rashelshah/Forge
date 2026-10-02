@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Check, Lock } from 'lucide-react'
+import { Check, Lock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Eyebrow, Logo, Ornament } from '@/components/brand'
