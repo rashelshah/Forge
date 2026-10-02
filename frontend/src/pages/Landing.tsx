@@ -104,8 +104,8 @@ function Pricing() {
 function FooterMascot() {
   return (
     <section className="relative w-full overflow-hidden bg-canvas pointer-events-none -mt-8 sm:-mt-16 h-[450px] sm:h-[500px]">
-      <div className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto">
-        <BotAvatar type="circle" size={800} shading="flat" color="#fcfcfc" ink="#e6e6e6" interactive={true} turn={0} jumpEvery={0} />
+      <div className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto grayscale">
+        <BotAvatar type="circle" size={800} shading="flat" color="#fcfcfc" ink="#a9aab1" interactive={true} turn={0} jumpEvery={0} />
       </div>
       {/* Platform line for the mascot to rest on, slightly wider than the mascot */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[850px] max-w-[90vw] border-b border-line" />
