@@ -222,7 +222,7 @@ export default function VentureDetail() {
             <StageBadge stage={v.stage} />
             {v.verdict && (['GO', 'PIVOT', 'KILL'].includes(v.verdict) ? <DecisionBadge decision={v.verdict} /> : <Badge tone="indigo">{v.verdict}</Badge>)}
           </div>
-          <h1 className="mt-2 text-[34px] leading-[1.1] sm:text-[40px]">{v.name}</h1>
+          <h1 className="mt-2 break-words text-[34px] leading-[1.1] sm:text-[40px]">{v.name}</h1>
           <p className="mt-2 max-w-3xl text-[15px] text-ink-2">{v.idea}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

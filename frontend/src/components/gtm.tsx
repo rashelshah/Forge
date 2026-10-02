@@ -25,8 +25,8 @@ function Section({ id, n, title, blurb, children, downloads }: { id: string; n: 
 }
 
 const Dl = ({ a }: { a: GtmAsset }) => (
-  <a href={a.url} target="_blank" rel="noreferrer" download={a.filename} className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3.5 py-2 text-sm transition hover:border-line-2 hover:shadow-float">
-    <Download className="size-3.5 text-muted" />{a.label}<span className="text-xs text-faint">{kb(a.bytes)}</span>
+  <a href={a.url} target="_blank" rel="noreferrer" download={a.filename} className="inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-white px-3.5 py-2 text-sm transition hover:border-line-2 hover:shadow-float">
+    <Download className="size-3.5 shrink-0 text-muted" /><span className="truncate">{a.label}</span><span className="shrink-0 text-xs text-faint">{kb(a.bytes)}</span>
   </a>
 )
 

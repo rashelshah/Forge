@@ -40,7 +40,7 @@
 
 @layer base {
   html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-  body { @apply bg-canvas text-ink font-sans; font-weight: 400; }
+  body { @apply bg-canvas text-ink font-sans; font-weight: 400; overflow-x: hidden; }
   h1, h2, h3 { @apply font-display; font-weight: 450; letter-spacing: -0.02em; }
   ::selection { background: var(--color-lavender); }
   :focus-visible { outline: 2px solid var(--color-azure-2); outline-offset: 2px; }

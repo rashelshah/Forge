@@ -7,7 +7,7 @@ export const TabsContent = ({ className, ...p }: React.ComponentProps<typeof Tab
   <TabsPrimitive.Content className={cn('focus:outline-none', className)} {...p} />
 )
 export const TabsList = ({ className, ...p }: React.ComponentProps<typeof TabsPrimitive.List>) => (
-  <TabsPrimitive.List className={cn('scrollbar-none flex gap-1 overflow-x-auto border-b border-line', className)} {...p} />
+  <TabsPrimitive.List className={cn('scrollbar-none flex gap-1 overflow-x-auto overflow-y-hidden border-b border-line', className)} {...p} />
 )
 export const TabsTrigger = ({ className, ...p }: React.ComponentProps<typeof TabsPrimitive.Trigger>) => (
   <TabsPrimitive.Trigger
