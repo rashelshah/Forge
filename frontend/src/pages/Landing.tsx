@@ -5,6 +5,7 @@ import { Link } from 'react-router'
 import { Eyebrow, Logo, Ornament } from '@/components/brand'
 import { HowItWorks, Outputs, Principles, TryBoardroom } from '@/components/landing-demos'
 import { AgentFeatures } from '@/components/agent-features'
+import { BotAvatar } from 'bot-avatars'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -100,18 +101,14 @@ function Pricing() {
   )
 }
 
-function Cta() {
+function FooterMascot() {
   return (
-    <section className="relative isolate overflow-hidden px-4 pt-28 pb-32 text-center sm:px-6">
-      <div className="absolute inset-x-0 bottom-0 -z-10 h-[520px] rotate-180"><div className="aurora opacity-80" /></div>
-      <motion.div {...fade}>
-        <Eyebrow>Your next company deserves a board</Eyebrow>
-        <h2 className="mx-auto mt-6 max-w-2xl text-[40px] leading-[1.08] font-[425] tracking-[-0.03em] sm:text-[56px]">Stop guessing. Start compounding.</h2>
-        <div className="mt-9 flex justify-center gap-3">
-          <Button asChild size="lg" className="h-12 px-6 text-[15px]"><Link to="/app">Start free <ArrowRight /></Link></Button>
-          <Button asChild size="lg" variant="white" className="h-12 px-6 text-[15px]"><Link to="/login">Log in</Link></Button>
-        </div>
-      </motion.div>
+    <section className="relative w-full overflow-hidden bg-canvas pointer-events-none -mt-8 sm:-mt-16 h-[450px] sm:h-[500px]">
+      <div className="absolute left-1/2 -translate-x-1/2 top-0 pointer-events-auto">
+        <BotAvatar type="circle" size={800} shading="flat" color="#fcfcfc" ink="#e6e6e6" interactive={true} turn={0} jumpEvery={0} />
+      </div>
+      {/* Platform line for the mascot to rest on, slightly wider than the mascot */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[850px] max-w-[90vw] border-b border-line" />
     </section>
   )
 }
@@ -123,7 +120,7 @@ function Footer() {
     Company: [['Pricing', '#pricing'], ['How it works', '#how'], ['Log in', '/login'], ['Open the studio', '/app']],
   }
   return (
-    <footer className="border-t border-line bg-white px-4 pt-16 pb-10 sm:px-6">
+    <footer className="bg-white px-4 pt-16 pb-10 sm:px-6">
       <div className="mx-auto grid max-w-[1120px] gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div>
           <Logo />
@@ -156,7 +153,7 @@ export default function Landing() {
       <Outputs />
       <Principles />
       <Pricing />
-      <Cta />
+      <FooterMascot />
       <Footer />
     </div>
   )
