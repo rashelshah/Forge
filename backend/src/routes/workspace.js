@@ -23,7 +23,10 @@ r.patch('/me', async (req, res) => {
       weekly_hours: Number(f.weekly_hours) || 0, capital: text(f.capital, 40), background: text(f.background, 600),
     }
   }
-  if (req.body.settings) patch.settings = { ...req.user.settings, daily_monitoring: !!req.body.settings.daily_monitoring }
+  if (req.body.settings) {
+    const s = req.body.settings // only the keys sent change, so saving one setting never resets another
+    patch.settings = { ...req.user.settings, ...(s.daily_monitoring !== undefined && { daily_monitoring: !!s.daily_monitoring }), ...(s.onboarded !== undefined && { onboarded: !!s.onboarded }) }
+  }
   const updated = await db.update('users', req.user.id, patch)
   forgetUser(req.user.id)
   res.json(updated)

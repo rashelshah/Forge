@@ -206,7 +206,7 @@ export interface Me {
   plan: 'free' | 'pro' | 'studio'
   admin?: boolean
   founder_profile: FounderProfile
-  settings: { daily_monitoring?: boolean }
+  settings: { daily_monitoring?: boolean; onboarded?: boolean }
   limits: Plan
   usage: { ventures: number; agentRuns: number }
   plans: Record<string, Plan>

@@ -1,18 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, AppWindow, Bell, Brain, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
+  Activity, AppWindow, Bell, Brain, CircleHelp, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
 } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
 import { Loading } from '@/components/bits'
 import { Logo } from '@/components/brand'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
+import { ProductTour } from '@/components/tour'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { api } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useAction, useConfig, useMe } from '@/lib/queries'
+import { useQueryClient } from '@tanstack/react-query'
 import type { Notification } from '@/lib/types'
 import { ago, cn } from '@/lib/utils'
 
@@ -124,7 +126,7 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
               const { label, icon: Icon } = item
               const on = active(item)
               return (
-                <Link key={item.to} to={item.tab && ventureId ? `/app/ventures/${ventureId}?tab=${item.tab}` : item.to} onClick={onNavigate} aria-current={on ? 'page' : undefined}
+                <Link key={item.to} data-tour={item.to} to={item.tab && ventureId ? `/app/ventures/${ventureId}?tab=${item.tab}` : item.to} onClick={onNavigate} aria-current={on ? 'page' : undefined}
                   title={collapsed ? label : undefined} aria-label={label}
                   className={cn('flex items-center rounded-xl py-2 text-[14px] transition', collapsed ? 'justify-center px-0' : 'gap-3 px-3',
                     on ? 'bg-soft font-medium text-ink shadow-press-light' : 'text-ink-2 hover:bg-soft/60 hover:text-ink')}>
@@ -166,18 +168,38 @@ function Sidebar({ onNavigate, collapsed = false, onToggle }: { onNavigate?: () 
   )
 }
 
+const tourKey = (id: string) => `forge:tour:${id}`
+const tourSeen = (id: string) => { try { return localStorage.getItem(tourKey(id)) === 'done' } catch { return false } }
+
 export function AppShell() {
   const [mobile, setMobile] = useState(false)
   const [newOpen, setNewOpen] = useState(false)
+  const [tourOpen, setTourOpen] = useState(false)
+  const { data: me } = useMe()
+  const qc = useQueryClient()
+  // A brand-new founder (no ventures yet, tour never finished or skipped) is greeted with the tour. Finishing or skipping it is remembered
+  // on the account (and in this browser, in case that save fails), so it never reappears; the ? button replays it.
+  useEffect(() => {
+    if (!me || me.settings.onboarded || me.usage.ventures > 0 || tourSeen(me.id)) return
+    const t = setTimeout(() => setTourOpen(true), 700)
+    return () => clearTimeout(t)
+  }, [me])
+  const closeTour = () => {
+    setTourOpen(false)
+    if (!me) return
+    try { localStorage.setItem(tourKey(me.id), 'done') } catch { /* private mode */ }
+    if (!me.settings.onboarded) api('/me', { settings: { onboarded: true } }, 'PATCH').then(() => qc.invalidateQueries({ queryKey: ['me'] })).catch(() => {})
+  }
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('forge:sidebar') === 'collapsed' } catch { return false } })
   const loc = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
   const toggle = () => setCollapsed((c) => { try { localStorage.setItem('forge:sidebar', c ? 'expanded' : 'collapsed') } catch { /* private mode */ } return !c })
-  const style = { '--sbw': collapsed ? '5rem' : '16rem' } as React.CSSProperties
+  const wide = collapsed && !tourOpen // the tour needs the sidebar labels visible
+  const style = { '--sbw': wide ? '5rem' : '16rem' } as React.CSSProperties
   return (
     <div className="relative min-h-screen bg-canvas transition-[padding] duration-200 lg:pl-[var(--sbw)]" style={style}>
       <aside className="fixed inset-y-0 left-0 z-30 hidden border-r border-line bg-white/85 backdrop-blur transition-[width] duration-200 lg:block lg:w-[var(--sbw)]">
-        <Sidebar collapsed={collapsed} onToggle={toggle} />
+        <Sidebar collapsed={wide} onToggle={toggle} />
       </aside>
       <AnimatePresence>
         {mobile && (
@@ -196,8 +218,10 @@ export function AppShell() {
         <Logo to="/app" className="lg:hidden" />
         <div className="ml-auto flex items-center gap-2">
           <AiStatus />
+          <button data-tour="help" onClick={() => setTourOpen(true)} aria-label="Take the product tour" title="Product tour"
+            className="grid size-9 place-items-center rounded-full border border-line bg-white text-ink-2 hover:text-ink cursor-pointer"><CircleHelp className="size-4" /></button>
           <Notifications />
-          <Button size="sm" onClick={() => setNewOpen(true)} className="h-9"><Plus />New venture</Button>
+          <Button data-tour="new-venture" size="sm" onClick={() => setNewOpen(true)} className="h-9"><Plus />New venture</Button>
         </div>
       </header>
 
@@ -208,6 +232,7 @@ export function AppShell() {
         </motion.div>
       </main>
       <NewVentureDialog open={newOpen} onOpenChange={setNewOpen} />
+      <ProductTour open={tourOpen} onClose={closeTour} onCreate={() => setNewOpen(true)} setSidebar={setMobile} />
     </div>
   )
 }
