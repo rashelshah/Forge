@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Eyebrow, Logo, Ornament } from '@/components/brand'
 import { HowItWorks, Outputs, Principles, TryBoardroom } from '@/components/landing-demos'
+import { AgentFeatures } from '@/components/agent-features'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -151,6 +152,7 @@ export default function Landing() {
       <Hero />
       <TryBoardroom />
       <HowItWorks />
+      <AgentFeatures />
       <Outputs />
       <Principles />
       <Pricing />

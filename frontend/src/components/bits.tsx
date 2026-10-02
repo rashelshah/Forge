@@ -161,7 +161,7 @@ export const AGENT_BOT_TYPES: Record<AgentKey, BotAvatarType> = {
  * Pass `state="working"` while the agent is processing.
  * Falls back to gradient + icon for very small sizes (< 24 px) where the bot canvas is noisy.
  */
-export function AgentAvatar({ agent, size = 36, state = 'default' }: { agent: AgentKey; size?: number; state?: 'default' | 'working' | 'sleeping' }) {
+export function AgentAvatar({ agent, size = 36, state = 'default', interactive, ink, face, glasses }: { agent: AgentKey; size?: number; state?: 'default' | 'working' | 'sleeping'; interactive?: boolean; ink?: string; face?: 'eyes' | 'mouth'; glasses?: 'none' | 'round' | 'square' | 'shades' }) {
   const A = AGENTS[agent]
   const botType = AGENT_BOT_TYPES[agent]
   if (size < 24) {
@@ -175,7 +175,7 @@ export function AgentAvatar({ agent, size = 36, state = 'default' }: { agent: Ag
   }
   return (
     <span className="shrink-0 leading-none" title={A.name}>
-      <BotAvatar type={botType} size={size} state={state} face="eyes" shading="fabric" seed={(['ceo','investor','product','growth','technical','failure'] as AgentKey[]).indexOf(agent) / 6} />
+      <BotAvatar type={botType} size={size} state={state} face={face ?? "eyes"} glasses={glasses} shading="fabric" interactive={interactive} ink={ink} seed={(['ceo','investor','product','growth','technical','failure'] as AgentKey[]).indexOf(agent) / 6} />
     </span>
   )
 }
