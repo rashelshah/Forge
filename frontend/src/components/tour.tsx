@@ -196,10 +196,12 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
           <div className="aurora-soft -z-10" />
           <div className="relative p-5 sm:p-6">
             <div className={cn('flex items-center gap-3', centred && 'flex-col')}>
-              {step.id !== 'welcome' && <Icon className="size-[18px] shrink-0 text-ink-2" strokeWidth={1.75} />}
               <div className={cn('min-w-0 flex-1', centred && 'flex-none')}>
                 {step.group && <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">{step.group}</p>}
-                <h2 className={cn('font-display leading-tight font-medium tracking-[-0.01em]', centred ? 'mt-2 text-[26px]' : 'text-[19px]')}>{step.title}</h2>
+                <div className="mt-1 flex items-center gap-2.5">
+                  {step.id !== 'welcome' && <Icon className="size-[19px] shrink-0 text-ink-2" strokeWidth={1.75} />}
+                  <h2 className={cn('font-display leading-tight font-medium tracking-[-0.01em]', centred ? 'mt-1 text-[26px]' : 'text-[19px]')}>{step.title}</h2>
+                </div>
               </div>
               {!centred && <button onClick={() => finish('skipped')} aria-label="Close tour" className="-mt-1 -mr-1 self-start rounded-full p-1.5 text-muted transition hover:bg-soft hover:text-ink cursor-pointer"><X className="size-4" /></button>}
             </div>
