@@ -49,11 +49,11 @@ function Hero() {
         <Ornament className="mx-auto w-[170px]" />
         <div className="mt-7"><Eyebrow>The AI Venture Studio</Eyebrow></div>
         <h1 className="mx-auto mt-7 max-w-[860px] text-[44px] leading-[1.05] font-[425] tracking-[-0.035em] text-ink sm:text-[64px]">
-          Build companies, not guesses
+          The Operating System for Startup Creation
         </h1>
         <p className="mx-auto mt-6 max-w-[620px] text-[17px] leading-[1.75] text-ink-2 sm:text-lg">
-          Discover real problems. Validate them with evidence.
-          <br className="hidden sm:block" /> Debate in an AI boardroom. Ship what the market wants.
+          AI agents discover opportunities, challenge assumptions, and build launch-ready ventures.
+          <br className="hidden sm:block" />
         </p>
         <div className="mt-9 flex justify-center gap-3">
           <Button asChild size="lg" className="h-12 px-6 text-[15px]"><Link to="/app">Start a venture</Link></Button>
