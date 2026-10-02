@@ -1,8 +1,9 @@
-import { ArrowRight, Check, ExternalLink, Loader2, Minus, Plus, RefreshCw, Sparkles, Swords, Target, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { ArrowRight, Check, ExternalLink, Loader2, Minus, Plus, RefreshCw, Shield, Sparkles, Swords, Target, Trash2, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Disclose, FounderBrief, InsightCard, LongText, gist } from '@/components/ux'
 import { api } from '@/lib/api'
 import { useAction } from '@/lib/queries'
 import type { Competitor, IntelAction, IntelData, IntelReport, RadarItem, Signal } from '@/lib/types'
@@ -46,6 +47,20 @@ const BASIS = { website: 'Website', news: 'News', history: 'Our history', analys
 
 // ---------------------------------------------------------------- 1. weekly brief + insight
 
+function IntelBrief({ r, competitors }: { r: IntelReport; competitors: Competitor[] }) {
+  const threat = [...competitors].sort((a, b) => (b.strategic_threat ?? -1) - (a.strategic_threat ?? -1))[0]
+  const gap = r.radar.white_space[0]
+  const act = r.actions[0]
+  return (
+    <FounderBrief confidence={act?.confidence ?? null}
+      items={[
+        { label: 'Largest competitive threat', icon: Swords, tone: 'rose', value: threat && `${threat.name}${threat.profile?.threat_reason ? `: ${gist(threat.profile.threat_reason, 22)}` : ''}` },
+        { label: 'Biggest white space opportunity', icon: Target, tone: 'leaf', value: gap ? `${gap.feature}. No tracked competitor offers it.` : gist(r.insight.insight, 24) },
+        { label: 'Recommended strategic response', icon: Shield, tone: 'azure', value: act?.title ?? gist(r.brief.recommendation, 24) },
+      ]} />
+  )
+}
+
 function Brief({ r }: { r: IntelReport }) {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -58,17 +73,17 @@ function Brief({ r }: { r: IntelReport }) {
         </ul>
         {!!r.brief.baseline?.length && <p className="mt-3 rounded-lg bg-canvas px-3 py-2 text-xs text-muted">First snapshot recorded for {r.brief.baseline.join(', ')}. Price and feature changes are detected by comparing against it on every later run.</p>}
         <p className="mt-5 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Market trend</p>
-        <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{r.brief.market_trend}</p>
+        <LongText text={r.brief.market_trend} className="mt-1" max={30} />
         <div className="mt-5 rounded-xl border border-mist bg-[#f4f7fe] p-4">
           <p className="font-mono text-[10px] tracking-[0.14em] text-azure uppercase">Recommendation</p>
-          <p className="mt-1 text-[15px] leading-relaxed">{r.brief.recommendation}</p>
+          <LongText text={r.brief.recommendation} className="mt-1" max={30} />
         </div>
       </Card>
       <Card className="hero-light p-6">
         <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase"><Sparkles className="size-3.5" />Strategic insight</p>
-        <p className="mt-3 text-lg leading-snug">{r.insight.insight}</p>
+        <LongText text={r.insight.insight} className="mt-3 text-lg leading-snug" max={30} />
         <p className="mt-5 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">How your strategy should change</p>
-        <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{r.insight.recommendation}</p>
+        <LongText text={r.insight.recommendation} className="mt-1" max={30} />
       </Card>
     </div>
   )
@@ -80,26 +95,20 @@ function Actions({ actions }: { actions: IntelAction[] }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {actions.map((a) => (
-        <Card key={a.title} className="flex flex-col p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div><Badge tone="saffron" className="capitalize">{a.kind}</Badge><h3 className="mt-2 text-lg leading-snug">{a.title}</h3></div>
-            <div className="shrink-0 text-right" title="How sure the agent is, based on the evidence found">
-              <p className="text-2xl font-medium tabular-nums">{a.confidence}%</p><p className="text-[10px] tracking-wide text-muted uppercase">Confidence</p>
+        <InsightCard key={a.title} title={a.title} category={titleCase(a.kind)} confidence={a.confidence}
+          evidence={(
+            <div className="space-y-3 text-sm">
+              <div><p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Reason</p><p className="mt-0.5 text-ink-2">{a.reason}</p></div>
+              <div><p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Expected impact</p><p className="mt-0.5 text-ink-2">{a.impact}</p></div>
+              <div>
+                <p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Supporting evidence ({a.evidence.length})</p>
+                <ul className="mt-1.5 space-y-2">{a.evidence.map((e, i) => (
+                  <li key={i} className="flex gap-2"><Badge tone="outline" className="mt-0.5 h-fit shrink-0">{BASIS[e.basis]}</Badge>
+                    <span><b className="font-medium">{e.competitor}:</b> {e.fact}{e.source_url && <a href={e.source_url} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-0.5 text-azure hover:underline"><ExternalLink className="size-3" />source</a>}</span></li>
+                ))}</ul>
+              </div>
             </div>
-          </div>
-          <div className="mt-2 h-1.5 rounded-full bg-soft"><div className="h-full rounded-full bg-[linear-gradient(90deg,#ec8a44,#6a88e2)]" style={{ width: `${a.confidence}%` }} /></div>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div><dt className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Reason</dt><dd className="mt-0.5 text-ink-2">{a.reason}</dd></div>
-            <div><dt className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Expected impact</dt><dd className="mt-0.5 text-ink-2">{a.impact}</dd></div>
-          </dl>
-          <details className="mt-4 rounded-xl border border-line bg-canvas px-3 py-2 text-sm">
-            <summary className="cursor-pointer text-xs text-muted select-none">Supporting evidence ({a.evidence.length})</summary>
-            <ul className="mt-2 space-y-2">{a.evidence.map((e, i) => (
-              <li key={i} className="flex gap-2"><Badge tone="outline" className="mt-0.5 h-fit shrink-0">{BASIS[e.basis]}</Badge>
-                <span><b className="font-medium">{e.competitor}:</b> {e.fact}{e.source_url && <a href={e.source_url} target="_blank" rel="noreferrer" className="ml-1 inline-flex items-center gap-0.5 text-azure hover:underline"><ExternalLink className="size-3" />source</a>}</span></li>
-            ))}</ul>
-          </details>
-        </Card>
+          )} />
       ))}
     </div>
   )
@@ -127,7 +136,10 @@ function Watch({ c, memory, scan, del, scanning }: { c: Competitor; memory: Inte
         </div>
       </div>
       {!p ? <p className="mt-4 rounded-xl bg-canvas p-3 text-sm text-muted">Not analysed yet. Run the analysis to get this competitor's threat score, recent changes and a suggested response.</p> : (
-        <div className="mt-4 space-y-4 text-sm">
+        <div className="mt-4 text-sm">
+          <p className="text-ink-2">{gist(p.why_it_matters, 26)}</p>
+          <p className="mt-2 text-xs text-muted"><b className="font-medium text-ink-2">Suggested response:</b> {gist(p.suggested_response, 20)}</p>
+          <Disclose className="mt-3"><div className="space-y-4">
           <div><p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Why they matter</p><p className="mt-0.5 text-ink-2">{p.why_it_matters}</p></div>
           <div>
             <p className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Recent activity</p>
@@ -154,6 +166,7 @@ function Watch({ c, memory, scan, del, scanning }: { c: Competitor; memory: Inte
             ) : <p className="mt-1 text-muted">No measurable numbers found yet. Changes will be tracked on every run.</p>}
             <p className="mt-2 text-xs text-ink-2"><b className="font-medium">Trend:</b> {p.positioning_trend}</p>
           </div>
+          </div></Disclose>
         </div>
       )}
     </Card>
@@ -342,6 +355,7 @@ export function IntelPanel({ ventureId, ventureName, data, isLoading, onAdd }: {
 
   return (
     <div className="space-y-12">
+      {ready && <IntelBrief r={report} competitors={competitors} />}
       {status}{err}
       {ready && <>
         <Section n={1} question="What changed in the market this week?" title="Weekly competitive intelligence brief"><Brief r={report} /></Section>

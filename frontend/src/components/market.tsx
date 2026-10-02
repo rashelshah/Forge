@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Loader2, Minus, Radar, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import { ExternalLink, Flame, Loader2, Minus, Radar, Sparkles, Target, TrendingDown, TrendingUp } from 'lucide-react'
 import { useState } from 'react'
 import { Empty, ScoreRing } from '@/components/bits'
 import { Section } from '@/components/intel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { CardGrid, FounderBrief, InsightCard, LongText, OpportunityScoreCard, RiskCard, gist, wordCount } from '@/components/ux'
 import { api } from '@/lib/api'
 import { useAction } from '@/lib/queries'
 import type { Level, MarketData, Signal } from '@/lib/types'
@@ -14,7 +15,6 @@ import { ago, cn, date, titleCase } from '@/lib/utils'
 const KEYS = [['market'], ['memory'], ['activity'], ['notifications'], ['signals'], ['me']]
 const HEALTH = { positive: ['leaf', 'Positive'], neutral: ['amber', 'Neutral'], negative: ['rose', 'Negative'] } as const
 const BAD_WHEN_HIGH: Record<Level, 'rose' | 'amber' | 'leaf'> = { high: 'rose', medium: 'amber', low: 'leaf' }
-const STRENGTH: Record<Level | 'info', 'saffron' | 'amber' | 'neutral'> = { high: 'saffron', medium: 'amber', low: 'neutral', info: 'neutral' }
 const SIZE: Record<Level, 'leaf' | 'indigo' | 'neutral'> = { high: 'leaf', medium: 'indigo', low: 'neutral' }
 const MOMENTUM = { growing: [TrendingUp, 'text-[#3f6b17]', 'Growing'], stable: [Minus, 'text-muted', 'Stable'], declining: [TrendingDown, 'text-rose', 'Declining'] } as const
 const when = (s: Signal) => date(s.occurred_on ? `${s.occurred_on}T12:00:00` : s.created_at)
@@ -33,25 +33,35 @@ function Mini({ label, children }: { label: string; children: React.ReactNode })
 }
 
 function SignalCard({ s }: { s: Signal }) {
+  const extra = [['Potential impact', s.impact], [s.opportunity ? 'Opportunity' : 'Suggested response', s.opportunity ?? s.recommended_response]] as const
   return (
-    <Card className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="min-w-0 flex-[1_1_16rem] text-[16px] leading-snug font-medium">{s.title}</p>
-        {s.type === 'radar' && <Badge tone={STRENGTH[s.severity]}>Signal strength: {titleCase(s.severity)}</Badge>}
-      </div>
-      {s.detail && <p className="mt-1.5 text-sm text-ink-2">{s.detail}</p>}
-      {(s.impact || s.opportunity || s.recommended_response) && (
-        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-          {s.impact && <div className="rounded-xl bg-canvas p-3"><dt className="text-xs text-muted">Potential impact</dt><dd className="mt-0.5">{s.impact}</dd></div>}
-          {(s.opportunity || s.recommended_response) && <div className="rounded-xl bg-canvas p-3"><dt className="text-xs text-muted">{s.opportunity ? 'Opportunity' : 'Suggested response'}</dt><dd className="mt-0.5">{s.opportunity ?? s.recommended_response}</dd></div>}
-        </dl>
-      )}
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-faint">
-        <span>{when(s)}</span>
-        {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-azure hover:underline"><ExternalLink className="size-3" />{s.source || new URL(s.source_url).hostname}</a>}
-        {s.confidence != null && <span>Confidence {s.confidence}%</span>}
-      </div>
-    </Card>
+    <InsightCard title={s.title} category={titleCase(s.type)} signal={s.type === 'radar' ? titleCase(s.severity) : undefined} confidence={s.confidence}
+      evidence={(
+        <div className="space-y-3 text-sm">
+          <LongText text={s.detail} />
+          {extra.map(([k, v]) => v && <div key={k} className="rounded-xl bg-canvas p-3"><p className="text-xs text-muted">{k}</p><p className="mt-0.5">{v}</p></div>)}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-faint">
+            <span>{when(s)}</span>
+            {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-azure hover:underline"><ExternalLink className="size-3" />{s.source || new URL(s.source_url).hostname}</a>}
+          </div>
+        </div>
+      )} />
+  )
+}
+
+const RANK = { high: 0, medium: 1, low: 2 } as const
+
+function MarketBrief({ data }: { data: MarketData }) {
+  const trend = [...data.trends].sort((a, b) => Number(b.momentum === 'growing') - Number(a.momentum === 'growing') || b.confidence - a.confidence)[0]
+  const opp = [...data.opportunities].sort((a, b) => b.score - a.score)[0]
+  const threat = [...data.threats].sort((a, b) => RANK[a.severity] - RANK[b.severity] || RANK[a.likelihood] - RANK[b.likelihood])[0]
+  return (
+    <FounderBrief confidence={data.outlook?.confidence ?? null}
+      items={[
+        { label: 'Most important trend', icon: TrendingUp, tone: 'azure', value: trend && `${trend.title}${trend.summary ? `: ${gist(trend.summary, 18)}` : ''}` },
+        { label: 'Biggest opportunity', icon: Target, tone: 'leaf', value: opp && `${opp.title}. Opportunity score ${opp.score}/100.` },
+        { label: 'Emerging threat', icon: Flame, tone: 'rose', value: threat && `${threat.title}${threat.suggested_action ? `. Response: ${gist(threat.suggested_action, 16)}` : ''}` },
+      ]} />
   )
 }
 
@@ -65,21 +75,15 @@ function Trends({ trends }: { trends: MarketData['trends'] }) {
           <button key={c ?? 'all'} onClick={() => setCat(c)} className={cn('rounded-full px-3 py-1 text-xs whitespace-nowrap cursor-pointer', cat === c ? 'bg-dark text-white' : 'bg-soft text-ink-2 hover:bg-line-2')}>{c ?? 'All'}</button>
         ))}
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      <CardGrid>
         {trends.filter((t) => !cat || t.category === cat).map((t) => {
-          const [Icon, color, label] = MOMENTUM[t.momentum]
+          const [Icon, , label] = MOMENTUM[t.momentum]
           return (
-            <Card key={t.id} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0"><Badge tone="indigo">{t.category}</Badge><p className="mt-2 text-[16px] font-medium">{t.title}</p></div>
-                <span className={cn('inline-flex shrink-0 items-center gap-1 text-sm font-medium', color)}><Icon className="size-4" />{label}</span>
-              </div>
-              {t.summary && <p className="mt-1.5 text-sm text-ink-2">{t.summary}</p>}
-              <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 text-xs"><Mini label="Confidence">{t.confidence}%</Mini><Mini label="Impact">{t.impact}</Mini></dl>
-            </Card>
+            <InsightCard key={t.id} icon={Icon} title={t.title} category={`${t.category} · ${label}`} confidence={t.confidence} signal={t.impact} summary={gist(t.summary, 22)}
+              evidence={wordCount(t.summary) > 22 ? <LongText text={t.summary} /> : undefined} />
           )
         })}
-      </div>
+      </CardGrid>
     </div>
   )
 }
@@ -108,6 +112,7 @@ export function MarketRadar({ ventureId }: { ventureId: string }) {
   const feed = all ? data.signals : data.signals.slice(0, 6)
   return (
     <div className="space-y-12">
+      <MarketBrief data={data} />
       {status}
       {!o.live && <p className="rounded-xl border border-[#f3e0b3] bg-[#fdf6e6] px-4 py-3 text-sm text-[#8a5e12]">No live sources were available, so this radar is analysis from your venture's own data and the AI's market knowledge — add a Tavily key for real-time signals.</p>}
 
@@ -128,34 +133,22 @@ export function MarketRadar({ ventureId }: { ventureId: string }) {
       </Section>
 
       <Section n={3} question="What opportunities are emerging?" title="Emerging opportunities">
-        <div className="grid gap-3 md:grid-cols-2">
+        <CardGrid>
           {data.opportunities.map((x) => (
-            <Card key={x.id} className="p-5">
-              <div className="flex items-start gap-3">
-                <ScoreRing value={x.score} size={52} stroke={5} label={`Opportunity score ${x.score}`} />
-                <div className="min-w-0"><p className="text-[16px] leading-snug font-medium">{x.title}</p>{x.description && <p className="mt-1 text-sm text-ink-2">{x.description}</p>}</div>
-              </div>
-              <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-xs">
-                <Mini label="Market size"><Badge tone={SIZE[x.market_size]}>{x.market_size}</Badge></Mini>
-                <Mini label="Difficulty"><Badge tone={BAD_WHEN_HIGH[x.difficulty]}>{x.difficulty}</Badge></Mini>
-                <Mini label="Time horizon">{x.time_horizon}</Mini>
-              </dl>
-            </Card>
+            <OpportunityScoreCard key={x.id} opportunity={x.title} score={x.score}
+              reason={<div className="space-y-3"><LongText text={x.description} />
+                <dl className="grid grid-cols-3 gap-2 border-t border-line pt-3 text-xs"><Mini label="Market size"><Badge tone={SIZE[x.market_size]}>{x.market_size}</Badge></Mini><Mini label="Difficulty"><Badge tone={BAD_WHEN_HIGH[x.difficulty]}>{x.difficulty}</Badge></Mini><Mini label="Time horizon">{x.time_horizon}</Mini></dl></div>} />
           ))}
-        </div>
+        </CardGrid>
       </Section>
 
       <Section n={4} question="What could hurt us?" title="Threat radar">
-        <div className="grid gap-3 md:grid-cols-2">
+        <CardGrid>
           {data.threats.map((t) => (
-            <Card key={t.id} className="p-5">
-              <p className="text-[16px] leading-snug font-medium">{t.title}</p>
-              <div className="mt-2 flex flex-wrap gap-1.5"><Badge tone={BAD_WHEN_HIGH[t.severity]}>Severity: {t.severity}</Badge><Badge tone={BAD_WHEN_HIGH[t.likelihood]}>Likelihood: {t.likelihood}</Badge></div>
-              {t.description && <p className="mt-2 text-sm text-ink-2">{t.description}</p>}
-              <div className="mt-3 rounded-xl bg-canvas p-3 text-sm"><p className="text-xs text-muted">Suggested action</p><p className="mt-0.5">{t.suggested_action}</p></div>
-            </Card>
+            <RiskCard key={t.id} risk={t.title} severity={t.severity} mitigation={t.suggested_action}
+              detail={<div className="space-y-2"><LongText text={t.description} /><p className="text-xs text-muted">Likelihood: <span className="capitalize text-ink-2">{t.likelihood}</span></p></div>} />
           ))}
-        </div>
+        </CardGrid>
       </Section>
 
       <Section n={5} question="Which trends matter right now?" title="Trend analysis"><Trends trends={data.trends} /></Section>
@@ -163,7 +156,7 @@ export function MarketRadar({ ventureId }: { ventureId: string }) {
       <Section n={6} question="Where is the industry heading?" title="Industry outlook">
         <Card className="p-6">
           <Badge tone={healthTone} className="px-3 py-1 text-sm">{healthLabel}</Badge>
-          {o.summary && <p className="mt-3 max-w-3xl text-[15px] leading-relaxed">{o.summary}</p>}
+          <LongText text={o.summary} className="mt-3 max-w-3xl" />
           {o.best_area && <div className="mt-4 rounded-xl bg-[#e8f3dc] p-4 text-sm"><p className="text-xs text-[#3f6b17]">Most promising area</p><p className="mt-0.5 font-medium">{o.best_area}</p></div>}
         </Card>
       </Section>

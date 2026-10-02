@@ -1,9 +1,10 @@
-import { ArrowUpRight, BookOpen, ChevronDown, Globe, Quote, TriangleAlert } from 'lucide-react'
+import { ArrowUpRight, BookOpen, ChevronDown, Compass, Globe, Quote, Radar, Sparkles, TriangleAlert } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { SCORE_KEYS, SCORE_LABELS, ScoreRing, scoreColor } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MvpView } from '@/components/mvp'
+import { CardGrid, Disclose, FounderBrief, InsightCard, LongText, RiskCard, gist, wordCount } from '@/components/ux'
 import { PrototypePreview } from '@/components/prototype'
 import type { ExperimentAnalysis, MvpPlan, Opportunity, PrototypeContent, Report, Source, Validation } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -74,7 +75,7 @@ export function OpportunityCard({ o, action }: { o: Opportunity; action?: ReactN
         <div className="min-w-0">
           {o.rank && <p className="mb-1 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Opportunity #{o.rank}</p>}
           <h4 className="text-[17px] font-medium tracking-[-0.01em]">{o.title}</h4>
-          <p className="mt-1 text-sm text-ink-2">{o.problem}</p>
+          <LongText text={o.problem} className="mt-1" />
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
@@ -100,6 +101,7 @@ export function OpportunityCard({ o, action }: { o: Opportunity; action?: ReactN
           </div>
         ))}
       </div>
+      <Disclose className="mt-4">
       <p className="mt-3 text-xs text-muted">{o.market_size_reasoning}</p>
       {o.quotes?.length > 0 && (
         <div className="mt-3 space-y-1.5">
@@ -183,6 +185,7 @@ export function OpportunityCard({ o, action }: { o: Opportunity; action?: ReactN
           )}
         </div>
       )}
+      </Disclose>
     </Card>
   )
 }
@@ -190,7 +193,7 @@ export function OpportunityCard({ o, action }: { o: Opportunity; action?: ReactN
 // ---------------------------------------------------------------- validation engine
 
 export function ValidationView({ v }: { v: Validation }) {
-  const [open, setOpen] = useState<string | null>(SCORE_KEYS[0])
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <div className="space-y-4">
       <Card className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
@@ -200,7 +203,7 @@ export function ValidationView({ v }: { v: Validation }) {
             <Badge tone={v.verdict === 'Promising' ? 'leaf' : v.verdict === 'Weak' ? 'rose' : 'amber'}>{v.verdict}</Badge>
             <span className="text-xs text-muted">{v.web_sources} web sources · library evidence</span>
           </div>
-          <p className="mt-2 text-[15px] text-ink-2">{v.summary}</p>
+          <LongText text={v.summary} className="mt-2" />
         </div>
       </Card>
 
@@ -220,7 +223,7 @@ export function ValidationView({ v }: { v: Validation }) {
               </button>
               {isOpen && (
                 <div className="border-t border-line bg-canvas/60 px-4 py-4">
-                  <p className="text-sm text-ink-2">{s.summary}</p>
+                  <LongText text={s.summary} />
                   <p className="mt-4 mb-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Evidence</p>
                   {s.evidence.length === 0 && <p className="text-xs text-muted">No citable evidence found — treat this score as a hypothesis.</p>}
                   <ul className="space-y-2">
@@ -239,10 +242,10 @@ export function ValidationView({ v }: { v: Validation }) {
       </div>
 
       {v.key_risks?.length > 0 && (
-        <Card className="p-5">
+        <div>
           <p className="mb-3 flex items-center gap-2 text-sm font-medium"><TriangleAlert className="size-4 text-amber" />Key risks</p>
-          <ul className="space-y-1.5 text-sm text-ink-2">{v.key_risks.map((r) => <li key={r} className="flex gap-2"><span className="text-faint">—</span>{r}</li>)}</ul>
-        </Card>
+          <CardGrid>{v.key_risks.map((r) => <RiskCard key={r} risk={gist(r, 18)} detail={wordCount(r) > 18 ? r : undefined} />)}</CardGrid>
+        </div>
       )}
     </div>
   )
@@ -256,11 +259,11 @@ export function AnalysisView({ a }: { a: ExperimentAnalysis }) {
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2"><Badge tone={OUTCOME_TONE[a.outcome]} className="capitalize">{a.outcome}</Badge><span className="text-xs text-muted">{a.conversion}% conversion</span></div>
-      <p className="mt-3 text-sm text-ink-2">{a.summary}</p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div><p className="mb-2 text-xs font-medium text-muted">Insights</p><ul className="space-y-1 text-sm">{a.insights.map((x) => <li key={x}>· {x}</li>)}</ul></div>
-        <div><p className="mb-2 text-xs font-medium text-muted">Recommended next</p><ul className="space-y-1 text-sm">{a.recommended_next.map((x) => <li key={x}>→ {x}</li>)}</ul></div>
-      </div>
+      <LongText text={a.summary} className="mt-3" />
+      <CardGrid className="mt-4">
+        {a.insights.map((x) => <InsightCard key={x} category="Insight" title={gist(x, 18)} evidence={wordCount(x) > 18 ? <p className="text-sm text-ink-2">{x}</p> : undefined} />)}
+        {a.recommended_next.map((x) => <InsightCard key={x} category="Next step" title={gist(x, 18)} evidence={wordCount(x) > 18 ? <p className="text-sm text-ink-2">{x}</p> : undefined} />)}
+      </CardGrid>
     </Card>
   )
 }
@@ -274,4 +277,42 @@ export function ReportBody({ r }: { r: Report }) {
     case 'landing': return <Card className="p-6 text-sm text-muted">Landing pages were replaced by the Prototype Builder. Open the venture's Prototype tab to build a working app.</Card>
     case 'experiment_analysis': return <AnalysisView a={r.content as ExperimentAnalysis} />
   }
+}
+
+// ---------------------------------------------------------------- research page: founder brief + key insights
+
+const discoveries = (reports: Report[]) => reports.filter((r) => r.kind === 'discovery').flatMap((r) => (r.content as { opportunities?: Opportunity[] }).opportunities ?? [])
+const topOpportunities = (reports: Report[]) => discoveries(reports).sort((a, b) => (b.rank_score ?? b.opportunity_score ?? 0) - (a.rank_score ?? a.opportunity_score ?? 0))
+
+export function ResearchBrief({ reports }: { reports: Report[] }) {
+  if (!reports.length) return null
+  const top = topOpportunities(reports)[0]
+  const val = reports.find((r) => r.kind === 'validation')?.content as Validation | undefined
+  const weakest = val ? [...SCORE_KEYS].sort((a, b) => val[a].score - val[b].score)[0] : null
+  return (
+    <FounderBrief className="mb-8"
+      confidence={top?.validation?.confidence ?? top?.evidence_strength ?? null}
+      note={`Based on ${reports.length} report${reports.length === 1 ? '' : 's'}, newest first`}
+      items={[
+        { label: 'Most important market insight', icon: Sparkles, tone: 'leaf', value: top ? `${top.title}: ${gist(top.problem, 20)}` : gist(val?.summary) },
+        { label: 'Strongest demand signal', icon: Radar, tone: 'azure', value: val?.demand ? `Demand scores ${val.demand.score}/100. ${gist(val.demand.summary, 18)}` : top ? `${top.mentions} sources describe it, at pain level ${top.pain_level}/10` : null },
+        { label: 'Recommended research direction', icon: Compass, tone: 'amber', value: weakest ? `Dig into "${SCORE_LABELS[weakest].toLowerCase()}" next. It is the weakest score at ${val![weakest].score}/100.` : top ? `Validate "${top.title}" for demand, competition and fit.` : 'Run opportunity discovery to find a problem worth solving.' },
+      ]} />
+  )
+}
+
+export function ResearchInsights({ reports }: { reports: Report[] }) {
+  const top = topOpportunities(reports).slice(0, 4)
+  if (!top.length) return null
+  return (
+    <div className="mb-8">
+      <h2 className="mb-3 text-xl">Key insights</h2>
+      <CardGrid className="lg:grid-cols-4">
+        {top.map((o) => (
+          <InsightCard key={o.title} title={o.title} category={o.cluster?.industry ?? 'Opportunity'} confidence={o.validation?.confidence ?? o.evidence_strength ?? null}
+            evidence={<div className="space-y-2 text-sm text-ink-2"><LongText text={o.problem} /><p className="text-xs text-muted">{o.mentions} sources · pain {o.pain_level}/10 · {o.market_size}</p></div>} />
+        ))}
+      </CardGrid>
+    </div>
+  )
 }

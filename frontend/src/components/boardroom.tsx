@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, ChevronDown, Flame, MessageSquarePlus, Play, Users } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, Flame, MessageSquarePlus, Play, ShieldAlert, Users, Vote } from 'lucide-react'
 import { Fragment, useEffect, useState } from 'react'
 import { AGENTS, AgentAvatar, ModeBadge, ScoreRing } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CardGrid, Disclose, FounderBrief, RiskCard, gist, wordCount } from '@/components/ux'
 import { api } from '@/lib/api'
 import { clearBoardRun, startBoard, useBoardRun } from '@/lib/boardroomStore'
 import type { AgentKey, BoardMessage, BoardSession, Decision, Venture, Verdict } from '@/lib/types'
@@ -29,7 +30,6 @@ const THINKING: Record<AgentKey, string> = {
   technical: 'The Technical lead is estimating build effort and cost',
   failure: 'The Failure Agent is hunting for reasons this could fail',
 }
-const RISK_COPY = { high: ['Big risk', 'rose'], medium: ['Some risk', 'amber'], low: ['Small risk', 'leaf'] } as const
 
 // ---------------------------------------------------------------- full debate (secondary)
 
@@ -57,7 +57,12 @@ export function Transcript({ messages }: { messages: BoardMessage[] }) {
                 </div>
                 <div className={cn('mt-1.5 rounded-2xl rounded-tl-md border px-4 py-3 text-[14px] leading-relaxed', AGENTS[m.agent].bubble, failure && 'border-l-4 border-l-rose')}>
                   {failure && <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-rose uppercase"><Flame className="size-3" />Challenge</p>}
-                  {m.content}
+                  {wordCount(m.content) <= 25 ? m.content : (
+                    <>
+                      <p className="font-medium">{m.key_point || gist(m.content)}</p>
+                      <Disclose label="Read full argument" className="mt-1.5"><p className="whitespace-pre-line">{m.content}</p></Disclose>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -131,20 +136,9 @@ export function VerdictCard({ v }: { v: Verdict }) {
         <div className="border-t border-line p-6">
           <p className="mb-1 text-sm font-medium">Check these before you spend money</p>
           <p className="mb-4 text-xs text-muted">Each one could sink the idea if it's wrong — and each can be tested cheaply in about two weeks.</p>
-          <div className="space-y-2">
-            {v.critical_assumptions.map((a) => {
-              const [label, tone] = RISK_COPY[a.risk]
-              return (
-                <div key={a.assumption} className="rounded-xl border border-line bg-canvas p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-[15px] font-medium">{a.assumption}</p>
-                    <Badge tone={tone}>{label}</Badge>
-                  </div>
-                  <p className="mt-1.5 text-sm text-ink-2"><span className="text-muted">How to check: </span>{a.test}</p>
-                </div>
-              )
-            })}
-          </div>
+          <CardGrid>
+            {v.critical_assumptions.map((a) => <RiskCard key={a.assumption} risk={a.assumption} severity={a.risk} mitigation={a.test} />)}
+          </CardGrid>
         </div>
 
         {(v.consensus.length > 0 || v.disagreements.length > 0) && (
@@ -162,6 +156,34 @@ export function VerdictCard({ v }: { v: Verdict }) {
         )}
       </Card>
     </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------- founder brief + the whole outcome
+
+const RISK_RANK = { high: 0, medium: 1, low: 2 } as const
+
+function BoardBrief({ v, messages }: { v: Verdict; messages: BoardMessage[] }) {
+  const copy = DECISION_COPY[v.decision]
+  const total = v.votes.GO + v.votes.PIVOT + v.votes.KILL
+  const objection = messages.findLast((m) => m.agent === 'failure')?.key_point || v.disagreements[0] || [...v.critical_assumptions].sort((a, b) => RISK_RANK[a.risk] - RISK_RANK[b.risk])[0]?.assumption
+  return (
+    <FounderBrief confidence={v.confidence}
+      items={[
+        { label: 'Board consensus', icon: Vote, tone: 'leaf', value: `${total ? `${v.votes[v.decision]} of ${total} advisors: ${copy.label.toLowerCase()}. ` : ''}${gist(v.consensus[0] ?? v.headline ?? copy.blurb, 20)}` },
+        { label: 'Strongest objection', icon: ShieldAlert, tone: 'rose', value: gist(objection, 24) },
+        { label: 'Recommended decision', icon: ArrowRight, tone: 'azure', value: `${copy.label}. ${gist(v.next_steps[0], 20)}` },
+      ]} />
+  )
+}
+
+function Outcome({ v, messages }: { v: Verdict; messages: BoardMessage[] }) {
+  return (
+    <div className="space-y-4">
+      <BoardBrief v={v} messages={messages} />
+      <VerdictCard v={v} />
+      <DebateToggle messages={messages} />
+    </div>
   )
 }
 
@@ -291,8 +313,7 @@ export function LiveBoardroom({ venture }: { venture: Venture }) {
           <Button variant="light" size="sm" onClick={() => { clearBoardRun(venture.id); setAsking(true) }}><MessageSquarePlus />Ask another question</Button>
         </div>
       </div>
-      <VerdictCard v={result.verdict} />
-      <DebateToggle messages={result.messages} />
+      <Outcome v={result.verdict} messages={result.messages} />
     </div>
   )
 }
@@ -303,10 +324,5 @@ export function SessionResult({ session }: { session: BoardSession }) {
       ? <BoardInSession question={session.question} rounds={session.rounds} messages={session.transcript} />
       : <Card className="p-6 text-sm text-muted"><Users className="mb-2 size-5" />This session ended without a verdict.</Card>
   }
-  return (
-    <div className="space-y-4">
-      <VerdictCard v={session.verdict} />
-      <DebateToggle messages={session.transcript} />
-    </div>
-  )
+  return <Outcome v={session.verdict} messages={session.transcript} />
 }

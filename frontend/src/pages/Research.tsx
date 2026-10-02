@@ -3,7 +3,7 @@ import { AppWindow, ArrowLeft, Compass, FileSearch, FlaskConical, Gauge, Layers,
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Empty, ErrorNote, Loading, ModeBadge, PageHeader } from '@/components/bits'
-import { OpportunityCard, ReportBody, ventureFromOpportunity } from '@/components/research'
+import { OpportunityCard, ReportBody, ResearchBrief, ResearchInsights, ventureFromOpportunity } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -34,11 +34,15 @@ export default function Research() {
     queryFn: () => api<Report[]>(`/research?${new URLSearchParams({ ...(kind && { kind }), ...(venture && { venture_id: venture.id }) })}`),
   })
   const { data: ventures = [] } = useVentures()
+  // The brief and insights summarise every report, whichever kind filter is active (same cache key as the venture page).
+  const { data: all = [] } = useQuery({ queryKey: ['research', { venture_id: venture?.id }], queryFn: () => api<Report[]>(`/research${venture ? `?venture_id=${venture.id}` : ''}`) })
   const discover = useAction(() => api<Report>('/discover', { seed }), [['research'], ['me'], ['activity']], 'Discovery complete')
 
   return (
     <>
       <PageHeader eyebrow="Research" title="Research reports" description="Every opportunity scan, validation, MVP blueprint, landing page and experiment analysis your agents have produced." actions={<VentureSelect allowAll />} />
+      <ResearchBrief reports={all} />
+      <ResearchInsights reports={all} />
       <Card className="mb-6 overflow-hidden">
         <div className="relative isolate flex flex-col gap-4 p-5 md:flex-row md:items-center">
           <div className="aurora-soft -z-10" />
@@ -105,6 +109,7 @@ export function ReportPage() {
       <PageHeader eyebrow={KINDS[r.kind].label} title={r.title}
         description={<span className="flex flex-wrap items-center gap-2">{date(r.created_at)}{venture && <>· <Link className="text-azure hover:underline" to={`/app/ventures/${venture.id}`}>{venture.name}</Link></>}<ModeBadge mode={r.mode} /></span>}
         actions={<Button size="icon" variant="ghost" aria-label="Delete report" onClick={() => confirm('Delete this report?') && del.mutate(undefined, { onSuccess: () => nav('/app/research') })}><Trash2 /></Button>} />
+      {(r.kind === 'discovery' || r.kind === 'validation') && <ResearchBrief reports={[r]} />}
       {r.kind === 'discovery' ? (
         <div className="space-y-3">
           {(r.content as { opportunities: Opportunity[] }).opportunities.map((o) => (

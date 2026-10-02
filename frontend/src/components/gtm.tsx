@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Check, Download, Loader2, Megaphone, RefreshCw, Rocket } from 'lucide-react'
+import { AlertTriangle, Check, Download, Loader2, Megaphone, RefreshCw, Rocket, Target, TrendingUp } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { Empty, ErrorNote, ScoreRing } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
+import { Disclose, FoldSection, FounderBrief, InsightCard, LongText, RiskCard, gist } from '@/components/ux'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { api } from '@/lib/api'
@@ -15,15 +16,11 @@ import { ago, cn } from '@/lib/utils'
 const kb = (n: number) => (n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`)
 const Eyebrow = ({ children, className }: { children: ReactNode; className?: string }) => <p className={cn('font-mono text-[10px] tracking-[0.14em] text-muted uppercase', className)}>{children}</p>
 
+/** Each part of the launch package stays folded until opened; the nav pills below link straight into them. */
 function Section({ id, n, title, blurb, children, downloads }: { id: string; n: number; title: string; blurb: string; children: ReactNode; downloads?: (GtmAsset | undefined)[] }) {
+  const dl = downloads?.filter(Boolean) as GtmAsset[] | undefined
   return (
-    <section id={id} className="scroll-mt-24 space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Eyebrow>Section {n}</Eyebrow><h2 className="mt-1 text-2xl">{title}</h2><p className="mt-1 max-w-2xl text-sm text-muted">{blurb}</p></div>
-        <div className="flex flex-wrap gap-2">{downloads?.filter(Boolean).map((a) => <Dl key={a!.key} a={a!} />)}</div>
-      </div>
-      {children}
-    </section>
+    <FoldSection id={id} title={`${n}. ${title}`} hint={blurb} aside={dl?.length ? <div className="flex flex-wrap gap-2">{dl.map((a) => <Dl key={a.key} a={a} />)}</div> : undefined}>{children}</FoldSection>
   )
 }
 
@@ -41,7 +38,6 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => <
 const AREAS: [string, string][] = [['brand', 'Brand'], ['marketing', 'Marketing'], ['product', 'Product'], ['sales', 'Sales']]
 
 function Dashboard({ rd }: { rd: any }) {
-  const sev = { high: 'rose', medium: 'amber', low: 'neutral' } as const
   return (
     <Card className="relative isolate overflow-hidden p-6">
       <div className="aurora-soft -z-10" />
@@ -61,9 +57,7 @@ function Dashboard({ rd }: { rd: any }) {
       {rd.blocking_issues.length > 0 && (
         <div className="mt-6">
           <Eyebrow className="flex items-center gap-1.5"><AlertTriangle className="size-3 text-rose" />Blocking issues ({rd.blocking_issues.length})</Eyebrow>
-          <ul className="mt-2 grid gap-2 lg:grid-cols-2">{rd.blocking_issues.map((b: any, i: number) => (
-            <li key={i} className="rounded-xl border border-line bg-white/80 p-3 text-sm"><div className="flex items-center gap-2"><Badge tone={sev[b.severity as keyof typeof sev]}>{b.severity}</Badge><span className="font-medium">{b.issue}</span></div><p className="mt-1 text-muted"><b className="font-medium text-ink-2">Fix:</b> {b.fix}</p></li>
-          ))}</ul>
+          <div className="mt-2 grid gap-2 lg:grid-cols-2">{rd.blocking_issues.map((b: any, i: number) => <RiskCard key={i} risk={b.issue} severity={b.severity} mitigation={b.fix} />)}</div>
         </div>
       )}
     </Card>
@@ -199,7 +193,7 @@ function Deck({ a, group }: { a: Record<string, any>; group: (g: string) => GtmA
   return (
     <div className="space-y-4">
       <Gallery items={group('slides')} cols="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
-      {d && <Card className="p-5 text-sm text-ink-2"><Eyebrow>About the numbers</Eyebrow><p className="mt-1">{d.assumptions_note}</p></Card>}
+      {d && <Card className="p-5"><Eyebrow>About the numbers</Eyebrow><LongText text={d.assumptions_note} className="mt-1" /></Card>}
     </div>
   )
 }
@@ -210,17 +204,26 @@ function Growth({ a }: { a: Record<string, any> }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-3">{g.launch_strategy.map((p: any, i: number) => (
-        <Card key={i} className="p-5"><Badge tone="saffron">Phase {i + 1} · {p.timeframe}</Badge><p className="mt-2 text-lg font-medium">{p.name}</p><p className="mt-1 text-sm text-ink-2">{p.goal}</p><div className="mt-2"><List items={p.tactics} /></div><p className="mt-3 text-xs text-muted">KPI: {p.kpi}</p></Card>))}</div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {[['First 100 users', g.first_100], ['First 1,000 users', g.first_1000]].map(([t, items]: any) => <Card key={t} className="p-5"><Eyebrow>{t}</Eyebrow><ol className="mt-2 space-y-2 text-sm">{items.map((x: any, i: number) => <li key={i}><b className="font-medium">{i + 1}. {x.action}</b> <span className="text-ink-2">{x.detail}</span></li>)}</ol></Card>)}
+        <Card key={i} className="p-5"><Badge tone="saffron">Phase {i + 1} · {p.timeframe}</Badge><p className="mt-2 text-lg font-medium">{p.name}</p><p className="mt-1 text-sm text-ink-2">{gist(p.goal, 24)}</p><p className="mt-2 text-xs text-muted">KPI: {p.kpi}</p>
+          <Disclose label="View tactics" className="mt-3"><List items={p.tactics} /></Disclose></Card>))}</div>
+      <div>
+        <h3 className="mb-2 text-lg">Acquisition channels</h3>
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{g.channels.map((c: any) => (
+          <InsightCard key={c.channel} title={c.channel} category={`${c.cost} cost`} summary={c.expected_result}
+            evidence={<div className="space-y-2 text-sm text-ink-2"><p><b className="font-medium text-ink">Why:</b> {c.why}</p><p><b className="font-medium text-ink">Tactic:</b> {c.tactic}</p></div>} />))}</div>
       </div>
-      <Card className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-line text-left text-xs text-muted"><th className="px-4 py-3">Channel</th><th className="px-3 py-3">Why</th><th className="px-3 py-3">Tactic</th><th className="px-3 py-3">Cost</th><th className="px-3 py-3">Expected</th></tr></thead>
-        <tbody>{g.channels.map((c: any) => <tr key={c.channel} className="border-b border-line align-top last:border-0"><td className="px-4 py-3 font-medium">{c.channel}</td><td className="px-3 py-3 text-ink-2">{c.why}</td><td className="px-3 py-3 text-ink-2">{c.tactic}</td><td className="px-3 py-3"><Badge tone={c.cost === 'Low' ? 'leaf' : c.cost === 'Medium' ? 'amber' : 'rose'}>{c.cost}</Badge></td><td className="px-3 py-3 text-ink-2">{c.expected_result}</td></tr>)}</tbody></table></Card>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="p-5"><Eyebrow>Growth loops</Eyebrow>{g.growth_loops.map((l: any) => <div key={l.name} className="mt-3 text-sm"><b className="font-medium">{l.name}</b><p className="text-ink-2">{l.steps.join(' → ')}</p><p className="text-xs text-muted">Metric: {l.metric}</p></div>)}</Card>
-        <Card className="p-5"><Eyebrow>Referral ideas</Eyebrow><div className="mt-2"><List items={g.referral_ideas} /></div><Eyebrow className="mt-4">Community strategy</Eyebrow><p className="mt-1 text-sm text-ink-2">{g.community_strategy}</p></Card>
-        <Card className="p-5"><Eyebrow>Partnerships</Eyebrow>{g.partnerships.map((p: any) => <div key={p.who} className="mt-3 text-sm"><b className="font-medium">{p.who}</b><p className="text-ink-2">{p.offer}</p><p className="text-xs text-muted">{p.why}</p></div>)}</Card>
-      </div>
+      <Disclose label="View full growth plan">
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {[['First 100 users', g.first_100], ['First 1,000 users', g.first_1000]].map(([t, items]: any) => <Card key={t} className="p-5"><Eyebrow>{t}</Eyebrow><ol className="mt-2 space-y-2 text-sm">{items.map((x: any, i: number) => <li key={i}><b className="font-medium">{i + 1}. {x.action}</b> <span className="text-ink-2">{x.detail}</span></li>)}</ol></Card>)}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card className="p-5"><Eyebrow>Growth loops</Eyebrow>{g.growth_loops.map((l: any) => <div key={l.name} className="mt-3 text-sm"><b className="font-medium">{l.name}</b><p className="text-ink-2">{l.steps.join(' → ')}</p><p className="text-xs text-muted">Metric: {l.metric}</p></div>)}</Card>
+            <Card className="p-5"><Eyebrow>Referral ideas</Eyebrow><div className="mt-2"><List items={g.referral_ideas} /></div><Eyebrow className="mt-4">Community strategy</Eyebrow><LongText text={g.community_strategy} className="mt-1" /></Card>
+            <Card className="p-5"><Eyebrow>Partnerships</Eyebrow>{g.partnerships.map((p: any) => <div key={p.who} className="mt-3 text-sm"><b className="font-medium">{p.who}</b><p className="text-ink-2">{p.offer}</p><p className="text-xs text-muted">{p.why}</p></div>)}</Card>
+          </div>
+        </div>
+      </Disclose>
     </div>
   )
 }
@@ -279,6 +282,24 @@ function Checklist({ ventureId, a }: { ventureId: string; a: Record<string, any>
   )
 }
 
+// ---------------------------------------------------------------- founder brief
+
+function GtmBrief({ a }: { a: Record<string, any> }) {
+  const g = a.growth
+  if (!g) return null
+  const channel = g.channels.find((c: any) => c.cost === 'Low') ?? g.channels[0]
+  const phase = g.launch_strategy[0]
+  return (
+    <FounderBrief
+      note={a.readiness ? `Launch readiness ${a.readiness.readiness_percent}% · launch score ${a.readiness.launch_score}/10` : undefined}
+      items={[
+        { label: 'Best acquisition channel', icon: Target, tone: 'leaf', value: channel && `${channel.channel}: ${gist(channel.expected_result, 18)}` },
+        { label: 'Biggest growth opportunity', icon: TrendingUp, tone: 'azure', value: g.first_100[0] && `First 100 users: ${g.first_100[0].action}` },
+        { label: 'Recommended launch strategy', icon: Rocket, tone: 'amber', value: phase && `${phase.name} (${phase.timeframe}): ${gist(phase.goal, 18)}` },
+      ]} />
+  )
+}
+
 // ---------------------------------------------------------------- the tab
 
 const NAV = [['brand', 'Brand identity'], ['messaging', 'Positioning & messaging'], ['marketing', 'Marketing assets'], ['deck', 'Investor deck'], ['growth', 'Growth strategy'], ['calendar', 'Content calendar'], ['ads', 'Ad creatives'], ['checklist', 'Launch checklist']]
@@ -309,7 +330,8 @@ export function GtmStudio({ ventureId }: { ventureId: string }) {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
+      <GtmBrief a={a} />
       <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-white px-4 py-3">
         <Megaphone className="size-4 text-saffron" />
         <p className="min-w-0 flex-[1_1_16rem] text-sm">{running ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />{run.stage ?? 'Starting'} — the launch team is working (about 3–8 minutes)…</span>

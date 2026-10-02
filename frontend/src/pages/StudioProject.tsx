@@ -7,6 +7,7 @@ import { Meta } from '@/components/doc'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Disclose } from '@/components/ux'
 import { Select } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { api, download } from '@/lib/api'
@@ -32,7 +33,7 @@ const ScoreChip = ({ label, value }: { label: string; value?: number }) => (
 )
 const Scores = ({ scores }: { scores?: Record<string, number> }) => <div className="flex flex-wrap gap-1.5">{DIMENSIONS.map((d) => <ScoreChip key={d} label={d} value={scores?.[d]} />)}</div>
 const Reasoning = ({ text }: { text?: string }) => text ? (
-  <div className="mb-5 rounded-xl border border-line bg-canvas p-4"><p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">Agent reasoning</p><p className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-ink-2">{text}</p></div>
+  <Disclose label="View agent reasoning" className="mb-5"><div className="rounded-xl border border-line bg-canvas p-4"><p className="text-sm leading-relaxed whitespace-pre-line text-ink-2">{text}</p></div></Disclose>
 ) : null
 const Section = ({ title, children }: { title: string; children: ReactNode }) => <section className="mb-6"><h3 className="mb-2 text-lg">{title}</h3>{children}</section>
 const Issues = ({ items }: { items?: { severity: 'high' | 'medium' | 'low'; where: string; problem: string; fix: string }[] }) => (

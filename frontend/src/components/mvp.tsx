@@ -1,7 +1,8 @@
-import { Ban, CalendarDays, Check, CheckCircle2, Flag, Gauge, Network, ShieldAlert, ShoppingCart, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
+import { Ban, CalendarDays, CheckCircle2, Flag, Gauge, Hammer, Rocket, ShieldAlert, ShoppingCart, Target, TrendingUp, X, type LucideIcon } from 'lucide-react'
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { ActionCard, FoldSection, FounderBrief, LongText, RiskCard, gist } from '@/components/ux'
 import type { Level, MvpComponent, MvpPlan, MvpStrategy } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -42,17 +43,8 @@ export function ArchitectureDiagram({ arch }: { arch: MvpPlan['architecture'] })
   )
 }
 
-function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
-  return (
-    <section>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h3 className="text-xl">{title}</h3>
-        {aside}
-      </div>
-      {children}
-    </section>
-  )
-}
+/** Reference material (schema, APIs, sprints…) stays folded until asked for. */
+const Section = ({ title, children }: { title: string; children: ReactNode }) => <FoldSection title={title}>{children}</FoldSection>
 
 const PRIORITY_TONE = { must: 'dark', should: 'indigo', could: 'neutral' } as const
 const METHOD_TONE: Record<string, string> = { GET: 'text-[#3f6b17]', POST: 'text-azure', PUT: 'text-amber', PATCH: 'text-amber', DELETE: 'text-rose' }
@@ -123,17 +115,7 @@ function Recommendation({ s }: { s: MvpStrategy }) {
         <h2 className="mt-2 max-w-3xl text-[26px] leading-[1.2] sm:text-[30px]">{r.headline}</h2>
         <p className="mt-3 max-w-3xl text-[15px] text-ink-2"><span className="font-medium text-ink">Biggest challenge:</span> {r.biggest_challenge}</p>
       </div>
-      <div className="grid gap-6 p-6 sm:grid-cols-2 sm:p-8">
-        <div>
-          <p className="mb-2 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Prioritize</p>
-          <ul className="space-y-1.5">{r.prioritize.map((f) => <li key={f} className="flex items-center gap-2 text-sm font-medium"><Check className="size-4 text-leaf" />{f}</li>)}</ul>
-        </div>
-        <div>
-          <p className="mb-2 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Delay</p>
-          <ul className="space-y-1.5">{r.delay.map((f) => <li key={f} className="flex items-center gap-2 text-sm text-ink-2"><X className="size-4 text-rose" />{f}</li>)}</ul>
-        </div>
-        <p className="border-t border-line pt-4 text-sm text-ink-2 sm:col-span-2"><span className="font-medium text-ink">Why:</span> {r.reason}</p>
-      </div>
+      <div className="p-6 sm:px-8"><LongText text={r.reason} /></div>
     </Card>
   )
 }
@@ -146,6 +128,8 @@ const TIERS = [
   ['could', 'Build later', 'Nice to have', 'neutral'],
 ] as const
 
+const TIER_PRIORITY = { must: 'high', should: 'medium', could: 'low' } as const
+
 function Scope({ features }: { features: MvpPlan['features'] }) {
   return (
     <Panel icon={Target} title="MVP scope" hint="Every feature sorted by what launch actually needs">
@@ -155,17 +139,9 @@ function Scope({ features }: { features: MvpPlan['features'] }) {
           return list.length ? (
             <div key={tier}>
               <p className="mb-2 flex items-center gap-2 text-sm font-medium"><Badge tone={tone}>{label}</Badge><span className="text-xs font-normal text-muted">{sub}</span></p>
-              <ul className="divide-y divide-line rounded-xl border border-line">
-                {list.map((f) => (
-                  <li key={f.name} className="px-3.5 py-2.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-sm font-medium">{f.name}</p>
-                      {f.user_impact && f.effort && <p className="flex gap-1.5 text-[11px] text-muted">Impact <LevelBadge level={f.user_impact} good /> Effort <LevelBadge level={f.effort} /></p>}
-                    </div>
-                    <p className="mt-0.5 text-xs text-muted">{f.reason || f.description}</p>
-                  </li>
-                ))}
-              </ul>
+              <div className="grid gap-2">
+                {list.map((f) => <ActionCard key={f.name} className="bg-canvas" action={f.name} impact={f.user_impact} priority={TIER_PRIORITY[tier]} effort={f.effort} detail={<p className="text-sm text-ink-2">{f.reason || f.description}</p>} />)}
+              </div>
             </div>
           ) : null
         })}
@@ -293,7 +269,7 @@ function DependencyGraph({ components }: { components: MvpComponent[] }) {
   const nameOf = (id: string) => components.find((c) => c.id === id)?.name ?? id
 
   return (
-    <Panel icon={Network} title="Dependency graph" hint="Build left to right. Hover a step to see what it needs">
+    <div>
       <div ref={scroller} className="overflow-x-auto rounded-xl border border-line bg-canvas p-4 pb-28">
         <div className="dot-grid relative rounded-lg" style={{ width: size.w, height: size.h, margin: 'auto' }}>
           <svg className="pointer-events-none absolute inset-0" width={size.w} height={size.h}>
@@ -327,7 +303,7 @@ function DependencyGraph({ components }: { components: MvpComponent[] }) {
           )}
         </div>
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -337,15 +313,11 @@ function Risks({ risks }: { risks: MvpStrategy['risks'] }) {
   const order = { high: 0, medium: 1, low: 2 }
   return (
     <Panel icon={ShieldAlert} title="Implementation risks" hint="Technical and business, worst first">
-      <ul className="space-y-2.5">
+      <div className="grid gap-2">
         {[...risks].sort((a, b) => order[a.severity] - order[b.severity]).map((r) => (
-          <li key={r.title} className="rounded-xl border border-line p-3">
-            <p className="flex items-center justify-between gap-2 text-sm font-medium">{r.title}<LevelBadge level={r.severity} /></p>
-            <p className="mt-1 text-xs text-muted">{r.explanation}</p>
-            <p className="mt-1.5 text-xs text-ink-2"><span className="font-medium">Mitigation:</span> {r.mitigation}</p>
-          </li>
+          <RiskCard key={r.title} className="bg-canvas" risk={r.title} severity={r.severity} mitigation={r.mitigation} detail={<p>{r.explanation}</p>} />
         ))}
-      </ul>
+      </div>
     </Panel>
   )
 }
@@ -397,14 +369,24 @@ function Investor({ i }: { i: MvpStrategy['investor'] }) {
 export function MvpView({ m }: { m: MvpPlan }) {
   const s = m.strategy
   const metricFor = new Map((s?.metrics ?? []).map((x) => [x.feature, x.metric]))
+  const first = s?.recommendation.prioritize.length ? s.recommendation.prioritize : m.features.filter((f) => f.priority === 'must').map((f) => f.name)
+  const later = s?.recommendation.delay.length ? s.recommendation.delay : m.features.filter((f) => f.priority === 'could').map((f) => f.name)
+  const solo = s?.components.length ? span(schedule(s.components, 1).days) : null
   return (
     <div className="space-y-6">
+      <FounderBrief
+        note={solo ? `Timeline assumes a solo founder at 4 to 5 focused build days a week` : undefined}
+        items={[
+          { label: 'Build first', icon: Hammer, tone: 'leaf', value: first.slice(0, 3).join(' · ') },
+          { label: 'Delay', icon: Ban, tone: 'amber', value: later.slice(0, 3).join(' · ') },
+          { label: 'Fastest path to launch', icon: Rocket, tone: 'azure', value: s ? `${first[0] ? `Ship ${first[0]} first. ` : ''}${solo ? `A solo founder can launch in about ${solo}.` : gist(s.recommendation.headline, 20)}` : null },
+        ]} />
       {s ? (
         <>
           <Recommendation s={s} />
           <div className="grid gap-6 lg:grid-cols-2"><Scope features={m.features} /><BuildVsBuy rows={s.build_vs_buy} /></div>
           <div className="grid gap-6 lg:grid-cols-2"><Roadmap components={s.components} /><CostPanel s={s} /></div>
-          <DependencyGraph components={s.components} />
+          <FoldSection title="Dependency graph" hint="Build left to right. Hover a step to see what it needs"><DependencyGraph components={s.components} /></FoldSection>
           <div className="grid gap-6 lg:grid-cols-2"><Risks risks={s.risks} /><Metrics metrics={s.metrics} /></div>
           <div className="grid gap-6 lg:grid-cols-2"><Avoid avoid={s.avoid} /><Investor i={s.investor} /></div>
         </>
@@ -412,9 +394,9 @@ export function MvpView({ m }: { m: MvpPlan }) {
         <Card className="p-5 text-sm text-ink-2">This blueprint was generated before the strategy sections existed. Press Regenerate for the architect's recommendation, build vs buy, roadmap, risks and more.</Card>
       )}
 
-      <div className="space-y-10 pt-6">
+      <div className="space-y-3 pt-2">
         <Card className="p-6">
-          <p className="text-[15px] text-ink-2">{m.summary}</p>
+          <LongText text={m.summary} />
           <div className="mt-4 flex flex-wrap gap-1.5">{m.stack.map((t) => <Badge key={t} tone="outline">{t}</Badge>)}</div>
           <p className="mt-3 text-xs text-muted">Estimated infrastructure: {m.monthly_cost_estimate}</p>
         </Card>

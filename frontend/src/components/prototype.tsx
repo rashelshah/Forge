@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlertTriangle, AppWindow, Download, FlaskConical, Loader2, Maximize2, Monitor, RefreshCw, Send, Smartphone, Sparkles, Tablet, Undo2, Wand2, X,
+  AlertTriangle, AppWindow, Download, FlaskConical, Loader2, Maximize2, Monitor, MousePointerClick, RefreshCw, Send, Smartphone, Sparkles, Tablet, Undo2, Wand2, X, Zap, LayoutTemplate,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
@@ -12,7 +12,8 @@ import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAction } from '@/lib/queries'
-import type { Experiment, PrototypeContent, Report, Venture } from '@/lib/types'
+import { FounderBrief, LongText, gist } from '@/components/ux'
+import type { Experiment, PrototypeContent, Report, StudioDetail, Venture } from '@/lib/types'
 import { ago, cn } from '@/lib/utils'
 
 // The prototype runs in a sandboxed iframe with an opaque origin: generated code can't touch this app.
@@ -122,6 +123,27 @@ function Building({ build, compact }: { build: Build; compact?: boolean }) {
   )
 }
 
+type Issue = { severity: 'high' | 'medium' | 'low'; where: string; problem: string; fix: string }
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 }
+
+/** The Product Studio's own reviewers (vision review + design critic) already ranked what is wrong; surface the worst finding. */
+function PrototypeBrief({ c }: { c: PrototypeContent }) {
+  const id = c.studio_project_id
+  const { data } = useQuery({ queryKey: ['studio', id, 'brief'], enabled: !!id, staleTime: 5 * 60_000, retry: false, queryFn: () => api<StudioDetail>(`/studio/projects/${id}`) })
+  const version = data?.project.best_iteration ?? data?.versions.at(-1)?.iteration
+  const art = (kind: string) => data?.artifacts.filter((a) => a.kind === kind && a.iteration === version).at(-1)?.content
+  const top = ([...(art('review_report')?.issues ?? []), ...(art('design_feedback')?.critique ?? [])] as Issue[]).sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])[0]
+  return (
+    <FounderBrief className="mb-4" confidence={c.studio_score != null ? Math.round(c.studio_score * 10) : null}
+      note={c.studio_score != null ? `Confidence is the Product Studio's quality score: ${c.studio_score}/10` : undefined}
+      items={[
+        { label: 'Most important UX finding', icon: MousePointerClick, tone: 'amber', value: top ? gist(top.problem, 24) : gist(c.summary, 24) },
+        { label: 'Highest priority screen', icon: LayoutTemplate, tone: 'rose', value: top?.where },
+        { label: 'Prototype recommendation', icon: Zap, tone: 'azure', value: top ? `Fix this first: ${gist(top.fix, 22)}` : 'Put it in front of 5 to 10 real users and measure how many sign up.' },
+      ]} />
+  )
+}
+
 export function PrototypeStudio({ venture, report }: { venture: Venture; report?: Report<PrototypeContent> }) {
   const nav = useNavigate()
   const qc = useQueryClient()
@@ -198,6 +220,8 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
   }
 
   return (
+    <>
+    <PrototypeBrief c={c} />
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -256,7 +280,7 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
           <p className="text-xs text-muted">Describe what you want, like you would to a designer.</p>
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
-          <div className="rounded-xl bg-canvas p-3 text-sm text-ink-2">✨ {c.summary}</div>
+          <div className="rounded-xl bg-canvas p-3"><LongText text={`✨ ${c.summary}`} /></div>
           {c.history.map((h) => (
             <div key={h.at} className="space-y-1.5">
               <p className="ml-6 rounded-xl rounded-tr-sm bg-dark px-3 py-2 text-sm text-white">{h.instruction.startsWith('Fix this runtime error') ? 'Fix the error' : h.instruction}</p>
@@ -295,5 +319,6 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
         </div>
       )}
     </div>
+    </>
   )
 }

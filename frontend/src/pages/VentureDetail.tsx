@@ -10,6 +10,7 @@ import { PrototypeStudio } from '@/components/prototype'
 import { MvpView } from '@/components/mvp'
 import { OpportunityCard, ValidationView } from '@/components/research'
 import { Badge } from '@/components/ui/badge'
+import { LongText } from '@/components/ux'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Select, Textarea } from '@/components/ui/input'
@@ -116,7 +117,7 @@ function MemoryTab({ v }: { v: Venture }) {
                 <Card className="p-4">
                   <div className="flex flex-wrap items-center gap-2"><Badge tone={MEMORY_TONE[m.kind] ?? 'neutral'} className="capitalize">{m.kind}</Badge><span className="text-[11px] text-faint">{date(m.created_at)}</span></div>
                   <p className="mt-2 text-sm font-medium">{m.title}</p>
-                  <p className="mt-1 text-sm whitespace-pre-line text-ink-2">{m.content}</p>
+                  <LongText text={m.content} className="mt-1" />
                 </Card>
               </li>
             ))}

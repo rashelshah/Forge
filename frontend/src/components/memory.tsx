@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Brain, Check, Loader2, Search, Sparkles } from 'lucide-react'
+import { Brain, CircleHelp, Gavel, Lightbulb, Loader2, Search, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Empty } from '@/components/bits'
 import { Section } from '@/components/intel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { CardGrid, Disclose, FounderBrief, InsightCard, LongText, gist } from '@/components/ux'
 import { Input } from '@/components/ui/input'
 import { api } from '@/lib/api'
 import { useAction } from '@/lib/queries'
@@ -26,16 +27,6 @@ function Evidence({ items }: { items: MemoryEvidence[] }) {
     <div className="mt-3">
       <p className="text-xs text-faint">Evidence</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">{items.map((e) => <Badge key={e.title} tone="neutral" title={e.title} className="max-w-full"><span className="truncate">{moduleOf(e.kind)} · {e.title}</span></Badge>)}</div>
-    </div>
-  )
-}
-
-function Confidence({ value, tone }: { value: number; tone: string }) {
-  return (
-    <div className="mt-3 flex items-center gap-3 text-xs">
-      <span className="text-muted">Confidence</span>
-      <div className="h-1.5 w-28 rounded-full bg-soft"><div className="h-full rounded-full" style={{ width: `${value}%`, background: tone }} /></div>
-      <span className="font-medium tabular-nums">{value}%</span>
     </div>
   )
 }
@@ -77,6 +68,23 @@ function MemorySearch({ ventureId }: { ventureId: string }) {
   )
 }
 
+function MemoryBrief({ d }: { d: MemoryData }) {
+  const learning = d.top[0] ?? d.known[0]
+  const decision = [...d.decisions].sort((a, b) => b.occurred_on.localeCompare(a.occurred_on))[0]
+  const failed = d.failed[0]
+  const shaky = [...d.validated].sort((a, b) => a.confidence - b.confidence)[0]
+  const confs = d.validated.map((v) => v.confidence)
+  return (
+    <FounderBrief confidence={confs.length ? Math.round(confs.reduce((a, b) => a + b, 0) / confs.length) : null}
+      note={confs.length ? 'Confidence is the average across validated assumptions' : undefined}
+      items={[
+        { label: 'Top learning', icon: Lightbulb, tone: 'leaf', value: learning?.statement },
+        { label: 'Most important decision', icon: Gavel, tone: 'azure', value: decision && `${decision.decision.replace(/[.!?]+$/, '')}. ${gist(decision.why, 18)}` },
+        { label: 'Largest unresolved question', icon: CircleHelp, tone: 'amber', value: failed ? `Still open: ${failed.statement}` : shaky && `Is this really true? ${shaky.statement} (${shaky.confidence}% confident)` },
+      ]} />
+  )
+}
+
 export function MemoryHub({ ventureId }: { ventureId: string }) {
   const { data, isLoading } = useQuery({ queryKey: ['memory', 'hub', ventureId], queryFn: () => api<MemoryData>(`/memory?venture_id=${ventureId}`) })
   const synth = useAction(() => api('/memory/synthesize', { venture_id: ventureId }), [['memory'], ['activity'], ['me']], 'Venture memory synthesized')
@@ -110,16 +118,18 @@ export function MemoryHub({ ventureId }: { ventureId: string }) {
 
   return (
     <div className="space-y-12">
+      {synthesized && <MemoryBrief d={data} />}
       {status}
 
       <Section n={1} question="What have we learned so far?" title="What we know">
         {data.known.length ? (
-          <Card className="p-5"><ul className="space-y-2.5">{data.known.map((k) => <li key={k.id} className="flex gap-2.5 text-[15px]"><Check className="mt-1 size-4 shrink-0 text-[#6fa33a]" />{k.statement}</li>)}</ul></Card>
+          <CardGrid>{data.known.map((k) => <InsightCard key={k.id} title={gist(k.statement, 24)} category="Learning" evidence={k.statement.length > gist(k.statement, 24).length ? <p className="text-sm text-ink-2">{k.statement}</p> : undefined} />)}</CardGrid>
         ) : synthesized ? none('learnings') : hint}
       </Section>
 
       <Section n={2} question="How did the venture's understanding evolve?" title="Learning timeline">
         {events.length ? (
+          <Disclose label={`View the timeline (${events.length} events)`}>
           <ol className="relative space-y-4 border-l border-line pl-5">
             {events.map((e, i) => (
               <li key={i} className="relative">
@@ -132,44 +142,37 @@ export function MemoryHub({ ventureId }: { ventureId: string }) {
               </li>
             ))}
           </ol>
+          </Disclose>
         ) : none('milestones')}
       </Section>
 
       <Section n={3} question="Why were decisions made?" title="Decision journal">
         {data.decisions.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
+          <CardGrid>
             {data.decisions.map((d) => (
-              <Card key={d.id} className="p-5">
-                <p className="text-xs text-faint">{day(d.occurred_on)}</p>
-                <p className="mt-1 text-[16px] leading-snug font-medium">{d.decision}</p>
-                <div className="mt-3 rounded-xl bg-canvas p-3 text-sm"><p className="text-xs text-muted">Why</p><p className="mt-0.5">{d.why}</p></div>
-                <Evidence items={d.evidence} />
-              </Card>
+              <InsightCard key={d.id} title={d.decision} category={day(d.occurred_on)}
+                evidence={<div className="space-y-3 text-sm"><div className="rounded-xl bg-canvas p-3"><p className="text-xs text-muted">Why</p><LongText text={d.why} className="mt-0.5" /></div><Evidence items={d.evidence} /></div>} />
             ))}
-          </div>
+          </CardGrid>
         ) : none('decisions')}
       </Section>
 
       <Section n={4} question="What assumptions were validated?" title="Validated assumptions">
         {data.validated.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {data.validated.map((a) => <Card key={a.id} className="p-5"><p className="text-[16px] leading-snug font-medium">{a.statement}</p><Confidence value={a.confidence} tone="#5d8a2b" /><Evidence items={a.evidence} /></Card>)}
-          </div>
+          <CardGrid>
+            {data.validated.map((a) => <InsightCard key={a.id} title={a.statement} category="Validated" confidence={a.confidence} evidence={a.evidence.length ? <Evidence items={a.evidence} /> : undefined} />)}
+          </CardGrid>
         ) : none('validated assumptions')}
       </Section>
 
       <Section n={5} question="What failed — so we don't repeat it?" title="Failed assumptions">
         {data.failed.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
+          <CardGrid>
             {data.failed.map((a) => (
-              <Card key={a.id} className="p-5">
-                <p className="text-[16px] leading-snug font-medium">{a.statement}</p>
-                <Confidence value={a.confidence} tone="#c43d2b" />
-                <div className="mt-3 rounded-xl bg-[#fdf3f1] p-3 text-sm"><p className="text-xs text-rose">Reason</p><p className="mt-0.5">{a.reason}</p></div>
-                <Evidence items={a.evidence} />
-              </Card>
+              <InsightCard key={a.id} title={a.statement} category="Failed" confidence={a.confidence}
+                evidence={<div className="space-y-3 text-sm"><div className="rounded-xl bg-[#fdf3f1] p-3"><p className="text-xs text-rose">Reason</p><LongText text={a.reason} className="mt-0.5" /></div><Evidence items={a.evidence} /></div>} />
             ))}
-          </div>
+          </CardGrid>
         ) : none('failed assumptions')}
       </Section>
 

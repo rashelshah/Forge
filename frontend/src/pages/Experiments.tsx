@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Copy, ExternalLink, FlaskConical, MessageSquareText, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { BadgeCheck, Copy, ExternalLink, FlaskConical, FlaskRound, GraduationCap, MessageSquareText, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Input, Select, Textarea } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { FounderBrief, LongText, gist } from '@/components/ux'
 import { VentureSelect } from '@/components/VentureSelect'
 import { api, publicPageUrl } from '@/lib/api'
 import { useAction, useVentures } from '@/lib/queries'
@@ -20,12 +21,38 @@ import { ago, cn, date, titleCase } from '@/lib/utils'
 
 const STATUS_TONE = { draft: 'neutral', running: 'leaf', completed: 'indigo' } as const
 
+type LabRow = { e: Experiment; a?: ExperimentAnalysis }
+
+/** What the experiments taught us, what held up, and what to test next. */
+function LabBrief({ rows, className }: { rows: LabRow[]; className?: string }) {
+  const analysed = rows.filter((r) => r.a)
+  const learning = analysed[0]?.a?.insights[0] ?? rows.find((r) => r.e.result)?.e.result
+  // Only the analyst's verdict counts, or a raw result on a real sample: two visitors proves nothing.
+  const won = analysed.find((r) => r.a!.outcome === 'validated') ?? rows.find((r) => !r.a && r.e.metrics.visitors >= 30 && r.e.metrics.conversion >= r.e.target_conversion)
+  const next = analysed.find((r) => r.a!.recommended_next.length)?.a?.recommended_next[0]
+  const draft = rows.find((r) => r.e.status === 'draft')?.e
+  return (
+    <FounderBrief className={className}
+      items={[
+        { label: 'Most important learning', icon: GraduationCap, tone: 'azure', value: gist(learning, 26) },
+        { label: 'Strongest validated assumption', icon: BadgeCheck, tone: 'leaf', value: won && `${gist(won.e.hypothesis ?? won.e.name, 22).replace(/[.…]+$/, '')}. Converted at ${won.e.metrics.conversion}% against a ${won.e.target_conversion}% target.` },
+        { label: 'Next experiment', icon: FlaskRound, tone: 'amber', value: next ? gist(next, 24) : draft ? `Launch "${draft.name}" and share it with 10 real users.` : 'Write a hypothesis you could prove wrong and test it with 10 real users.' },
+      ]} />
+  )
+}
+
 export function ExperimentList({ ventureId, empty }: { ventureId?: string; empty?: ReactNode }) {
   const { data = [], isLoading } = useQuery({ queryKey: ['experiments', { venture_id: ventureId }], queryFn: () => api<Experiment[]>(`/experiments${ventureId ? `?venture_id=${ventureId}` : ''}`) })
   const { data: ventures = [] } = useVentures()
+  const { data: analyses = [] } = useQuery({
+    queryKey: ['research', { venture_id: ventureId, kind: 'experiment_analysis' }],
+    queryFn: () => api<Report<ExperimentAnalysis>[]>(`/research?kind=experiment_analysis${ventureId ? `&venture_id=${ventureId}` : ''}`),
+  })
   if (isLoading) return <Loading />
   if (data.length === 0) return <>{empty}</>
   return (
+    <>
+    <LabBrief className="mb-6" rows={data.map((e) => ({ e, a: analyses.find((r) => r.venture_id === e.venture_id && r.title.endsWith(e.name))?.content }))} />
     <div className="grid gap-3 md:grid-cols-2">
       {data.map((e) => {
         const pct = Math.min(100, (100 * e.metrics.conversion) / (e.target_conversion || 1))
@@ -54,6 +81,7 @@ export function ExperimentList({ ventureId, empty }: { ventureId?: string; empty
         )
       })}
     </div>
+    </>
   )
 }
 
@@ -170,6 +198,8 @@ export function ExperimentDetail() {
           <Button size="icon" variant="ghost" aria-label="Delete experiment" onClick={() => confirm('Delete this experiment and its data?') && del.mutate(undefined, { onSuccess: () => nav('/app/experiments') })}><Trash2 /></Button>
         </>} />
 
+      {latest && <LabBrief className="mb-6" rows={[{ e, a: latest }]} />}
+
       {url && (
         <Card className="mb-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
           <Badge tone={STATUS_TONE[e.status]} className="w-fit capitalize">{e.status === 'running' ? 'Live' : e.status}</Badge>
@@ -192,7 +222,7 @@ export function ExperimentDetail() {
         <div className="space-y-6">
           {url && <DailyChart events={e.events ?? []} />}
           {latest && <div><h3 className="mb-3 text-xl">Analyst verdict</h3><AnalysisView a={latest} /></div>}
-          {!latest && e.result && <Card className="p-5 text-sm text-ink-2">{e.result}</Card>}
+          {!latest && e.result && <Card className="p-5"><LongText text={e.result} /></Card>}
         </div>
         <div className="space-y-4">
           <Card className="p-4">

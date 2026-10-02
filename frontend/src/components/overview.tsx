@@ -6,6 +6,7 @@ import { ScoreRing } from '@/components/bits'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Disclose, gist, wordCount } from '@/components/ux'
 import { api } from '@/lib/api'
 import { useAction } from '@/lib/queries'
 import type { ReadinessKey, VentureCommand } from '@/lib/types'
@@ -33,7 +34,7 @@ function FounderBrief({ c, refreshing, onRefresh }: { c: VentureCommand; refresh
       <div className="flex flex-wrap items-center gap-3 px-5 pt-5 sm:px-7 sm:pt-6">
         <div>
           <Eyebrow className="flex items-center gap-1.5"><Sparkles className="size-3 text-saffron" />AI venture partner</Eyebrow>
-          <h2 className="mt-1 text-2xl sm:text-[28px]">Today's founder brief</h2>
+          <h2 className="mt-1 text-2xl sm:text-[28px]">AI Founder Brief</h2>
         </div>
         <span className="flex-1" />
         <div className="flex items-center gap-4">
@@ -59,7 +60,7 @@ function FounderBrief({ c, refreshing, onRefresh }: { c: VentureCommand; refresh
           </div>
         </div>
         <div className="flex flex-col rounded-2xl border border-line bg-white/80 p-6">
-          <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase"><ArrowRight className="size-3.5" />Recommended direction</p>
+          <p className="flex items-center gap-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase"><ArrowRight className="size-3.5" />Recommended next step</p>
           <p className="mt-3 flex-1 text-lg leading-snug sm:text-xl">{b.recommendation}</p>
         </div>
       </div>
@@ -108,7 +109,8 @@ function Actions({ c, ventureId, stage }: { c: VentureCommand; ventureId: string
                   <p className={cn('font-medium', isDone && 'line-through')}>{a.title}</p>
                   <Badge tone={a.priority === 'High' ? 'rose' : a.priority === 'Medium' ? 'amber' : 'neutral'}>{a.priority}</Badge>
                 </div>
-                <p className="mt-1 text-sm leading-relaxed text-ink-2">{a.description}</p>
+                <p className="mt-1 text-sm leading-relaxed text-ink-2">{gist(a.description, 18)}</p>
+                {wordCount(a.description) > 18 && <Disclose label="Details" className="mt-1"><p className="text-sm leading-relaxed text-ink-2">{a.description}</p></Disclose>}
                 <div className="mt-2.5 flex flex-wrap items-center gap-3 text-xs text-muted">
                   <span className="inline-flex items-center gap-1.5"><Icon className="size-3.5" />{a.source}</span>
                   {SOURCE_TAB[a.source] && !isDone && <button onClick={() => setParams({ tab: SOURCE_TAB[a.source] })} className="inline-flex items-center gap-1 text-azure hover:underline cursor-pointer">Open <ArrowRight className="size-3" /></button>}
