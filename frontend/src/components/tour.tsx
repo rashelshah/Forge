@@ -192,11 +192,11 @@ export function ProductTour({ open, onClose, onCreate, setSidebar }: {
 
       <AnimatePresence mode="wait">
         <motion.div key={step.id} ref={setCardEl} initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}
-          className={cn('absolute overflow-y-auto rounded-3xl border border-white/60 bg-white shadow-[0_24px_70px_-12px_rgba(16,18,31,0.55)]', centred && 'text-center')} style={{ ...pos, maxHeight: vh - 2 * PAD }}>
-          {centred && <div className="aurora-soft absolute inset-0 -z-0 opacity-80" />}
+          className={cn('absolute isolate overflow-y-auto rounded-3xl border border-white/60 bg-white shadow-[0_24px_70px_-12px_rgba(16,18,31,0.55)]', centred && 'text-center')} style={{ ...pos, maxHeight: vh - 2 * PAD }}>
+          <div className="aurora-soft -z-10" />
           <div className="relative p-5 sm:p-6">
             <div className={cn('flex items-center gap-3', centred && 'flex-col')}>
-              <span className={cn('grid shrink-0 place-items-center rounded-2xl bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] text-white shadow-press-dark [&_svg]:size-5', centred ? 'size-14 [&_svg]:size-6' : 'size-10')}><Icon /></span>
+              {step.id !== 'welcome' && <Icon className="size-[18px] shrink-0 text-ink-2" strokeWidth={1.75} />}
               <div className={cn('min-w-0 flex-1', centred && 'flex-none')}>
                 {step.group && <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">{step.group}</p>}
                 <h2 className={cn('font-display leading-tight font-medium tracking-[-0.01em]', centred ? 'mt-2 text-[26px]' : 'text-[19px]')}>{step.title}</h2>
