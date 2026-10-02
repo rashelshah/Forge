@@ -339,7 +339,7 @@ export function IntelPanel({ ventureId, ventureName, data, isLoading, onAdd }: {
     <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-white px-4 py-3">
       <Swords className="size-4 text-saffron" />
       <p className="min-w-0 flex-[1_1_16rem] text-sm">
-        {building ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />The Competitive Intelligence Officer is reading {competitors.length} competitor{competitors.length === 1 ? '' : 's'} — about 2–4 minutes…</span>
+        {building ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />The Competitive Intelligence Officer is reading {competitors.length} competitor{competitors.length === 1 ? '' : 's'} — usually about a minute…</span>
           : ready ? <>Analysis updated <b className="font-medium">{ago(report.generated_at)}</b> · {competitors.length} competitor{competitors.length === 1 ? '' : 's'} tracked</> : 'Your AI strategy consultant for the competitive landscape.'}
       </p>
       <Button size="sm" variant="light" onClick={onAdd}><Plus />Track competitor</Button>

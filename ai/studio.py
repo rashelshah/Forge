@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from typing import Literal, TypedDict
 
 import httpx
+from concurrent.futures import ThreadPoolExecutor
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
@@ -771,6 +772,21 @@ def build(run: Run):
             return {key: d}
         return fn
 
+    reviewers = [
+        reviewer("Vision Reviewer", "review_report", ReviewReport, VISION_REVIEWER, None, lambda o: o.summary),
+        reviewer("Design Critic", "design_feedback", DesignFeedback, CRITIC, {"desktop-1", "mobile-1", "desktop-2"}, lambda o: o.verdict),
+        reviewer("Failure Agent", "failure_report", FailureReport, FAILURE, {"desktop-1", "mobile-1"},
+                 lambda o: f"Biggest risk: {o.biggest_risk}", extra=lambda s: "\n\nProduct spec:\n" + _compact(s["product_spec"])),
+    ]
+
+    def review(s: State):
+        """The three reviewers judge the same screenshots independently, so they work at the same time."""
+        out: dict = {}
+        with ThreadPoolExecutor(len(reviewers)) as ex:
+            for part in [f.result() for f in [ex.submit(r, s) for r in reviewers]]:
+                out.update(part)
+        return out
+
     def scoring(s: State):
         with run.step("Quality Scorer") as box:
             rv, cr = s["review_report"]["scores"], s["design_feedback"]["scores"]
@@ -878,27 +894,24 @@ def build(run: Run):
                           lambda o, d: f"{len(d['routes'])} routes, {len(d['component_tree'])} components — {d['state_management'][:90]}", 9000),
         "ui": ui_engineer,
         "screenshots": screenshots,
-        "vision": reviewer("Vision Reviewer", "review_report", ReviewReport, VISION_REVIEWER, None,
-                           lambda o: o.summary),
-        "critic": reviewer("Design Critic", "design_feedback", DesignFeedback, CRITIC, {"desktop-1", "mobile-1", "desktop-2"},
-                           lambda o: o.verdict),
-        "failure": reviewer("Failure Agent", "failure_report", FailureReport, FAILURE, {"desktop-1", "mobile-1"},
-                            lambda o: f"Biggest risk: {o.biggest_risk}", extra=lambda s: "\n\nProduct spec:\n" + _compact(s["product_spec"])),
+        "review": review,
         "scoring": scoring, "refine": refinement, "finish": finish, "finish_lite": finish_lite,
     }
     for name, fn in nodes.items():
         g.add_node(name, fn)
-    chain = ["strategist", "ux", "researcher", "designer", "mvp", "frontend", "ui"]
-    g.add_edge(START, chain[0])
-    for a, b in zip(chain, chain[1:]):
-        g.add_edge(a, b)
+    # Once the UX blueprint exists, design research -> designer and the technical spec are independent, so they run side by side.
+    g.add_edge(START, "strategist")
+    g.add_edge("strategist", "ux")
+    g.add_edge("ux", "researcher")
+    g.add_edge("ux", "mvp")
+    g.add_edge("researcher", "designer")
+    g.add_edge(["designer", "mvp"], "frontend")
+    g.add_edge("frontend", "ui")
     g.add_conditional_edges("ui", lambda s: "finish_lite" if core.LOW_MEMORY else "screenshots")
     g.add_edge("finish_lite", END)
-    g.add_conditional_edges("screenshots", lambda s: ("finish" if s["history"] else "finish_lite") if s.get("browser_failed") else "vision" if s["rendered"] else (
+    g.add_conditional_edges("screenshots", lambda s: ("finish" if s["history"] else "finish_lite") if s.get("browser_failed") else "review" if s["rendered"] else (
         "refine" if s["repairs"] < MAX_REPAIRS else "finish"))
-    g.add_edge("vision", "critic")
-    g.add_edge("critic", "failure")
-    g.add_edge("failure", "scoring")
+    g.add_edge("review", "scoring")
     g.add_conditional_edges("scoring", lambda s: "finish" if all(v >= TARGET for v in s["history"][-1]["scores"].values()) or len(s["history"]) >= s["max_iterations"] else "refine")
     g.add_conditional_edges("refine", lambda s: "finish" if s.get("stalled") else "screenshots")
     g.add_edge("finish", END)

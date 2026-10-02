@@ -3,8 +3,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity, AppWindow, Bell, Brain, FileSearch, FlaskConical, Layers, LayoutGrid, LogOut, Megaphone, PanelLeft, Menu, MessagesSquare, Plus, Radar, Rocket, Settings, TrendingUp, X, type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
+import { Loading } from '@/components/bits'
 import { Logo } from '@/components/brand'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
 import { Button } from '@/components/ui/button'
@@ -203,7 +204,7 @@ export function AppShell() {
       <main className="relative isolate">
         <div className="page-wash -z-10 h-80" />
         <motion.div key={loc.pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-10">
-          <Outlet context={{ newVenture: () => setNewOpen(true) } satisfies ShellCtx} />
+          <Suspense fallback={<Loading />}><Outlet context={{ newVenture: () => setNewOpen(true) } satisfies ShellCtx} /></Suspense>
         </motion.div>
       </main>
       <NewVentureDialog open={newOpen} onOpenChange={setNewOpen} />

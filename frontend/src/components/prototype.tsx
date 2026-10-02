@@ -105,7 +105,7 @@ function Building({ build, compact }: { build: Build; compact?: boolean }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-medium">Building your prototype…</p>
-          <p className="mt-1 text-sm text-muted">{build.studio_project_id ? "A team of AI agents is designing, building, screenshotting and reviewing it — usually 8–12 minutes. You can leave this page; we'll notify you when it's ready." : "Usually 1–3 minutes on the free AI models. You can leave this page — we'll notify you when it's ready."}</p>
+          <p className="mt-1 text-sm text-muted">{build.studio_project_id ? "A team of AI agents is designing, building, screenshotting and reviewing it — usually 2–4 minutes. You can leave this page; we'll notify you when it's ready." : "Usually 1–3 minutes on the free AI models. You can leave this page — we'll notify you when it's ready."}</p>
           {build.studio_project_id && <p className="mt-2 text-sm">{build.agent && <span className="text-ink-2">Now: <b className="font-medium">{build.agent}</b>{build.iteration ? ` · version ${build.iteration}` : ''} · </span>}<Link to={`/app/studio/${build.studio_project_id}`} className="text-azure hover:underline">Watch the team work →</Link></p>}
         </div>
         <span className="rounded-full bg-white px-3 py-1 font-mono text-xs text-muted shadow-press-light"><Elapsed since={build.started_at} /></span>

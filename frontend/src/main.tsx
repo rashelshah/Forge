@@ -7,7 +7,10 @@ import App from './App'
 import { AuthProvider } from './lib/auth'
 import './index.css'
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, retry: 1, refetchOnWindowFocus: false } } })
+const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, gcTime: 10 * 60_000, retry: 1, refetchOnWindowFocus: false } } })
+
+// Wake a sleeping API (free hosts spin down) while the user is still on the landing or login page.
+fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/ping`).catch(() => {})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

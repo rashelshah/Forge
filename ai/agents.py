@@ -437,15 +437,17 @@ def _url_ok(url: str | None) -> str | None:
 
 def validate(venture: dict, founder: dict):
     idea = venture["idea"]
-    web = core.dedupe(
-        core.web_search(f"{idea} market size", k=3)
-        + core.web_search(f"problems people have that {idea} would solve", ["reddit.com", "news.ycombinator.com"], k=3)
-        + core.web_search(f"companies and startups offering {idea}", k=4)
-        + core.web_search(f"how much do customers pay for {idea}", k=2)
+    # Four web searches and three lookups are independent: run them together (they used to run one after another).
+    s1, s2, s3, s4, lib, mem, ycx = core.parallel(
+        lambda: core.web_search(f"{idea} market size", k=3),
+        lambda: core.web_search(f"problems people have that {idea} would solve", ["reddit.com", "news.ycombinator.com"], k=3),
+        lambda: core.web_search(f"companies and startups offering {idea}", k=4),
+        lambda: core.web_search(f"how much do customers pay for {idea}", k=2),
+        lambda: core.search_knowledge(f"how to evaluate demand, competition, moats and business model for: {idea}", k=4),
+        lambda: core.recall(venture["id"], idea, k=4),
+        lambda: sd.context(idea),
     )
-    lib = core.search_knowledge(f"how to evaluate demand, competition, moats and business model for: {idea}", k=4)
-    mem = core.recall(venture["id"], idea, k=4)
-    ycx = sd.context(idea)
+    web = core.dedupe(s1 + s2 + s3 + s4)
     if not core.OPENAI:
         out = demo.validate(venture, founder, lib)
     else:

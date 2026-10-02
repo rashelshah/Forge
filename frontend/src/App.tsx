@@ -1,31 +1,64 @@
-import type { ReactNode } from 'react'
+import { Suspense, lazy, useEffect, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppShell } from './components/AppShell'
 import { useAuth } from './lib/auth'
 import { useVentures } from './lib/queries'
 import { storedVenture } from './lib/venture'
-import Activity from './pages/Activity'
-import Boardroom, { BoardroomSession } from './pages/Boardroom'
-import CompetitiveIntelligence from './pages/CompetitiveIntelligence'
-import Dashboard from './pages/Dashboard'
-import DesignIntelligence from './pages/DesignIntelligence'
-import Experiments, { ExperimentDetail } from './pages/Experiments'
-import Knowledge from './pages/Knowledge'
-import Landing from './pages/Landing'
-import Login from './pages/Login'
-import MarketSignals from './pages/MarketSignals'
-import Studio from './pages/Studio'
-import StudioProject from './pages/StudioProject'
-import Research, { ReportPage } from './pages/Research'
-import Settings from './pages/Settings'
-import VentureDetail from './pages/VentureDetail'
-import VentureMemory from './pages/VentureMemory'
-import Ventures from './pages/Ventures'
+// Every page is its own chunk: opening the app downloads only the page you land on, and the rest load on demand
+// (and in the background once the app is idle, see `preloadPages`).
+const pages = {
+  Activity: () => import('./pages/Activity'),
+  Boardroom: () => import('./pages/Boardroom'),
+  CompetitiveIntelligence: () => import('./pages/CompetitiveIntelligence'),
+  Dashboard: () => import('./pages/Dashboard'),
+  DesignIntelligence: () => import('./pages/DesignIntelligence'),
+  Experiments: () => import('./pages/Experiments'),
+  Knowledge: () => import('./pages/Knowledge'),
+  Landing: () => import('./pages/Landing'),
+  Login: () => import('./pages/Login'),
+  MarketSignals: () => import('./pages/MarketSignals'),
+  Studio: () => import('./pages/Studio'),
+  StudioProject: () => import('./pages/StudioProject'),
+  Research: () => import('./pages/Research'),
+  Settings: () => import('./pages/Settings'),
+  VentureDetail: () => import('./pages/VentureDetail'),
+  VentureMemory: () => import('./pages/VentureMemory'),
+  Ventures: () => import('./pages/Ventures'),
+}
+const Activity = lazy(pages.Activity)
+const Boardroom = lazy(pages.Boardroom)
+const BoardroomSession = lazy(() => pages.Boardroom().then((m) => ({ default: m.BoardroomSession })))
+const CompetitiveIntelligence = lazy(pages.CompetitiveIntelligence)
+const Dashboard = lazy(pages.Dashboard)
+const DesignIntelligence = lazy(pages.DesignIntelligence)
+const Experiments = lazy(pages.Experiments)
+const ExperimentDetail = lazy(() => pages.Experiments().then((m) => ({ default: m.ExperimentDetail })))
+const Knowledge = lazy(pages.Knowledge)
+const Landing = lazy(pages.Landing)
+const Login = lazy(pages.Login)
+const MarketSignals = lazy(pages.MarketSignals)
+const Studio = lazy(pages.Studio)
+const StudioProject = lazy(pages.StudioProject)
+const Research = lazy(pages.Research)
+const ReportPage = lazy(() => pages.Research().then((m) => ({ default: m.ReportPage })))
+const Settings = lazy(pages.Settings)
+const VentureDetail = lazy(pages.VentureDetail)
+const VentureMemory = lazy(pages.VentureMemory)
+const Ventures = lazy(pages.Ventures)
+
+/** Fetch the other pages' code while the browser is idle, so moving around the app never waits on a download. */
+function preloadPages() {
+  const go = () => Object.values(pages).forEach((load) => load().catch(() => {}))
+  if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 4000 })
+  else setTimeout(go, 2000)
+}
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { ready, session, demo } = useAuth()
+  const ok = demo || !!session
+  useEffect(() => { if (ready && ok) preloadPages() }, [ready, ok])
   if (!ready) return null
-  return demo || session ? children : <Navigate to="/login" replace />
+  return ok ? children : <Navigate to="/login" replace />
 }
 
 /** Old URL -> new URL, keeping the query string (notifications and bookmarks still point at /app/competitors). */
@@ -43,6 +76,7 @@ function VentureTab({ tab }: { tab: string }) {
 
 export default function App() {
   return (
+    <Suspense fallback={null}>
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
@@ -72,5 +106,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }

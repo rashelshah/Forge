@@ -73,9 +73,11 @@ class Radar(BaseModel):
 
 
 def _sources(idea: str) -> list[dict]:
-    found = core.web_search(f"{idea} market news product launches funding", k=5, topic="news", days=30)
-    found += core.web_search(f"{idea} industry trends growth consumer adoption", k=5)
-    found += core.web_search(f"{idea} regulation funding startups investors", k=4, topic="news", days=60)
+    found = sum(core.parallel(
+        lambda: core.web_search(f"{idea} market news product launches funding", k=5, topic="news", days=30),
+        lambda: core.web_search(f"{idea} industry trends growth consumer adoption", k=5),
+        lambda: core.web_search(f"{idea} regulation funding startups investors", k=4, topic="news", days=60),
+    ), [])
     return core.dedupe(found)[:12]
 
 
@@ -83,9 +85,8 @@ def run(venture: dict, context: dict) -> dict:
     """context: {competitors:[name], intel:{market_trend, recommendation}|None, memories:[{kind,title,content}], known_signals:[title]}."""
     if not core.OPENAI:
         raise core.LLMError("Market Signals needs an LLM: set GEMINI_API_KEY, GROQ_API_KEY or OPENAI_API_KEY")
-    sources = _sources(venture["idea"])
+    sources, ycx = core.parallel(lambda: _sources(venture["idea"]), lambda: sd.context(venture["idea"], k=6))
     live = bool(sources)
-    ycx = sd.context(venture["idea"], k=6)
     mem = "\n".join(f"- ({m['kind']}) {m['title']}: {m['content'][:240]}" for m in context.get("memories", [])[:20]) or "(none yet)"
     out: Radar = intel._retry(lambda: core.structured(
         Radar,

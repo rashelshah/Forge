@@ -1,10 +1,9 @@
 """Multi-agent boardroom: six board members debate over N rounds, then the Chair issues a verdict (LangGraph)."""
-import operator
 import re
 import time
-from typing import Annotated, Literal, TypedDict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Literal, TypedDict
 
-from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
 import core
@@ -70,8 +69,7 @@ class Board(TypedDict):
     failure_context: str
     rounds: int
     round: int
-    transcript: Annotated[list, operator.add]
-    verdict: dict | None
+    transcript: list
 
 
 def _transcript_text(transcript: list) -> str:
@@ -119,17 +117,14 @@ def member(key: str):
                 f"{_transcript_text(s['transcript'])}\n\nRound {s['round']} of {s['rounds']}. {task}",
                 temperature=0.7,
                 tier="heavy" if key == "failure" else "fast",
+                max_tokens=1500,  # a turn is under 70 words; the cap leaves room for reasoning tokens but stops a ramble
             ).model_dump()
             self_names = {"technical": "Technical|CTO", "failure": "Failure"}.get(key, name.replace(" Agent", ""))
             text = re.sub(rf"^(?:{self_names})(?: Agent)?(?: here)?[,:]\s*", "", turn["content"].strip())
             turn["content"] = _clip(text[:1].upper() + text[1:], 90)
-        return {"transcript": [{"agent": key, "name": name, "round": s["round"], **turn}]}
+        return {"agent": key, "name": name, "round": s["round"], **turn}
 
     return speak
-
-
-def next_round(s: Board):
-    return {"round": s["round"] + 1}
 
 
 def chair(s: Board):
@@ -153,31 +148,20 @@ def chair(s: Board):
         # Overruling the board needs strong conviction; otherwise the majority stands.
         verdict["summary"] += f" (The Chair's objections were noted, but without strong evidence the board's majority vote — {majority} — stands.)"
         verdict["decision"] = majority
-    return {"verdict": {**verdict, "votes": votes}}
+    return {**verdict, "votes": votes}
 
 
-def _build():
-    g = StateGraph(Board)
-    for key in ORDER:
-        g.add_node(key, member(key))
-    g.add_node("next_round", next_round)
-    g.add_node("chair", chair)
-    g.add_edge(START, ORDER[0])
-    for a, b in zip(ORDER, ORDER[1:]):
-        g.add_edge(a, b)
-    g.add_conditional_edges(ORDER[-1], lambda s: "next_round" if s["round"] < s["rounds"] else "chair")
-    g.add_edge("next_round", ORDER[0])
-    g.add_edge("chair", END)
-    return g.compile()
-
-
-graph = _build()
+SPEAKERS = {k: member(k) for k in ORDER}
 
 
 def run(venture: dict, question: str, rounds: int, validation: dict | None, owner: str | None):
-    mem = core.recall(venture["id"], question, k=6)
-    lib = core.search_knowledge(f"{question} {venture['idea']}", owner, k=3)
-    fails = core.search_knowledge(f"why startups fail {venture['idea']}", owner, k=3)
+    # The four lookups are independent: run them side by side instead of one after another.
+    mem, lib, fails, ycx = core.parallel(
+        lambda: core.recall(venture["id"], question, k=6),
+        lambda: core.search_knowledge(f"{question} {venture['idea']}", owner, k=3),
+        lambda: core.search_knowledge(f"why startups fail {venture['idea']}", owner, k=3),
+        lambda: sd.context(venture["idea"], k=6),
+    )
     scores = "Validation: not run yet — evidence is limited."
     if validation:
         scores = f"Validation ({validation.get('overall')}/100, {validation.get('verdict')}): " + "; ".join(
@@ -190,18 +174,25 @@ def run(venture: dict, question: str, rounds: int, validation: dict | None, owne
             scores += "\nKnown competitors: " + "; ".join(f"{c['name']} — {c['description']}" for c in validation["competitors"][:6])
     context = (
         f"{venture_text(venture)}\n{scores}\n\nVenture memory:\n{core.context_block(mem, 'Memory')}\n\n"
-        f"Startup library:\n{core.context_block(lib, 'Library')}\n\n{sd.context(venture['idea'], k=6)['text']}\n(Use these real companies and computed facts for the board's arguments; quote no statistic that is not in them; any other number you suggest must be framed as a target or an assumption to test, never as a fact.)"
+        f"Startup library:\n{core.context_block(lib, 'Library')}\n\n{ycx['text']}\n(Use these real companies and computed facts for the board's arguments; quote no statistic that is not in them; any other number you suggest must be framed as a target or an assumption to test, never as a fact.)"
     )
-    state = {"venture": venture, "question": question, "context": context,
-             "failure_context": core.context_block(fails, "Library"),
-             "rounds": rounds, "round": 1, "transcript": [], "verdict": None}
+    state: Board = {"venture": venture, "question": question, "context": context,
+                    "failure_context": core.context_block(fails, "Library"), "rounds": rounds, "round": 1, "transcript": []}
     yield {"type": "start", "members": [{"agent": k, "name": AGENTS[k][0], "focus": AGENTS[k][1]} for k in ORDER],
            "mode": core.MODE, "citations": list(dict.fromkeys(d["title"] for d in lib + fails))}
-    for update in graph.stream(state, stream_mode="updates", config={"recursion_limit": 100}):
-        for node, patch in update.items():
-            if node in AGENTS:
-                yield {"type": "message", "message": patch["transcript"][0]}
-            elif node == "next_round":
-                yield {"type": "round", "round": patch["round"]}
-            elif node == "chair":
-                yield {"type": "verdict", "verdict": patch["verdict"]}
+    # Within a round the first five members each speak from their own lens, so they answer at the same time. The Failure Agent then goes
+    # last and attacks what they said. Messages are still emitted in board order, so the stream reads like one debate.
+    with ThreadPoolExecutor(len(ORDER)) as ex:
+        for rnd in range(1, rounds + 1):
+            if rnd > 1:
+                yield {"type": "round", "round": rnd}
+            state = {**state, "round": rnd}
+            futures = [ex.submit(SPEAKERS[k], state) for k in ORDER[:-1]]
+            for f in futures:
+                msg = f.result()
+                state["transcript"] = state["transcript"] + [msg]
+                yield {"type": "message", "message": msg}
+            msg = SPEAKERS[ORDER[-1]](state)
+            state["transcript"] = state["transcript"] + [msg]
+            yield {"type": "message", "message": msg}
+    yield {"type": "verdict", "verdict": chair(state)}

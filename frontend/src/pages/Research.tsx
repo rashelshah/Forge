@@ -30,12 +30,12 @@ export default function Research() {
   const nav = useNavigate()
   const { venture } = useVentureFilter()
   const { data = [], isLoading } = useQuery({
-    queryKey: ['research', { kind, venture_id: venture?.id }],
-    queryFn: () => api<Report[]>(`/research?${new URLSearchParams({ ...(kind && { kind }), ...(venture && { venture_id: venture.id }) })}`),
+    queryKey: ['research', 'list', { kind, venture_id: venture?.id }],
+    queryFn: () => api<Report[]>(`/research?${new URLSearchParams({ slim: '1', ...(kind && { kind }), ...(venture && { venture_id: venture.id }) })}`),
   })
   const { data: ventures = [] } = useVentures()
-  // The brief and insights summarise every report, whichever kind filter is active (same cache key as the venture page).
-  const { data: all = [] } = useQuery({ queryKey: ['research', { venture_id: venture?.id }], queryFn: () => api<Report[]>(`/research${venture ? `?venture_id=${venture.id}` : ''}`) })
+  // The brief and insights summarise every report, whichever kind filter is active (its own cache key: the venture page keeps full reports under another).
+  const { data: all = [] } = useQuery({ queryKey: ['research', 'brief', { venture_id: venture?.id }], queryFn: () => api<Report[]>(`/research?slim=1${venture ? `&venture_id=${venture.id}` : ''}`) })
   const discover = useAction(() => api<Report>('/discover', { seed }), [['research'], ['me'], ['activity']], 'Discovery complete')
 
   return (

@@ -225,7 +225,7 @@ export function BoardInSession({ question, rounds, messages }: { question: strin
             {next ? `${THINKING[next]}…` : 'The Chair is writing up the final answer…'}
           </motion.p>
         </AnimatePresence>
-        <p className="mt-1 text-xs text-muted">Usually under a minute. You can switch tabs — the board keeps working and saves everything.</p>
+        <p className="mt-1 text-xs text-muted">Usually about 20 seconds. You can switch tabs — the board keeps working and saves everything.</p>
       </div>
     </Card>
   )

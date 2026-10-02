@@ -93,10 +93,8 @@ r.post('/ventures/:id/validate', async (req, res) => {
   })
 
   const existing = new Set((await db.list('competitors', { venture_id: v.id })).map((c) => c.name.toLowerCase()))
-  for (const c of out.competitors ?? []) {
-    if (existing.has(c.name.toLowerCase())) continue
-    await db.insert('competitors', { user_id: req.user.id, venture_id: v.id, name: c.name, url: c.url, description: c.description, threat_level: 'medium' })
-  }
+  await Promise.all((out.competitors ?? []).filter((c) => !existing.has(c.name.toLowerCase())).map((c) =>
+    db.insert('competitors', { user_id: req.user.id, venture_id: v.id, name: c.name, url: c.url, description: c.description, threat_level: 'medium' })))
 
   await remember(req.user, v.id, 'research', `Validation: ${out.overall}/100 (${out.verdict})`,
     `${out.summary}\nScores: ${SCORE_KEYS.map((k) => `${k} ${out[k].score} — ${out[k].summary}`).join('; ')}\nKey risks: ${out.key_risks.join('; ')}`)
@@ -110,7 +108,9 @@ r.post('/ventures/:id/validate', async (req, res) => {
 r.get('/research', async (req, res) => {
   const match = { user_id: req.user.id, ...(req.query.kind && { kind: String(req.query.kind) }), ...(req.query.venture_id && { venture_id: String(req.query.venture_id) }) }
   // Internal reports (competitive intelligence, founder brief) have their own views; they aren't Research library items.
-  res.json((await db.list('research_reports', match, { limit: 300 })).filter((x) => match.kind || !['intel', 'brief'].includes(x.kind)))
+  const rows = (await db.list('research_reports', match, { limit: 300 })).filter((x) => match.kind || !['intel', 'brief'].includes(x.kind))
+  // ?slim=1 (list pages) leaves out the generated app code, which is by far the biggest part of a prototype report.
+  res.json(req.query.slim ? rows.map((x) => (x.content?.html || x.content?.previous_html ? { ...x, content: { ...x.content, html: null, has_html: !!x.content.html, previous_html: null } } : x)) : rows)
 })
 r.get('/research/:id', async (req, res) => res.json(await own('research_reports', req.params.id, req.user)))
 r.delete('/research/:id', async (req, res) => {

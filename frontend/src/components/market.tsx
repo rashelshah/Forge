@@ -98,7 +98,7 @@ export function MarketRadar({ ventureId }: { ventureId: string }) {
     <div className="flex flex-wrap items-center gap-3 rounded-card border border-line bg-white px-4 py-3">
       <Radar className="size-4 text-saffron" />
       <p className="min-w-0 flex-[1_1_16rem] text-sm">
-        {run.isPending ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />Scanning news and market chatter — about 1–2 minutes…</span>
+        {run.isPending ? <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" />Scanning news and market chatter — usually under a minute…</span>
           : o ? <>Radar updated <b className="font-medium">{ago(o.created_at)}</b> · {data.sources.length} source{data.sources.length === 1 ? '' : 's'} read</> : 'Your AI market radar: what is changing, opening up and threatening your venture.'}
       </p>
       <Button size="sm" onClick={() => run.mutate()} loading={run.isPending}><Sparkles />{o ? 'Refresh radar' : 'Scan the market'}</Button>

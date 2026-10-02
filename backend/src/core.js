@@ -22,6 +22,29 @@ async function ensureUser({ id, email, full_name }) {
 const ADMINS = (process.env.ADMIN_EMAILS || '').toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
 export const isAdmin = (user) => !!user.email && ADMINS.includes(user.email.toLowerCase())
 
+// Checking a token costs a round trip to Supabase Auth plus one to the users table, and a page load fires half a dozen API calls at once.
+// Resolve each token once and share the answer (in-flight too) for a short while. Profile edits call forgetUser so they show up at once.
+const SESSION_TTL = 30_000
+const sessions = new Map() // token -> { user: Promise<user | null>, exp }
+
+function resolveUser(token) {
+  const hit = sessions.get(token)
+  if (hit && hit.exp > Date.now()) return hit.user
+  const user = (async () => {
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data.user) return null
+    return ensureUser({ id: data.user.id, email: data.user.email, full_name: data.user.user_metadata?.full_name })
+  })()
+  sessions.set(token, { user, exp: Date.now() + SESSION_TTL })
+  user.then((u) => u || sessions.delete(token), () => sessions.delete(token))
+  if (sessions.size > 500) for (const [k, v] of sessions) if (v.exp < Date.now()) sessions.delete(k)
+  return user
+}
+
+export const forgetUser = (id) => {
+  for (const [k, v] of sessions) v.user.then((u) => u?.id === id && sessions.delete(k), () => {})
+}
+
 export async function auth(req, res, next) {
   if (!supabase) {
     req.user = await ensureUser(DEMO_USER)
@@ -29,9 +52,9 @@ export async function auth(req, res, next) {
   }
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '')
   if (!token) return res.status(401).json({ error: 'Sign in required' })
-  const { data, error } = await supabase.auth.getUser(token)
-  if (error || !data.user) return res.status(401).json({ error: 'Session expired' })
-  req.user = await ensureUser({ id: data.user.id, email: data.user.email, full_name: data.user.user_metadata?.full_name })
+  const user = await resolveUser(token)
+  if (!user) return res.status(401).json({ error: 'Session expired' })
+  req.user = user
   next()
 }
 
@@ -54,10 +77,11 @@ export const PLANS = {
 
 export async function usage(user) {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-  return {
-    ventures: await db.count('ventures', { user_id: user.id }),
-    agentRuns: await db.count('agent_runs', { user_id: user.id, created_at: { gte: monthStart } }),
-  }
+  const [ventures, agentRuns] = await Promise.all([
+    db.count('ventures', { user_id: user.id }),
+    db.count('agent_runs', { user_id: user.id, created_at: { gte: monthStart } }),
+  ])
+  return { ventures, agentRuns }
 }
 
 export async function requireQuota(user, key) {

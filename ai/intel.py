@@ -7,6 +7,7 @@ Counts, radar buckets and white space are computed in code from the evidence, no
 import json
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Literal
 
@@ -153,19 +154,23 @@ def radar(rows: list[dict], n_competitors: int) -> dict:
 
 def _sources(comp: dict) -> list[dict]:
     name = comp["name"]
-    found = core.web_search(f"{name} news: product launches, pricing or fee changes, funding, partnerships, expansion", k=4, topic="news", days=60)
-    found += core.web_search(f"{name} pricing fees features how it works", k=3)
+    found = sum(core.parallel(
+        lambda: core.web_search(f"{name} news: product launches, pricing or fee changes, funding, partnerships, expansion", k=4, topic="news", days=60),
+        lambda: core.web_search(f"{name} pricing fees features how it works", k=3),
+    ), [])
     return core.dedupe(found)[:6]
 
 
 def _evidence(comp: dict, venture: dict) -> tuple[dict | None, list[dict], str | None]:
-    snap, error = None, None
-    if comp.get("url"):
+    def site():
+        if not comp.get("url"):
+            return None, None
         try:
-            snap = agents.snapshot(comp["url"])
+            return agents.snapshot(comp["url"]), None
         except Exception as e:
-            error = str(e)[:160]
-    return snap, _sources(comp), error
+            return None, str(e)[:160]
+    (snap, error), sources = core.parallel(site, lambda: _sources(comp))  # the site and the news search don't depend on each other
+    return snap, sources, error
 
 
 def profile_for(comp: dict, venture: dict, mvp: list[str]) -> dict:
@@ -222,14 +227,21 @@ def run(venture: dict, competitors: list[dict], mvp_features: list[str], recent_
     if not core.OPENAI:
         raise core.LLMError("The Competitive Intelligence Officer needs an LLM: set GEMINI_API_KEY, GROQ_API_KEY or OPENAI_API_KEY")
     results, skipped = [], []
-    for c in competitors:
+
+    def one(c):
         try:
-            r = profile_for(c, venture, mvp_features)
+            return c, profile_for(c, venture, mvp_features), None
         except core.LLMError as e:
-            skipped.append({"name": c["name"], "reason": str(e)[:200]})
-            continue
-        r["comp"], r["changes"] = c, memory_changes(c, r["profile"]["metrics"])
-        results.append(r)
+            return c, None, str(e)[:200]
+
+    # Each competitor is read and profiled independently, so do them together (a few at a time to stay inside the models' rate limits).
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        for c, r, err in ex.map(one, competitors):
+            if err:
+                skipped.append({"name": c["name"], "reason": err})
+                continue
+            r["comp"], r["changes"] = c, memory_changes(c, r["profile"]["metrics"])
+            results.append(r)
     if not results:
         raise core.LLMError("Couldn't gather evidence for any competitor: " + "; ".join(s["reason"] for s in skipped))
 

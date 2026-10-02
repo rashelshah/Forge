@@ -17,7 +17,7 @@ const SCORE_LABEL = { demand: 'Demand', competition: 'Competition', defensibilit
 
 async function gather(v) {
   const [reports, sessions, exps, competitors, signals, memory] = await Promise.all([
-    db.list('research_reports', { venture_id: v.id }, { limit: 200 }), db.list('boardroom_sessions', { venture_id: v.id }, { limit: 20 }),
+    db.list('research_reports', { venture_id: v.id, kind: ['validation', 'mvp', 'prototype', 'intel', 'experiment_analysis'] }, { limit: 100 }), db.list('boardroom_sessions', { venture_id: v.id }, { limit: 20 }),
     db.list('experiments', { venture_id: v.id }, { limit: 50 }), db.list('competitors', { venture_id: v.id }),
     db.list('market_signals', { venture_id: v.id }, { limit: 50 }), db.list('venture_memory', { venture_id: v.id }, { limit: 100 }),
   ])

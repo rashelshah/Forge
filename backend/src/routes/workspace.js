@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import { DB_MODE, db } from '../db.js'
 import { runIntelForVenture } from './intel.js'
-import { HttpError, PLANS, ai, isAdmin, log, notify, own, remember, runAgent, usage, ventureCtx } from '../core.js'
+import { HttpError, PLANS, ai, forgetUser, isAdmin, log, notify, own, remember, runAgent, usage, ventureCtx } from '../core.js'
 
 const r = Router()
 const text = (v, max = 2000) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -24,7 +24,9 @@ r.patch('/me', async (req, res) => {
     }
   }
   if (req.body.settings) patch.settings = { ...req.user.settings, daily_monitoring: !!req.body.settings.daily_monitoring }
-  res.json(await db.update('users', req.user.id, patch))
+  const updated = await db.update('users', req.user.id, patch)
+  forgetUser(req.user.id)
+  res.json(updated)
 })
 
 r.get('/config', async (req, res) => {

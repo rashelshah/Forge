@@ -14,10 +14,9 @@ r.use('/studio', (req, res, next) => {
   next()
 })
 
-// ---------------------------------------------------------------- job queue (one project at a time: free-tier LLMs are rate limited per minute)
+// ---------------------------------------------------------------- job queue (free-tier LLMs are rate limited per minute, so only a few at a time)
 
 const queue = []
-let draining = false
 
 // A venture's Prototype tab mirrors the Studio run: progress while it builds, the best version when it's done.
 const STAGE = { 'UI Engineer': 'code', 'Screenshot Agent': 'check', 'Vision Reviewer': 'check', 'Design Critic': 'check', 'Failure Agent': 'check', 'Quality Scorer': 'check', 'Refinement Agent': 'check', Studio: 'check' }
@@ -69,13 +68,14 @@ async function runProject(id) {
   }).catch(() => {})
 }
 
-async function drain() {
-  if (draining) return
-  draining = true
-  try {
-    while (queue.length) await runProject(queue.shift()).catch((e) => console.error('studio run failed:', e.message))
-  } finally {
-    draining = false
+// Builds spend their time waiting on the AI models, so a couple can run at once (STUDIO_CONCURRENCY; 1 restores strictly one at a time).
+const CONCURRENCY = Math.max(1, Number(process.env.STUDIO_CONCURRENCY) || 2)
+let running = 0
+
+function drain() {
+  while (running < CONCURRENCY && queue.length) {
+    running++
+    runProject(queue.shift()).catch((e) => console.error('studio run failed:', e.message)).finally(() => { running--; drain() })
   }
 }
 

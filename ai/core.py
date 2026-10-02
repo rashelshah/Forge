@@ -10,6 +10,8 @@ import os
 import re
 import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
 
 import httpx
@@ -83,10 +85,19 @@ _rr = {"i": 0}
 _rr_lock = threading.Lock()
 
 
-def _client(model: str, temperature: float, max_tokens: int):
+def parallel(*fns):
+    """Run zero-argument callables concurrently and return their results in order (the first exception is re-raised)."""
+    with ThreadPoolExecutor(len(fns)) as ex:
+        futures = [ex.submit(f) for f in fns]
+        return [f.result() for f in futures]
+
+
+@lru_cache(maxsize=128)
+def _client(model: str, temperature: float, max_tokens: int, retries: int = 2, timeout: int = 300):
+    """Cached per settings: the client keeps its HTTPS connection pool, so repeat calls skip the TLS handshake."""
     from langchain_openai import ChatOpenAI
 
-    kw = {"model": model, "temperature": temperature, "max_retries": 2, "timeout": 300, "max_tokens": max_tokens}
+    kw = {"model": model, "temperature": temperature, "max_retries": retries, "timeout": timeout, "max_tokens": max_tokens}
     if model.startswith("gemini"):
         return ChatOpenAI(**kw, base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                           api_key=os.getenv("GEMINI_API_KEY"), reasoning_effort="low")
@@ -115,10 +126,13 @@ def structured(schema, system: str, user, temperature: float = 0.4, tier: str = 
     else:
         models = HEAVY + FAST + GEMINI_FALLBACK
     errors = []
-    for model in dict.fromkeys(models):
+    chain = list(dict.fromkeys(models))
+    for n, model in enumerate(chain):
         method = "json_schema" if ("gpt-oss" in model or model.startswith("gemini") or not GROQ) else "function_calling"
+        # A rate-limited model fails over to the next one at once (the client's own backoff can sleep for 20s+); only the last resort retries.
+        retries = 2 if n == len(chain) - 1 else 0
         try:
-            out = _client(model, temperature, max_tokens).with_structured_output(schema, method=method, include_raw=True).invoke(
+            out = _client(model, temperature, max_tokens, retries, 150).with_structured_output(schema, method=method, include_raw=True).invoke(
                 [("system", system), ("human", user)])
         except Exception as e:  # rate limit, provider error, invalid JSON generation
             errors.append(f"{model}: {str(e)[:160]}")
@@ -133,11 +147,12 @@ def complete(system: str, user, temperature: float = 0.4, max_tokens: int = 4000
     """Plain-text completion (used for code generation), failing over across models; rejects truncated output.
     `user` may be a function of the model name, so prompts can adapt to each model's budget."""
     errors = []
-    for model in dict.fromkeys(models or HEAVY + FAST):
+    chain = list(dict.fromkeys(models or HEAVY + FAST))
+    for n, model in enumerate(chain):
         big = model.startswith("gemini")
         try:
             prompt = user(model) if callable(user) else user
-            msg = _client(model, temperature, 48000 if big else max_tokens).invoke([("system", system), ("human", prompt)])
+            msg = _client(model, temperature, 48000 if big else max_tokens, 2 if n == len(chain) - 1 else 0).invoke([("system", system), ("human", prompt)])
         except Exception as e:
             errors.append(f"{model}: {str(e)[:160]}")
             continue
@@ -306,17 +321,30 @@ def embed(texts: list[str]) -> list[list[float]]:
     return [v.tolist() for i in range(0, len(texts), 8) for v in m.passage_embed(texts[i:i + 8])]
 
 
-def embed_query(text: str) -> list[float]:
+@lru_cache(maxsize=512)
+def _embed_query(text: str) -> tuple[float, ...]:
     # bge models retrieve better when queries carry their instruction prefix (query_embed adds it).
     m = _get_embedder()
-    return next(iter(m.query_embed(text))).tolist() if m else _hash_embed(text)
+    return tuple(next(iter(m.query_embed(text))).tolist() if m else _hash_embed(text))
+
+
+def embed_query(text: str) -> list[float]:
+    return list(_embed_query(text))  # cached: several agents search with the same idea text
 
 
 # ---------------------------------------------------------------- Vector store: Supabase pgvector (local JSON fallback)
 
+_http = httpx.Client(timeout=30, limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=60))  # keep-alive: no TLS handshake per call
+
+
 def _rest(method: str, path: str, prefer: str = "return=minimal", **kw):
-    r = httpx.request(method, f"{SB_URL}/rest/v1/{path}", timeout=30, headers={
-        "apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}", "Content-Type": "application/json", "Prefer": prefer}, **kw)
+    def send():
+        return _http.request(method, f"{SB_URL}/rest/v1/{path}", headers={
+            "apikey": SB_KEY, "Authorization": f"Bearer {SB_KEY}", "Content-Type": "application/json", "Prefer": prefer}, **kw)
+    try:
+        r = send()
+    except httpx.TransportError:  # a pooled connection the server already closed: reconnect once
+        r = send()
     if r.status_code >= 400:
         raise RuntimeError(f"Supabase {method} {path.split('?')[0]} failed: {r.status_code} {r.text[:200]}")
     return r.json() if r.content else None

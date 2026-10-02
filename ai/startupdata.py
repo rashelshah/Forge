@@ -551,7 +551,7 @@ def context(query: str, k: int = 8) -> dict:
             n, peers, seg = saved[key]["reviewed"], saved[key]["peers"], saved[key]["segments"]
         else:
             cands = _entities(query)
-            peers, seg = _judge(query, cands), _segments(query)
+            peers, seg = core.parallel(lambda: _judge(query, cands), lambda: _segments(query))  # independent model calls
             n = len(cands)
             if not any(p["relevance"] == "unverified" for p in peers) and core.OPENAI:  # never freeze a degraded (no-LLM / failed) result
                 saved[key] = {"reviewed": n, "peers": peers, "segments": seg}
