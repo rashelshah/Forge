@@ -4,6 +4,7 @@ import {
   Bot, Send, ChevronDown, Sparkles, Minimize2,
   Brain, Lightbulb, ArrowRight, BarChart3, Shield, Zap, Globe
 } from 'lucide-react'
+import { BotAvatar } from 'bot-avatars'
 import { useLocation } from 'react-router'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -78,7 +79,7 @@ function pageLabel(pathname: string, search: string): string {
   if (pathname.startsWith('/app/ventures/') && tab) {
     path = `/app/${tab === 'gtm' ? 'go-to-market' : tab}`
   }
-  
+
   const map: Record<string, string> = {
     '/app': 'Dashboard',
     '/app/research': 'Research',
@@ -110,8 +111,8 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
       className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}
     >
       {!isUser && (
-        <div className="shrink-0 mt-0.5 size-7 rounded-full bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] flex items-center justify-center">
-          <Bot className="size-3.5 text-white" />
+        <div className="shrink-0 mt-0.5">
+          <BotAvatar type="cat" size={28} state={msg.loading ? 'working' : 'idle'} />
         </div>
       )}
       <div className={cn('flex flex-col gap-1.5 max-w-[85%]', isUser ? 'items-end' : 'items-start')}>
@@ -121,10 +122,8 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
             : 'bg-white border border-[#f0f0f0] text-[#1f1f1f] rounded-bl-sm shadow-sm'
         )}>
           {msg.loading ? (
-            <span className="flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-[#4250d5] animate-bounce [animation-delay:0ms]" />
-              <span className="size-1.5 rounded-full bg-[#4250d5] animate-bounce [animation-delay:150ms]" />
-              <span className="size-1.5 rounded-full bg-[#4250d5] animate-bounce [animation-delay:300ms]" />
+            <span className="flex items-center text-sm font-medium text-[#1f1f1f]/50">
+              Thinking...
             </span>
           ) : (
             <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.content) }} />
@@ -192,6 +191,17 @@ export function FounderCopilot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Load chat history on mount
+  useEffect(() => {
+    api<CopilotMessage[]>('/copilot/messages')
+      .then((history) => {
+        if (history && history.length > 0) {
+          setMessages(history)
+        }
+      })
+      .catch(console.error)
+  }, [])
 
   useEffect(() => {
     if (state === 'expanded') {
@@ -291,9 +301,7 @@ export function FounderCopilot() {
                 />
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="size-9 rounded-xl bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] flex items-center justify-center shadow-lg">
-                      <Bot className="size-4.5 text-white" />
-                    </div>
+                    <BotAvatar type="cat" size={36} interactive={true} />
                     <div>
                       <p className="text-sm font-semibold text-white tracking-tight">Founder Copilot</p>
                       <p className="text-[11px] text-white/60">
@@ -418,34 +426,15 @@ export function FounderCopilot() {
               transition={{ type: 'spring', damping: 22, stiffness: 300 }}
               onClick={() => setState('expanded')}
               aria-label="Open Founder Copilot"
-              className="group relative cursor-pointer"
+              className="group relative cursor-pointer bg-transparent border-none outline-none flex items-center justify-center p-0 m-0"
             >
-              {/* Pulse ring */}
-              <span className="absolute inset-0 rounded-2xl animate-ping bg-[#4250d5] opacity-20" style={{ animationDuration: '3s' }} />
-
-              <div className="relative flex items-center gap-0 rounded-2xl overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, #1a1b2e 0%, #2a2c4e 100%)',
-                  boxShadow: '0 4px 20px rgb(66 80 213 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.08)',
-                }}
-              >
-                {/* Icon section */}
-                <div className="flex items-center gap-2.5 px-3.5 py-3">
-                  <div className="size-7 rounded-lg bg-[linear-gradient(135deg,#ec8a44,#6a88e2)] flex items-center justify-center">
-                    <Bot className="size-3.5 text-white" />
-                  </div>
-                  <div className="overflow-hidden">
-                    <p className="text-[11px] font-semibold text-white whitespace-nowrap">Forge Copilot</p>
-                    <p className="text-[10px] text-white/50 whitespace-nowrap">Ask anything about your ventures</p>
-                  </div>
-                </div>
-
-                {/* CTA button */}
-                <div className="flex items-center self-stretch border-l border-white/10 px-3 text-[11px] text-white/70 hover:text-white transition">
-                  <Sparkles className="size-3 mr-1.5" />
-                  Ask
-                </div>
-              </div>
+              {/* Pulse ring removed */}
+              <BotAvatar
+                type="cat"
+                size={80}
+                interactive={true}
+                className="relative transition-transform duration-300 hover:scale-105 hover:-translate-y-1 drop-shadow-[0_8px_15px_rgba(0,0,0,0.2)]"
+              />
 
               {/* Unread badge */}
               {unread > 0 && (

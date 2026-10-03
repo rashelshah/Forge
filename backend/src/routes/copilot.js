@@ -240,7 +240,7 @@ function ruleBasedAnswer(question, intent, structured, knowledge, page_context) 
 // ---------------------------------------------------------------- chat history
 
 r.get('/copilot/messages', async (req, res) => {
-  const messages = await db.list('copilot_messages', { user_id: req.user.id }, { limit: 50, order: 'created_at', ascending: true })
+  const messages = await db.list('copilot_messages', { user_id: req.user.id }, { limit: 50, order: 'created_at', ascending: false })
   res.json(messages.reverse())
 })
 
