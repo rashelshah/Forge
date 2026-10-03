@@ -1,3 +1,5 @@
+import JSZip from 'jszip'
+import { prototypeProject } from '@/lib/exportPrototype'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -217,11 +219,14 @@ export function PrototypeStudio({ venture, report }: { venture: Venture; report?
     if (!text.trim() || busy) return
     edit.mutate(text, { onSuccess: () => setInstruction('') })
   }
-  const download = () => {
-    const url = URL.createObjectURL(new Blob([c.html], { type: 'text/html' }))
-    const a = Object.assign(document.createElement('a'), { href: url, download: `${venture.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-prototype.html` })
-    a.click()
-    URL.revokeObjectURL(url)
+  const download = async () => {
+    const slug = venture.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'prototype'
+    const zip = new JSZip()
+    for (const [path, content] of Object.entries(prototypeProject(c.html, venture.name, slug))) zip.file(`${slug}/${path}`, content)
+    const url = URL.createObjectURL(await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' }))
+    Object.assign(document.createElement('a'), { href: url, download: `${slug}-prototype.zip` }).click()
+    setTimeout(() => URL.revokeObjectURL(url), 10_000) // revoking at once can cancel the download in some browsers
+    toast.success('Downloaded — unzip, then run: npm install && npm run dev')
   }
 
   return (
