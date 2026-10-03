@@ -43,18 +43,37 @@ export default function Ventures() {
       ) : list.length === 0 ? <p className="py-16 text-center text-sm text-muted">No ventures match.</p> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((v) => (
-            <Link key={v.id} to={`/app/ventures/${v.id}`} className="group">
-              <Card className="flex h-full flex-col p-5 transition group-hover:border-line-2 group-hover:shadow-float">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-[17px] font-medium tracking-[-0.01em]">{v.name}</p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5"><StageBadge stage={v.stage} />{v.verdict && ['GO', 'PIVOT', 'KILL'].includes(v.verdict) && <DecisionBadge decision={v.verdict} />}</div>
+            <Link key={v.id} to={`/app/ventures/${v.id}`} className="group block">
+              <Card className="flex h-full flex-col bg-white overflow-hidden transition-all duration-300 group-hover:-translate-y-1 group-hover:border-azure/30 group-hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.12)]">
+                {/* Subtle top gradient accent */}
+                <div className="h-1 w-full bg-[linear-gradient(90deg,#8b9cf5,#f5b27e)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-semibold tracking-tight text-ink">{v.name}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <StageBadge stage={v.stage} />
+                        {v.verdict && ['GO', 'PIVOT', 'KILL'].includes(v.verdict) && <DecisionBadge decision={v.verdict} />}
+                      </div>
+                    </div>
+                    <ScoreRing value={v.overall_score} size={56} stroke={5} />
                   </div>
-                  <ScoreRing value={v.overall_score} size={52} stroke={5} />
+                  
+                  <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-ink-2 flex-1">{v.idea}</p>
+                  
+                  <div className="mt-6 border-t border-line/60 pt-5">
+                    <div className="space-y-3">
+                      {SCORE_KEYS.map((k) => <ScoreBar key={k} label={SCORE_LABELS[k]} value={v.scores[k]} />)}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-5 flex items-center justify-between">
+                    <p className="text-[11px] font-medium text-muted">Updated {ago(v.updated_at)}</p>
+                    <span className="text-[11px] font-medium text-azure opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                      View details &rarr;
+                    </span>
+                  </div>
                 </div>
-                <p className="mt-3 line-clamp-2 flex-1 text-sm text-ink-2">{v.idea}</p>
-                <div className="mt-5 space-y-2">{SCORE_KEYS.map((k) => <ScoreBar key={k} label={SCORE_LABELS[k]} value={v.scores[k]} />)}</div>
-                <p className="mt-4 text-[11px] text-faint">Updated {ago(v.updated_at)}</p>
               </Card>
             </Link>
           ))}
