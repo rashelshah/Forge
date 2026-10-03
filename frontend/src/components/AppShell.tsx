@@ -251,8 +251,8 @@ function ScrollToTop() {
   return (
     <Button
       size="icon"
-      // Shifted left enough to never overlap the Copilot FAB (≈220px wide on desktop)
-      className="fixed bottom-24 right-4 z-50 h-10 w-10 cursor-pointer rounded-full bg-dark text-white shadow-lg transition hover:bg-ink hover:-translate-y-1 sm:bottom-32 sm:right-[270px]"
+      // Shifted right to center directly above the Copilot FAB
+      className="fixed bottom-[120px] right-9 z-50 h-10 w-10 cursor-pointer rounded-full bg-dark text-white shadow-lg transition hover:bg-ink hover:-translate-y-1 sm:right-11"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Scroll to top"
     >
