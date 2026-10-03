@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bot, Send, ChevronDown, Sparkles, Minimize2,
+  Send, ChevronDown, Sparkles, Minimize2,
   Brain, Lightbulb, ArrowRight, BarChart3, Shield, Zap, Globe
 } from 'lucide-react'
 import { BotAvatar } from 'bot-avatars'
@@ -112,7 +112,7 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
     >
       {!isUser && (
         <div className="shrink-0 mt-0.5">
-          <BotAvatar type="cat" size={28} state={msg.loading ? 'working' : 'idle'} />
+          <BotAvatar type="cat" size={28} state={msg.loading ? 'working' : 'default'} />
         </div>
       )}
       <div className={cn('flex flex-col gap-1.5 max-w-[85%]', isUser ? 'items-end' : 'items-start')}>
