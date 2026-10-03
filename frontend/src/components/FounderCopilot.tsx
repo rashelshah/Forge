@@ -5,7 +5,7 @@ import {
   Brain, Lightbulb, ArrowRight, BarChart3, Shield, Zap, Globe
 } from 'lucide-react'
 import { BotAvatar } from 'bot-avatars'
-import { useLocation } from 'react-router'
+import { useLocation, useMatch } from 'react-router'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useVentures } from '@/lib/queries'
@@ -19,8 +19,8 @@ interface CopilotMessage {
   evidence?: string[]
   recommendation?: string
   ventures_mentioned?: string[]
-  intent?: string
   loading?: boolean
+  failed?: boolean
 }
 
 type WidgetState = 'collapsed' | 'expanded'
@@ -73,31 +73,13 @@ const PAGE_SUGGESTIONS: Record<string, { text: string; icon: typeof Brain }[]> =
 
 // ---------------------------------------------------------------- page → display name
 
-function pageLabel(pathname: string, search: string): string {
-  const tab = new URLSearchParams(search).get('tab')
-  let path = pathname
-  if (pathname.startsWith('/app/ventures/') && tab) {
-    path = `/app/${tab === 'gtm' ? 'go-to-market' : tab}`
-  }
-
-  const map: Record<string, string> = {
-    '/app': 'Dashboard',
-    '/app/research': 'Research',
-    '/app/boardroom': 'Boardroom',
-    '/app/competitive-intelligence': 'Competitive Intelligence',
-    '/app/market-signals': 'Market Signals',
-    '/app/memory': 'Venture Memory',
-    '/app/experiments': 'Validation Lab',
-    '/app/mvp': 'MVP Architect',
-    '/app/prototype': 'Prototype',
-    '/app/go-to-market': 'Go-To-Market',
-    '/app/ventures': 'Ventures',
-  }
-  for (const [k, v] of Object.entries(map)) {
-    if (path === k || path.startsWith(k + '/')) return v
-  }
-  return 'Dashboard'
+const PAGE_NAMES: Record<string, string> = {
+  dashboard: 'Dashboard', ventures: 'Venture Overview', research: 'Research', boardroom: 'Boardroom', mvp: 'MVP Architect',
+  prototype: 'Prototype', 'go-to-market': 'Go-To-Market', experiments: 'Validation Lab', 'competitive-intelligence': 'Competitive Intelligence',
+  'market-signals': 'Market Signals', memory: 'Venture Memory', activity: 'Agent Activity', settings: 'Settings',
 }
+// Tab names on a venture page that differ from the sidebar page names.
+const TAB_PAGE: Record<string, string> = { gtm: 'go-to-market', competitors: 'competitive-intelligence', overview: 'ventures' }
 
 // ---------------------------------------------------------------- chat bubble
 
@@ -126,7 +108,7 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
               Thinking...
             </span>
           ) : (
-            <div className="whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.content) }} />
+            <div className="break-words" dangerouslySetInnerHTML={{ __html: formatMarkdown(msg.content) }} />
           )}
         </div>
 
@@ -154,15 +136,27 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
 
 function formatMarkdown(text: string | undefined | null): string {
   if (!text) return ''
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^(\d+)\. /gm, '<br/><strong>$1.</strong> ')
-    .replace(/^• /gm, '<br/>• ')
-    .replace(/^- /gm, '<br/>• ')
-    .replace(/\n\n/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>')
-    .replace(/^<br\/>/, '')
+  const inline = (t: string) => t
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?![*\w])/g, '$1<em>$2</em>')
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-[#f1f5f9] px-1 text-[0.85em]">$1</code>')
+  // Escape first: the text is model output and user input, never trusted HTML.
+  const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const item = (l: string) => l.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)$/)
+  return esc.split(/\n{2,}/).map((block) => {
+    // Consecutive list lines become one list; any text lines around them stay paragraphs ("Key reasons:" then bullets).
+    const parts: { list: boolean; lines: string[] }[] = []
+    for (const l of block.split('\n')) {
+      const list = !!item(l)
+      if (parts.at(-1)?.list === list) parts.at(-1)!.lines.push(l)
+      else parts.push({ list, lines: [l] })
+    }
+    return parts.map(({ list, lines }) => {
+      if (!list) return `<p>${lines.map((l) => inline(l.replace(/^#{1,4}\s+/, ''))).join('<br/>')}</p>`
+      const tag = /^\s*\d/.test(lines[0]) ? 'ol' : 'ul'
+      return `<${tag} class="${tag === 'ol' ? 'list-decimal' : 'list-disc'} pl-5 space-y-1">${lines.map((l) => `<li>${inline(item(l)![1])}</li>`).join('')}</${tag}>`
+    }).join('')
+  }).join('<div class="h-2"></div>')
 }
 
 // ---------------------------------------------------------------- main component
@@ -175,16 +169,16 @@ export function FounderCopilot() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [unread, setUnread] = useState(0)
+  const expandedRef = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Extract page context slug from pathname and search params
+  // Page slug + label for the model; on a venture page the tab decides the page, and the venture itself is sent too.
+  const ventureId = useMatch('/app/ventures/:id')?.params.id
   const tab = new URLSearchParams(search).get('tab')
-  let pageContext = pathname.replace('/app/', '').split('/')[0] || 'dashboard'
-  if (pageContext === 'ventures' && tab) {
-    pageContext = tab === 'gtm' ? 'go-to-market' : tab
-  }
-  const contextLabel = pageLabel(pathname, search)
+  let pageContext = pathname.replace('/app', '').split('/')[1] || 'dashboard'
+  if (pageContext === 'ventures' && tab) pageContext = TAB_PAGE[tab] ?? tab
+  const contextLabel = PAGE_NAMES[pageContext] ?? 'Dashboard'
 
   const suggestions = PAGE_SUGGESTIONS[pageContext] ?? GLOBAL_SUGGESTIONS.slice(0, 4)
 
@@ -206,6 +200,7 @@ export function FounderCopilot() {
   }, [])
 
   useEffect(() => {
+    expandedRef.current = state === 'expanded'
     if (state === 'expanded') {
       setUnread(0)
       // Scroll instantly so there's no layout shift while opening
@@ -227,40 +222,38 @@ export function FounderCopilot() {
   }
 
   const ask = useCallback(async (question: string) => {
-    if (!question.trim() || sending) return
+    question = question.trim()
+    if (!question || sending) return
     setInput('')
+    if (inputRef.current) inputRef.current.style.height = 'auto'
     setSending(true)
 
+    // Earlier turns only: skip empty placeholders and failed replies so they don't steer the answer.
+    const history = messages.filter((m) => m.content.trim() && !m.loading && !m.failed).slice(-8).map((m) => ({ role: m.role, content: m.content }))
     addMessage({ role: 'user', content: question })
     const assistantId = addMessage({ role: 'assistant', content: '', loading: true })
 
     try {
-      const history = messages.slice(-6).map((m) => ({ role: m.role, content: m.content }))
-      const result = await api<{
-        answer: string; evidence: string[]; recommendation: string;
-        intent: string; retrieved: number; ventures_mentioned: string[]
-      }>('/copilot/ask', { question, page_context: pageContext, history })
-
+      const result = await api<{ answer: string; evidence: string[]; recommendation: string; ventures_mentioned: string[] }>(
+        '/copilot/ask', { question, page_context: pageContext, page_label: contextLabel, venture_id: ventureId, history })
       updateMessage(assistantId, {
-        content: result.answer || "I'm here and ready to help — try asking about your ventures, risks, or next steps.",
-        evidence: result.evidence,
-        recommendation: result.recommendation,
-        intent: result.intent,
-        ventures_mentioned: result.ventures_mentioned,
-        loading: false,
+        content: result.answer, evidence: result.evidence, recommendation: result.recommendation,
+        ventures_mentioned: result.ventures_mentioned, loading: false,
       })
-
-      // If collapsed, show unread badge
-      if (state === 'collapsed') setUnread((n) => n + 1)
+      if (!expandedRef.current) setUnread((n) => n + 1)
     } catch (e: any) {
-      updateMessage(assistantId, { content: e.message || 'Something went wrong. Please try again.', loading: false })
+      updateMessage(assistantId, {
+        content: e.status === 401 ? 'Your session expired. Please sign in again.' : "I couldn't reach the server just now. Give it a moment and ask again.",
+        loading: false, failed: true,
+      })
     } finally {
       setSending(false)
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
-  }, [sending, messages, pageContext, state])
+  }, [sending, messages, pageContext, contextLabel, ventureId])
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
       ask(input)
     }
@@ -391,7 +384,7 @@ export function FounderCopilot() {
                   <textarea
                     ref={inputRef}
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={(e) => { setInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px` }}
                     onKeyDown={onKeyDown}
                     placeholder={`Ask about your ventures…`}
                     rows={1}

@@ -221,5 +221,5 @@ r.post('/ventures/:id/command/refresh', async (req, res) => {
   res.status(202).json({ ...publicState(s), generating: true, error: null })
 })
 
-export { gather, readiness }
+export { gather, readiness, aiContext }
 export default r

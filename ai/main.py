@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 import agents
 import boardroom
 import chief
+import copilot
 import core
 import design_intel
 import gtm
@@ -263,6 +264,13 @@ def studio_edit(html: str = Body(...), instruction: str = Body(...), name: str =
 @app.post("/chief/brief")
 def chief_brief(context: dict = Body(..., embed=True)):
     return chief.run(context)
+
+
+@app.post("/copilot/answer")
+def copilot_answer(question: str = Body(...), page: dict = Body({}), ventures: list[dict] = Body([]), detailed: list[dict] = Body([]),
+                   recent_activity: list[dict] = Body([]), history: list[dict] = Body([])):
+    return copilot.answer({"question": question, "page": page, "ventures": ventures, "detailed": detailed,
+                           "recent_activity": recent_activity, "history": history})
 
 
 @app.post("/gtm/run")
