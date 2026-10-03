@@ -118,7 +118,7 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
       <div className={cn('flex flex-col gap-1.5 max-w-[85%]', isUser ? 'items-end' : 'items-start')}>
         <div className={cn('rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
           isUser
-            ? 'bg-[linear-gradient(135deg,#4250d5,#6a88e2)] text-white rounded-br-sm'
+            ? 'bg-[#1f1f1f] text-white rounded-br-sm'
             : 'bg-white border border-[#f0f0f0] text-[#1f1f1f] rounded-bl-sm shadow-sm'
         )}>
           {msg.loading ? (
@@ -132,17 +132,17 @@ function Bubble({ msg }: { msg: CopilotMessage }) {
 
         {/* Evidence chips */}
         {msg.evidence && msg.evidence.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 mt-1">
             {msg.evidence.slice(0, 3).map((e, i) => (
-              <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-[#f5f5f5] text-[#45464d] border border-[#f0f0f0]">{e}</span>
+              <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-white text-[#475569] border border-[#e2e8f0] shadow-sm">{e}</span>
             ))}
           </div>
         )}
 
         {/* Recommendation callout */}
         {msg.recommendation && !msg.loading && (
-          <div className="rounded-xl border border-[#e8effc] bg-[linear-gradient(135deg,#f5f7fe,#edf2ff)] px-3 py-2 text-xs text-[#4250d5] max-w-full">
-            <span className="font-medium">Recommendation: </span>{msg.recommendation}
+          <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-xs text-[#334155] max-w-full shadow-sm mt-1">
+            <span className="font-semibold text-[#0f172a]">Recommendation: </span>{msg.recommendation}
           </div>
         )}
       </div>
@@ -299,18 +299,13 @@ export function FounderCopilot() {
               }}
             >
               {/* Header */}
-              <div className="relative overflow-hidden px-5 py-4 shrink-0">
-                {/* Aurora gradient background */}
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,#1a1b2e_0%,#2a2c4e_50%,#1e2040_100%)]" />
-                <div className="absolute inset-0 opacity-40"
-                  style={{ background: 'radial-gradient(80% 80% at 20% 20%, rgb(236 138 68 / 0.35) 0%, transparent 60%), radial-gradient(60% 60% at 80% 80%, rgb(106 136 226 / 0.4) 0%, transparent 60%)' }}
-                />
+              <div className="relative overflow-hidden px-5 py-4 shrink-0 border-b border-[#f0f0f0] bg-white">
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <BotAvatar type="cat" size={36} interactive={true} />
                     <div>
-                      <p className="text-sm font-semibold text-white tracking-tight">Founder Copilot</p>
-                      <p className="text-[11px] text-white/60">
+                      <p className="text-sm font-semibold text-[#1f1f1f] tracking-tight">Founder Copilot</p>
+                      <p className="text-[11px] text-[#7b7c84]">
                         {ventureCount > 0 ? `${ventureCount} venture${ventureCount !== 1 ? 's' : ''} · ` : ''}{contextLabel}
                       </p>
                     </div>
@@ -318,14 +313,14 @@ export function FounderCopilot() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => setState('collapsed')}
-                      className="grid size-7 place-items-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                      className="grid size-7 place-items-center rounded-lg text-[#a9aab1] hover:text-[#1f1f1f] hover:bg-[#f5f5f5] transition cursor-pointer"
                       aria-label="Minimize"
                     >
                       <Minimize2 className="size-3.5" />
                     </button>
                     <button
                       onClick={() => setState('collapsed')}
-                      className="grid size-7 place-items-center rounded-lg text-white/50 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                      className="grid size-7 place-items-center rounded-lg text-[#a9aab1] hover:text-[#1f1f1f] hover:bg-[#f5f5f5] transition cursor-pointer"
                       aria-label="Close"
                     >
                       <ChevronDown className="size-4" />
@@ -340,8 +335,8 @@ export function FounderCopilot() {
                   <div className="space-y-4">
                     {/* Welcome state */}
                     <div className="text-center py-2">
-                      <div className="inline-flex size-14 rounded-2xl bg-[linear-gradient(135deg,#f0f4ff,#e8f0ff)] items-center justify-center mb-3">
-                        <Sparkles className="size-6 text-[#4250d5]" />
+                      <div className="inline-flex size-14 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] items-center justify-center mb-3">
+                        <Sparkles className="size-6 text-[#64748b]" />
                       </div>
                       <p className="text-sm font-semibold text-[#1f1f1f]">How can I help?</p>
                       <p className="text-xs text-[#7b7c84] mt-1">Ask anything about your ventures</p>
@@ -354,9 +349,9 @@ export function FounderCopilot() {
                         <button
                           key={text}
                           onClick={() => ask(text)}
-                          className="group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#45464d] hover:bg-[#f5f5f5] hover:text-[#4250d5] transition cursor-pointer border border-transparent hover:border-[#e8effc]"
+                          className="group w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#475569] bg-white border border-[#f0f0f0] hover:bg-[#f8fafc] hover:border-[#e2e8f0] transition cursor-pointer shadow-sm"
                         >
-                          <Icon className="size-3.5 shrink-0 text-[#a9aab1] group-hover:text-[#4250d5] transition" />
+                          <Icon className="size-3.5 shrink-0 text-[#94a3b8] group-hover:text-[#475569] transition" />
                           {text}
                         </button>
                       ))}
@@ -382,7 +377,7 @@ export function FounderCopilot() {
                       key={text}
                       onClick={() => ask(text)}
                       disabled={sending}
-                      className="shrink-0 rounded-full border border-[#e8effc] bg-[#f5f7fe] px-3 py-1 text-xs text-[#4250d5] hover:bg-[#e8effc] transition cursor-pointer disabled:opacity-50"
+                      className="shrink-0 rounded-full border border-[#e2e8f0] bg-white px-3 py-1 text-xs text-[#475569] hover:bg-[#f8fafc] transition cursor-pointer disabled:opacity-50 shadow-sm"
                     >
                       {text}
                     </button>
@@ -391,8 +386,8 @@ export function FounderCopilot() {
               )}
 
               {/* Input area */}
-              <div className="border-t border-[#f0f0f0] px-3 py-3 shrink-0">
-                <div className="flex items-end gap-2 rounded-2xl border border-[#f0f0f0] bg-[#fcfcfc] px-3 py-2 focus-within:border-[#a5bbfc] focus-within:ring-1 focus-within:ring-[#a5bbfc] transition">
+              <div className="border-t border-[#f0f0f0] px-3 py-3 shrink-0 bg-white">
+                <div className="flex items-end gap-2 rounded-2xl border border-[#e2e8f0] bg-white px-3 py-2 focus-within:border-[#cbd5e1] focus-within:ring-1 focus-within:ring-[#cbd5e1] shadow-sm transition">
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -407,7 +402,7 @@ export function FounderCopilot() {
                   <button
                     onClick={() => ask(input)}
                     disabled={!input.trim() || sending}
-                    className="shrink-0 grid size-8 place-items-center rounded-xl bg-[linear-gradient(135deg,#4250d5,#6a88e2)] text-white hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="shrink-0 grid size-8 place-items-center rounded-xl bg-[#1f1f1f] text-white hover:bg-[#334155] transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     aria-label="Send"
                   >
                     <Send className="size-3.5" />
