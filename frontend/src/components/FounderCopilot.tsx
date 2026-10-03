@@ -198,6 +198,8 @@ export function FounderCopilot() {
       .then((history) => {
         if (history && history.length > 0) {
           setMessages(history)
+          // Small delay to ensure refs are attached if already expanded
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }), 10)
         }
       })
       .catch(console.error)
@@ -206,7 +208,11 @@ export function FounderCopilot() {
   useEffect(() => {
     if (state === 'expanded') {
       setUnread(0)
-      setTimeout(() => inputRef.current?.focus(), 100)
+      // Scroll instantly so there's no layout shift while opening
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+        inputRef.current?.focus()
+      }, 10)
     }
   }, [state])
 
@@ -276,7 +282,7 @@ export function FounderCopilot() {
       </AnimatePresence>
 
       {/* Widget container */}
-      <div className="fixed bottom-6 right-4 sm:right-6 z-[999] flex flex-col items-end gap-3">
+      <div className="fixed bottom-6 right-4 sm:right-6 z-[999]">
 
         {/* ── EXPANDED PANEL ── */}
         <AnimatePresence>
@@ -286,7 +292,7 @@ export function FounderCopilot() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 20 }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="w-[min(420px,calc(100vw-32px))] max-h-[min(640px,calc(100dvh-120px))] rounded-3xl overflow-hidden flex flex-col"
+              className="absolute bottom-0 right-0 w-[min(420px,calc(100vw-32px))] max-h-[min(640px,calc(100dvh-120px))] rounded-3xl overflow-hidden flex flex-col"
               style={{
                 background: '#fff',
                 boxShadow: '0 4px 6px rgb(0 0 0 / 0.04), 0 24px 80px -12px rgb(16 18 35 / 0.22), 0 0 0 1px rgb(0 0 0 / 0.05)',
@@ -426,7 +432,7 @@ export function FounderCopilot() {
               transition={{ type: 'spring', damping: 22, stiffness: 300 }}
               onClick={() => setState('expanded')}
               aria-label="Open Founder Copilot"
-              className="group relative cursor-pointer bg-transparent border-none outline-none flex items-center justify-center p-0 m-0"
+              className="group absolute bottom-0 right-0 origin-bottom-right cursor-pointer bg-transparent border-none outline-none flex items-center justify-center p-0 m-0"
             >
               {/* Pulse ring removed */}
               <BotAvatar
