@@ -4,6 +4,7 @@ import cors from 'cors'
 import express from 'express'
 import { DB_MODE, db } from './db.js'
 import { ai, auth } from './core.js'
+import copilot from './routes/copilot.js'
 import design from './routes/design.js'
 import gtm from './routes/gtm.js'
 import command from './routes/command.js'
@@ -29,7 +30,7 @@ app.get('/api/ping', (req, res) => {
   res.status(200).json({ ok: true, timestamp: new Date().toISOString() })
 })
 app.use(publicRoutes)
-app.use('/api', auth, ventures, workspace, design, studio, intel, market, memory, command, gtm)
+app.use('/api', auth, ventures, workspace, design, studio, intel, market, memory, command, gtm, copilot)
 app.use((req, res) => res.status(404).json({ error: 'Not found' }))
 app.use((err, req, res, next) => {
   if (!err.status) console.error(err)

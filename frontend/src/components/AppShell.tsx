@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useMatch, useNavigate, useOutletContext } from 'react-router'
 import { Loading } from '@/components/bits'
 import { Logo } from '@/components/brand'
+import { FounderCopilot } from '@/components/FounderCopilot'
 import { NewVentureDialog } from '@/components/NewVentureDialog'
 import { ProductTour } from '@/components/tour'
 import { Button } from '@/components/ui/button'
@@ -233,6 +234,7 @@ export function AppShell() {
       </main>
       <NewVentureDialog open={newOpen} onOpenChange={setNewOpen} />
       <ProductTour open={tourOpen} onClose={closeTour} onCreate={() => setNewOpen(true)} setSidebar={setMobile} />
+      <FounderCopilot />
       <ScrollToTop />
     </div>
   )
@@ -249,7 +251,8 @@ function ScrollToTop() {
   return (
     <Button
       size="icon"
-      className="fixed bottom-24 right-4 z-50 h-10 w-10 cursor-pointer rounded-full bg-dark text-white shadow-lg transition hover:bg-ink hover:-translate-y-1 sm:bottom-8 sm:right-8"
+      // Shifted left enough to never overlap the Copilot FAB (≈220px wide on desktop)
+      className="fixed bottom-24 right-4 z-50 h-10 w-10 cursor-pointer rounded-full bg-dark text-white shadow-lg transition hover:bg-ink hover:-translate-y-1 sm:bottom-32 sm:right-[270px]"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="Scroll to top"
     >
